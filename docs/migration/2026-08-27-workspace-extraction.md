@@ -114,3 +114,6 @@ không fail trước khi CI được chuyển sang checkout workspace.
 Bốn contract test Compose/Filebeat/Elasticsearch/Kline-maintenance dùng cùng
 resolver ở `c9078f0`; local đã chạy trên manifest workspace và giữ fallback cho
 CI checkout đơn repo. Các test và workflow còn lại là cổng cutover tiếp theo.
+
+Contract healthcheck hạ tầng cũng đã chuyển sang resolver ở `5e05a73`; local
+đã xác nhận toàn bộ service trên manifest workspace có healthcheck bounded.
