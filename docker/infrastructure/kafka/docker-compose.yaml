@@ -1,6 +1,6 @@
 name: finance
 
 include:
-  - path: 
+  - path:
     - kafka-ui.yaml
     - kafka-cluster.yaml

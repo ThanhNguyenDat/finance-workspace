@@ -102,7 +102,7 @@ services:
       - finance-redis-cluster-node2-data:/data
     ports:
       - 7002:6379
-  redis-cluster-node3:  
+  redis-cluster-node3:
     <<: *redis-cluster-container-shared
     container_name: finance-redis-cluster-node3
     hostname: finance-redis-cluster-node3
@@ -111,7 +111,7 @@ services:
       - finance-redis-cluster-node3-data:/data
     ports:
       - 7003:6379
-  redis-cluster-node4:  
+  redis-cluster-node4:
     <<: *redis-cluster-container-shared
     container_name: finance-redis-cluster-node4
     hostname: finance-redis-cluster-node4
@@ -129,7 +129,7 @@ services:
       - finance-redis-cluster-node5-data:/data
     ports:
       - 7005:6379
-  redis-cluster-node6:  
+  redis-cluster-node6:
     <<: *redis-cluster-container-shared
     container_name: finance-redis-cluster-node6
     hostname: finance-redis-cluster-node6

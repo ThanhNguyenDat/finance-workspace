@@ -1,5 +1,5 @@
 name: finance
 
 include:
-  - path: 
+  - path:
     - rabbitmq.yaml

@@ -50,7 +50,7 @@ x-primary-container-shared: &primary-container-shared
     POSTGRES_USERNAME: postgres
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
   command: |
-    postgres 
+    postgres
     -c wal_level=logical
     -c hot_standby=on
     -c max_wal_senders=10
