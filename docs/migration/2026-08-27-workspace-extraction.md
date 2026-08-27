@@ -128,3 +128,7 @@ canonical vì cần owner xác nhận remote SHA trước khi pin dependency.
 Layout contract `943d2de` cũng kiểm tra thư mục canonical trong workspace (và
 fallback khi CI chỉ có một repo), nên không còn false-fail bởi thư mục
 `finance-mw/docker/monitor` root-owned cũ.
+
+Quality workflow không còn hard-code ba compose hạ tầng; `db1b76e` thêm target
+`make validate-infrastructure-compose` dùng cùng resolver. Local validation
+với biến môi trường contract đã pass và workflow YAML parse pass.
