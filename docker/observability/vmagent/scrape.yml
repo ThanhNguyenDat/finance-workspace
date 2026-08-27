@@ -1,0 +1,182 @@
+global:
+  scrape_interval: 30s
+  scrape_timeout: 25s
+  external_labels:
+    environment: production
+    monitor: finance-vmagent
+
+scrape_configs:
+  - job_name: finance-node
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    static_configs:
+      - targets:
+          - finance-node-exporter-prometheus:9100
+        labels:
+          host: production
+
+  - job_name: finance-process
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    static_configs:
+      - targets:
+          - finance-process-exporter:9256
+        labels:
+          host: production
+
+  - job_name: finance-postgres
+    scrape_interval: 60s
+    scrape_timeout: 45s
+    static_configs:
+      - targets:
+          - exporter:9187
+        labels:
+          database_type: timescaledb
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: pg_stat_statements.*
+        action: drop
+
+  - job_name: finance-redis
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    static_configs:
+      - targets:
+          - redis-singleton-exporter:9121
+        labels:
+          database_type: redis
+
+  - job_name: finance-kafka
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    static_configs:
+      - targets:
+          - finance-kafka-exporter:9308
+        labels:
+          messaging_type: kafka
+
+  - job_name: finance-mw
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - finance-mw:8002
+        labels:
+          appname: finance-mw
+          deploy_env: production
+
+  - job_name: finance-kline-ingest
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - finance-kline-ingest:8002
+        labels:
+          appname: finance-kline-ingest
+          deploy_env: production
+
+  - job_name: finance-trading-worker
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - finance-trading-worker:8002
+        labels:
+          appname: finance-trading-worker
+          deploy_env: production
+
+  - job_name: finance-english-worker
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - finance-english-worker:8002
+        labels:
+          appname: finance-english-worker
+          deploy_env: production
+
+  - job_name: finance-social-worker
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - finance-social-worker:8002
+        labels:
+          appname: finance-social-worker
+          deploy_env: production
+
+  - job_name: finance-tvl-worker
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - finance-tvl-worker:8002
+        labels:
+          appname: finance-tvl-worker
+          deploy_env: production
+
+  - job_name: finance-broker
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - finance-broker:8002
+        labels:
+          appname: finance-broker
+          deploy_env: production
+
+  - job_name: finance-mt5
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - mt5:8002
+        labels:
+          appname: finance-mt5
+          deploy_env: production
+
+  - job_name: finance-live-action
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - live-action-binance-perpetual-future-btc-usdt:8002
+          - live-action-binance-perpetual-future-xau-usdt:8002
+          - live-action-bybit-perpetual-future-btc-usdt:8002
+          - live-action-bybit-spot-xaut-usdt:8002
+          - live-action-exness-cfd-xau-usd:8002
+          - live-action-exness-cfd-btc-usd:8002
+        labels:
+          appname: finance-live-action
+          deploy_env: production
+
+  - job_name: finance-otel-collector
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - finance-otel-collector:8888
+        labels:
+          appname: finance-otel-collector
+          deploy_env: production
+
+  - job_name: finance-tempo
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - finance-tempo:3200
+        labels:
+          appname: finance-tempo
+          deploy_env: production

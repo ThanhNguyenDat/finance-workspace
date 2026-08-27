@@ -1,0 +1,496 @@
+# Local proof-of-concept for docs/specs/observability.md.
+#
+# This is NOT a production source and is not deployed by Coolify. The
+# production observability service remains coolify-observability.yaml; the
+# spec's own status line still names JSONL/Filebeat as the production pipeline
+# until the cutover gates pass.
+#
+# What it stands up, in the spec's own vocabulary:
+#
+#   loadgen        an application: ECS JSONL on stdout/stderr, nothing else
+#   vector-agent   "Agent thu thap cuc bo tren node" -- Docker json-file -> raw
+#   vector-processor  "Log processor"   raw -> canonical, poison -> DLQ
+#   vector-archiver   "S3 archiver"     canonical -> object storage
+#   clickhouse     "ClickHouse writers" three independent consumer groups
+#   kafka          the SEPARATE observability/analytics cluster
+#   minio          the S3-compatible store
+#
+# Profiles keep the default start small enough to run on a laptop:
+#   (default)      log path end to end
+#   console        kafka-ui, for watching topics and consumer lag
+#   tracing        otel-collector + tempo, the dual-publish branch
+#   search         elasticsearch + kibana, the hot search branch
+#   grafana        grafana wired to ClickHouse and Tempo
+#
+#   docker compose -f docker/observability/compose.yaml up -d
+#   docker compose -f docker/observability/compose.yaml --profile console up -d
+#
+# Credentials here are throwaway POC values carried in .env.poc (gitignored,
+# created by poc/README.md's bootstrap step). No production secret belongs in
+# this file or in that env file.
+
+name: finance-observability-poc
+
+x-poc-logging: &poc-logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+# The node agent reads the Docker json-file stream, so a container is only
+# collected if it opts in with this label. Without the label the agent would
+# ingest Kafka's and ClickHouse's own logs and feed its own pipeline.
+x-collected: &collected
+  labels:
+    finance.observability.collect: "true"
+
+services:
+  # ---------------------------------------------------------------- transport
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: poc-kafka
+    <<: *poc-logging
+    restart: unless-stopped
+    environment:
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      # Explicit topics only. Auto-creation would let a typo silently bypass
+      # the spec's topic-suffix schema versioning.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: "72"
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+    cpus: "1.0"
+    mem_limit: 900M
+    memswap_limit: 900M
+    pids_limit: 512
+
+  kafka-topics:
+    image: apache/kafka:3.9.1
+    container_name: poc-kafka-topics
+    <<: *poc-logging
+    depends_on:
+      kafka: {condition: service_healthy}
+    entrypoint: ["/bin/sh", "/scripts/create-topics.sh"]
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      TOPIC_PARTITIONS: "3"
+      TOPIC_REPLICATION: "1"
+    volumes:
+      - ./poc/kafka:/scripts:ro
+    restart: "no"
+    mem_limit: 512M
+
+  # -------------------------------------------------------------- object store
+  minio:
+    image: minio/minio:latest
+    container_name: poc-minio
+    <<: *poc-logging
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in docker/observability/.env.poc}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?set S3_SECRET_KEY in docker/observability/.env.poc}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "127.0.0.1:9001:9001" # console, loopback only
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    cpus: "0.5"
+    mem_limit: 384M
+    memswap_limit: 384M
+    pids_limit: 256
+
+  minio-buckets:
+    image: minio/mc:latest
+    container_name: poc-minio-buckets
+    <<: *poc-logging
+    depends_on:
+      minio: {condition: service_healthy}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mc alias set poc http://minio:9000 "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY"
+        for bucket in finance-observability finance-analytics finance-traces; do
+          mc mb --ignore-existing "poc/$$bucket"
+          # Archived objects are immutable. Versioning is what makes an
+          # accidental overwrite recoverable rather than silent.
+          mc version enable "poc/$$bucket"
+        done
+        mc ls poc
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+    restart: "no"
+    mem_limit: 128M
+
+  # ------------------------------------------------------------ the "app" tier
+  loadgen:
+    image: alpine:3.20
+    container_name: poc-loadgen
+    <<: [*poc-logging, *collected]
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/scripts/emit.sh"]
+    environment:
+      SERVICE_NAME: finance-mw
+      SERVICE_ENV: development
+      SERVICE_VERSION: ${LOADGEN_SERVICE_VERSION:-0000000000000000000000000000000000000000}
+      EMIT_INTERVAL_SECONDS: "2"
+    volumes:
+      - ./poc/loadgen:/scripts:ro
+    cpus: "0.25"
+    mem_limit: 64M
+    memswap_limit: 64M
+    pids_limit: 64
+
+  # ------------------------------------------------------- collection pipeline
+  vector-agent:
+    image: timberio/vector:0.54.0-debian
+    container_name: poc-vector-agent
+    <<: *poc-logging
+    restart: unless-stopped
+    depends_on:
+      kafka: {condition: service_healthy}
+      kafka-topics: {condition: service_completed_successfully}
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      VECTOR_LOG: info
+    volumes:
+      - ./poc/vector/agent.yaml:/etc/vector/vector.yaml:ro
+      # Read-only Docker socket: the agent discovers containers and reads their
+      # json-file stream. It never controls the daemon.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # The disk buffer and the read checkpoint. Losing this volume means the
+      # agent restarts from the runtime cursor and the local tail is gone --
+      # which is the spec's stated, bounded loss window.
+      - vector-agent-data:/var/lib/vector
+    cpus: "0.5"
+    mem_limit: 256M
+    memswap_limit: 256M
+    pids_limit: 256
+
+  vector-processor:
+    image: timberio/vector:0.54.0-debian
+    container_name: poc-vector-processor
+    <<: *poc-logging
+    restart: unless-stopped
+    depends_on:
+      kafka: {condition: service_healthy}
+      kafka-topics: {condition: service_completed_successfully}
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      DEPLOY_ENV: development
+      VECTOR_LOG: info
+    volumes:
+      - ./poc/vector/processor.yaml:/etc/vector/vector.yaml:ro
+      - vector-processor-data:/var/lib/vector
+    cpus: "0.5"
+    mem_limit: 256M
+    memswap_limit: 256M
+    pids_limit: 256
+
+  vector-archiver:
+    image: timberio/vector:0.54.0-debian
+    container_name: poc-vector-archiver
+    <<: *poc-logging
+    restart: unless-stopped
+    depends_on:
+      kafka: {condition: service_healthy}
+      minio-buckets: {condition: service_completed_successfully}
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: finance-observability
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      VECTOR_LOG: info
+    volumes:
+      - ./poc/vector/archiver.yaml:/etc/vector/vector.yaml:ro
+      - vector-archiver-data:/var/lib/vector
+    cpus: "0.5"
+    mem_limit: 256M
+    memswap_limit: 256M
+    pids_limit: 256
+
+  # ------------------------------------------------------------ analytics tier
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.8
+    container_name: poc-clickhouse
+    <<: *poc-logging
+    restart: unless-stopped
+    depends_on:
+      kafka: {condition: service_healthy}
+      kafka-topics: {condition: service_completed_successfully}
+    environment:
+      # Deliberately NOT CLICKHOUSE_USER/CLICKHOUSE_PASSWORD: those make the
+      # image's entrypoint write into users.d, which is mounted read-only here.
+      # poc/clickhouse/users.d/users.xml reads these two instead.
+      CH_APP_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD in docker/observability/.env.poc}
+      CH_RESEARCH_PASSWORD: ${CLICKHOUSE_RESEARCH_PASSWORD:?set CLICKHOUSE_RESEARCH_PASSWORD in docker/observability/.env.poc}
+    volumes:
+      # Schema is applied by the clickhouse-init service below, NOT through
+      # /docker-entrypoint-initdb.d. The image's initdb runner authenticates as
+      # `default` with the password from CLICKHOUSE_PASSWORD, which is exactly
+      # the env var that also makes the entrypoint write into the read-only
+      # users.d mount. Applying schema from outside sidesteps that and matches
+      # how a real deployment runs migrations anyway.
+      - ./poc/clickhouse/config.d:/etc/clickhouse-server/config.d:ro
+      # Read-only research identity with a bounded resource quota, per the
+      # spec's rule that research queries never run as a full-access user.
+      - ./poc/clickhouse/users.d:/etc/clickhouse-server/users.d:ro
+      - clickhouse-data:/var/lib/clickhouse
+    ports:
+      - "127.0.0.1:8123:8123" # HTTP, loopback only
+    ulimits:
+      nofile: {soft: 262144, hard: 262144}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping | grep -q Ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    cpus: "1.5"
+    mem_limit: 1500M
+    memswap_limit: 1500M
+    pids_limit: 1024
+
+  # Applies poc/clickhouse/initdb/*.sql in filename order, every start.
+  # Every statement is CREATE ... IF NOT EXISTS, so re-running is a no-op --
+  # the same property a migration runner needs.
+  clickhouse-init:
+    image: clickhouse/clickhouse-server:25.8
+    container_name: poc-clickhouse-init
+    <<: *poc-logging
+    depends_on:
+      clickhouse: {condition: service_healthy}
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        set -euo pipefail
+        for f in /schema/*.sql; do
+          echo "applying $${f}"
+          clickhouse-client --host clickhouse --port 9000 \
+            --user default --password "$${CH_APP_PASSWORD}" \
+            --queries-file "$${f}"
+        done
+        echo "schema applied"
+    environment:
+      CH_APP_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    volumes:
+      - ./poc/clickhouse/initdb:/schema:ro
+    restart: "no"
+    mem_limit: 512M
+
+  # ------------------------------------------------------- console (opt in)
+  kafka-ui:
+    image: kafbat/kafka-ui:latest
+    container_name: poc-kafka-ui
+    profiles: ["console"]
+    <<: *poc-logging
+    restart: unless-stopped
+    depends_on:
+      kafka: {condition: service_healthy}
+    environment:
+      KAFKA_CLUSTERS_0_NAME: observability-poc
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "false"
+      # Read-only: the console is for watching lag, not for mutating topics.
+      AUTH_TYPE: DISABLED
+    ports:
+      - "127.0.0.1:8080:8080"
+    cpus: "0.5"
+    mem_limit: 512M
+    memswap_limit: 512M
+    pids_limit: 256
+
+  # -------------------------------------------------------- tracing (opt in)
+  tempo:
+    image: grafana/tempo:2.8.2
+    container_name: poc-tempo
+    profiles: ["tracing"]
+    <<: *poc-logging
+    restart: unless-stopped
+    depends_on:
+      minio-buckets: {condition: service_completed_successfully}
+    command: ["-target=all", "-config.file=/etc/tempo/tempo.yaml", "-config.expand-env=true"]
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - ./poc/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3200/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    # 2G, matching the production limit raised after the 2026-08-25 OOM crash
+    # loop. A smaller limit reproduces that incident rather than the design.
+    cpus: "1.0"
+    mem_limit: 2G
+    memswap_limit: 2G
+    pids_limit: 512
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.137.0
+    container_name: poc-otel-collector
+    profiles: ["tracing"]
+    <<: *poc-logging
+    restart: unless-stopped
+    depends_on:
+      kafka: {condition: service_healthy}
+      kafka-topics: {condition: service_completed_successfully}
+      tempo: {condition: service_healthy}
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    user: "0:0" # needs to own /var/lib/otelcol/queue on a fresh volume
+    volumes:
+      - ./poc/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      # The persistent sending queue. This volume is the whole point of the
+      # file_storage extension -- without it the queue is in-memory again.
+      - otel-queue:/var/lib/otelcol/queue
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    cpus: "0.5"
+    mem_limit: 512M
+    memswap_limit: 512M
+    pids_limit: 256
+
+  # --------------------------------------------------------- search (opt in)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.2
+    container_name: poc-elasticsearch
+    profiles: ["search"]
+    <<: *poc-logging
+    restart: unless-stopped
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?set ELASTIC_PASSWORD in docker/observability/.env.poc}
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      discovery.type: single-node
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "false"
+      xpack.security.transport.ssl.enabled: "false"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:$${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health | grep -q '\"status\"' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+    cpus: "1.5"
+    mem_limit: 1600M
+    memswap_limit: 1600M
+    pids_limit: 1024
+
+  # elastic-indexer, consumer group observability-elastic-indexer-v1.
+  # Vector's elasticsearch sink sets the document _id from event.id, which is
+  # the spec's idempotency rule: a replayed offset overwrites the same document
+  # instead of creating a second one.
+  vector-indexer:
+    image: timberio/vector:0.54.0-debian
+    container_name: poc-vector-indexer
+    profiles: ["search"]
+    <<: *poc-logging
+    restart: unless-stopped
+    depends_on:
+      kafka: {condition: service_healthy}
+      elasticsearch: {condition: service_healthy}
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      ES_ENDPOINT: http://elasticsearch:9200
+      ES_USER: elastic
+      ES_PASSWORD: ${ELASTIC_PASSWORD}
+      VECTOR_LOG: info
+    volumes:
+      - ./poc/vector/indexer.yaml:/etc/vector/vector.yaml:ro
+      - vector-indexer-data:/var/lib/vector
+    cpus: "0.5"
+    mem_limit: 256M
+    memswap_limit: 256M
+    pids_limit: 256
+
+  kibana:
+    image: kibana:9.1.2
+    container_name: poc-kibana
+    profiles: ["search"]
+    <<: *poc-logging
+    restart: unless-stopped
+    depends_on:
+      elasticsearch: {condition: service_healthy}
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD}
+      TELEMETRY_OPTIN: "false"
+    ports:
+      - "127.0.0.1:5601:5601"
+    cpus: "1.0"
+    mem_limit: 1G
+    memswap_limit: 1G
+    pids_limit: 512
+
+  # -------------------------------------------------------- grafana (opt in)
+  grafana:
+    image: grafana/grafana-oss:11.6.1
+    container_name: poc-grafana
+    profiles: ["grafana"]
+    <<: *poc-logging
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD in docker/observability/.env.poc}
+      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    volumes:
+      - ./poc/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    cpus: "0.5"
+    mem_limit: 512M
+    memswap_limit: 512M
+    pids_limit: 256
+
+volumes:
+  kafka-data:
+  minio-data:
+  clickhouse-data:
+  vector-agent-data:
+  vector-processor-data:
+  vector-archiver-data:
+  vector-indexer-data:
+  elasticsearch-data:
+  tempo-data:
+  otel-queue:
+  grafana-data:

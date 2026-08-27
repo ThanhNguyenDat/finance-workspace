@@ -1,0 +1,47 @@
+# Tempo for the POC, with the S3 backend the target diagram calls for.
+#
+# The production tempo-production.yaml still uses `backend: local`, so the
+# "TEMPO --> TS3" edge in the spec's tracing diagram is not implemented in
+# production yet. This config is the working shape of that edge, pointed at
+# MinIO instead of a cloud bucket.
+
+stream_over_http_enabled: true
+
+server:
+  http_listen_port: 3200
+  register_instrumentation: true
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+ingester:
+  # Small windows so a POC produces flushed blocks in minutes, not hours.
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 168h
+
+storage:
+  trace:
+    backend: s3
+    s3:
+      bucket: finance-traces
+      endpoint: minio:9000
+      access_key: ${S3_ACCESS_KEY}
+      secret_key: ${S3_SECRET_KEY}
+      insecure: true
+      forcepathstyle: true
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+usage_report:
+  reporting_enabled: false

@@ -1,0 +1,7 @@
+name: finance
+
+include:
+  - path: 
+    - redisinsight.yaml
+    - redis-singleton.yaml
+    - redis-cluster.yaml

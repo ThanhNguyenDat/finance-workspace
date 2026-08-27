@@ -1,0 +1,115 @@
+x-container-shared: &container-shared
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - finance
+  cpus: "1"
+  mem_limit: "1G"
+  deploy:
+    mode: global # custom only for node-exporter
+    resources:
+      limits:
+        memory: "1G"
+        cpus: "1"
+
+networks:
+  finance:
+    name: finance
+    external: true
+
+volumes:
+  finance-redis-singleton-data:
+    name: finance-redis-singleton-data
+    driver: local
+
+
+#############################################################################################
+###################################       ENVIRONMENT     ###################################
+#############################################################################################
+x-redis-environment-common: &redis-environment-common
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+  REDIS_MAXMEMORY: 3072mb
+
+
+#############################################################################################
+###################################       PROFILES        ###################################
+#############################################################################################
+x-redis-singleton-profiles-shared: &redis-singleton-profiles-shared
+  <<: *container-shared
+  profiles: ["singleton"]
+
+
+#############################################################################################
+###################################       CONTAINER       ###################################
+#############################################################################################
+# Singleton
+x-redis-container-singleton-shared: &redis-container-singleton-shared
+  <<: *redis-singleton-profiles-shared
+  image: redis:7.2.4
+  environment:
+    <<: *redis-environment-common
+  command:
+    - sh
+    - -c
+    - exec redis-server --requirepass "$${REDIS_PASSWORD}" --save 60 1 --maxmemory "$${REDIS_MAXMEMORY:-3072mb}" --maxmemory-policy noeviction
+  expose:
+    - 6379
+  healthcheck:
+    test: [ "CMD-SHELL", "redis-cli --no-auth-warning ping | grep -q PONG" ]
+    interval: 1s
+    timeout: 3s
+    retries: 5
+
+x-redis-singleton-container-exporter-shared: &redis-singleton-container-exporter-shared
+  <<: *redis-singleton-profiles-shared
+  image: bitnami/redis-exporter:latest
+  expose:
+    - 9121
+  healthcheck:
+    test:
+      - CMD
+      - /usr/bin/bash
+      - -c
+      - >-
+        exec 3<>/dev/tcp/127.0.0.1/9121;
+        printf 'GET /metrics HTTP/1.0\r\n\r\n' >&3;
+        read -r line <&3;
+        [[ $$line == *200* ]]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 15s
+
+#############################################################################################
+###################################       SERVICES        ###################################
+#############################################################################################
+services:
+  redis-singleton:
+    <<: *redis-container-singleton-shared
+    cpus: "2"
+    mem_limit: "4G"
+    container_name: finance-redis-singleton
+    hostname: finance-redis-singleton
+    volumes:
+      - finance-redis-singleton-data:/data
+    environment:
+      <<: *redis-environment-common
+      REDISCLI_AUTH: "$${REDIS_PASSWORD}"
+    ports:
+      - 6379:6379
+    deploy:
+      resources:
+        limits:
+          memory: "4G"
+          cpus: "2"
+  redis-singleton-exporter:
+    <<: *redis-singleton-container-exporter-shared
+    container_name: finance-redis-singleton-exporter
+    hostname: finance-redis-singleton-exporter
+    environment:
+      <<: *redis-environment-common
+      REDIS_ADDR: redis://finance-redis-singleton:6379

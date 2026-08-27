@@ -1,0 +1,3621 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Production runtime health for Finance applications and Finance Live Action workers. Runtime-specific panels appear when the selected application exposes those metrics.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Finance Live Action details",
+      "tooltip": "Open the dedicated per-instrument Finance Live Action dashboard",
+      "type": "link",
+      "url": "/d/finance-live-action-prod"
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 101,
+      "panels": [],
+      "title": "Overview",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 99.9
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "100 * avg(up{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker|finance-live-action\", appname=~\"$application\"})",
+          "legendFormat": "fleet availability",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Fleet Availability Now",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "avg(100 * rate(process_cpu_seconds_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "average CPU",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Average CPU / App",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 751619276
+              },
+              {
+                "color": "red",
+                "value": 966367641
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(process_resident_memory_bytes{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"})",
+          "legendFormat": "fleet RSS",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Fleet Resident Memory",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 2000
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(process_virtual_memory_bytes{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"})",
+          "legendFormat": "fleet VIRT",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Fleet Virtual Memory",
+      "type": "stat",
+      "description": "Current process virtual address space for the selected applications."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(process_open_fds{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"})",
+          "legendFormat": "fleet FDs",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Fleet Open FDs",
+      "type": "stat",
+      "description": "Current process file descriptor usage."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(changes(process_start_time_seconds{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[1h]))",
+          "legendFormat": "restarts",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Restarts / 1h",
+      "type": "stat",
+      "description": null
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 103,
+      "panels": [],
+      "title": "Reliability - SLA, SLO & Error Budget",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 99.5
+              },
+              {
+                "color": "green",
+                "value": 99.9
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 99,
+          "max": 100,
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Availability %",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 16,
+        "x": 0,
+        "y": 6
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "100 * (1 - (((sum(increase(finance_mw_http_requests_total{appname=~\"$application\", status=~\"5..|5xx|error\"}[30d])) or vector(0)) + (sum(increase(finance_mw_grpc_requests_total{appname=~\"$application\", code!~\"OK|Canceled|CANCELLED|200\"}[30d])) or vector(0)) + (sum(increase(http_requests_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\", status=~\"5..|5xx|error\"}[30d])) or vector(0)) + (sum(increase(grpc_server_handled_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\", grpc_code!~\"OK|Canceled|CANCELLED\"}[30d])) or vector(0))) / ((sum(increase(finance_mw_http_requests_total{appname=~\"$application\"}[30d])) or vector(0)) + (sum(increase(finance_mw_grpc_requests_total{appname=~\"$application\"}[30d])) or vector(0)) + (sum(increase(http_requests_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[30d])) or vector(0)) + (sum(increase(grpc_server_handled_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[30d])) or vector(0)))))",
+          "legendFormat": "actual request SLI",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "0 * avg(up{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}) + 99.9",
+          "legendFormat": "99.9% SLO target",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Availability SLA 30d (99.9%)",
+      "type": "timeseries",
+      "description": "Rolling 30-day request-success SLI compared with the 99.9% SLO target. Zero traffic is shown as No data instead of a misleading 100%."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "The service-level objective. This is intentionally a fixed target, not another measurement of availability.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 99
+              },
+              {
+                "color": "green",
+                "value": 99.5
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 95,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 8,
+        "x": 16,
+        "y": 6
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "0 * avg(up{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}) + 99.9",
+          "legendFormat": "SLO target",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Request Success SLO Target",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Remaining share of the 0.1% request-error budget. Below 25% requires attention; 0% means the SLO budget is exhausted.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 25
+              },
+              {
+                "color": "green",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 9
+      },
+      "id": 13,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "clamp_max(clamp_min((100 * (1 - (((sum(increase(finance_mw_http_requests_total{appname=~\"$application\", status=~\"5..|5xx|error\"}[30d])) or vector(0)) + (sum(increase(finance_mw_grpc_requests_total{appname=~\"$application\", code!~\"OK|Canceled|CANCELLED|200\"}[30d])) or vector(0)) + (sum(increase(http_requests_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\", status=~\"5..|5xx|error\"}[30d])) or vector(0)) + (sum(increase(grpc_server_handled_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\", grpc_code!~\"OK|Canceled|CANCELLED\"}[30d])) or vector(0))) / ((sum(increase(finance_mw_http_requests_total{appname=~\"$application\"}[30d])) or vector(0)) + (sum(increase(finance_mw_grpc_requests_total{appname=~\"$application\"}[30d])) or vector(0)) + (sum(increase(http_requests_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[30d])) or vector(0)) + (sum(increase(grpc_server_handled_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[30d])) or vector(0))))) - 99.9) * 1000, 0), 100)",
+          "legendFormat": "budget remaining",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Error Budget Remaining 30d",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 108,
+      "panels": [],
+      "title": "Traffic & Latency - RED Signals",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Completed HTTP and gRPC requests per second across Go and Python applications.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 14
+      },
+      "id": 24,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname) (rate(finance_mw_http_requests_total{appname=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} HTTP",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname) (rate(finance_mw_grpc_requests_total{appname=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} gRPC",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname) (rate(finance_live_action_worker_operations_total{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",operation=~\"grpc_.*\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} gRPC",
+          "range": true,
+          "refId": "E"
+        }
+      ],
+      "title": "Request Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Failed requests as a percentage of completed requests. This is the short-window RED error signal.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "unit": "percent",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 14
+      },
+      "id": 25,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "100 * ((sum(rate(finance_mw_http_requests_total{appname=~\"$application\",status=~\"5..|5xx|error\"}[$__rate_interval])) or vector(0)) + (sum(rate(finance_mw_grpc_requests_total{appname=~\"$application\",code!~\"OK|Canceled|CANCELLED|200\"}[$__rate_interval])) or vector(0)) + (sum(rate(http_requests_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\",status=~\"5..|5xx|error\"}[$__rate_interval])) or vector(0)) + (sum(rate(grpc_server_handled_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\",grpc_code!~\"OK|Canceled|CANCELLED\"}[$__rate_interval])) or vector(0)) + (sum(rate(finance_live_action_worker_operations_total{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",operation=~\"grpc_.*\",status=~\"error|stale\"}[$__rate_interval])) or vector(0))) / clamp_min((sum(rate(finance_mw_http_requests_total{appname=~\"$application\"}[$__rate_interval])) or vector(0)) + (sum(rate(finance_mw_grpc_requests_total{appname=~\"$application\"}[$__rate_interval])) or vector(0)) + (sum(rate(http_requests_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}[$__rate_interval])) or vector(0)) + (sum(rate(grpc_server_handled_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}[$__rate_interval])) or vector(0)) + (sum(rate(finance_live_action_worker_operations_total{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",operation=~\"grpc_.*\"}[$__rate_interval])) or vector(0)), 0.001)",
+          "legendFormat": "error %",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Request Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "User-facing HTTP duration. p50 shows normal experience; p95 and p99 expose tail latency.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 14
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.50, sum by (appname, le) (rate(finance_mw_http_request_duration_seconds_bucket{appname=~\"$application\"}[$__rate_interval])) or sum by (appname, le) (rate(http_request_duration_seconds_bucket{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}[$__rate_interval])))",
+          "legendFormat": "{{appname}} p50",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (appname, le) (rate(finance_mw_http_request_duration_seconds_bucket{appname=~\"$application\"}[$__rate_interval])) or sum by (appname, le) (rate(http_request_duration_seconds_bucket{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}[$__rate_interval])))",
+          "legendFormat": "{{appname}} p95",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (appname, le) (rate(finance_mw_http_request_duration_seconds_bucket{appname=~\"$application\"}[$__rate_interval])) or sum by (appname, le) (rate(http_request_duration_seconds_bucket{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}[$__rate_interval])))",
+          "legendFormat": "{{appname}} p99",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "HTTP / REST Latency Percentiles",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Concurrent requests in progress. Use with request rate and latency to distinguish healthy traffic from saturation.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 14
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname) (finance_mw_http_requests_in_flight{appname=~\"$application\"}) or sum by (appname) (http_requests_inprogress{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"})",
+          "legendFormat": "{{appname}} HTTP",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname) (finance_mw_grpc_requests_in_flight{appname=~\"$application\",type=\"unary\"})",
+          "legendFormat": "{{appname}} gRPC unary",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname) (finance_mw_grpc_requests_in_flight{appname=~\"$application\",type=\"stream\"})",
+          "legendFormat": "{{appname}} gRPC stream",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, operation) (finance_live_action_worker_operations_in_flight{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",operation=~\"grpc_.*\"})",
+          "legendFormat": "{{appname}} {{operation}}",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "Concurrency / Active Work",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "id": 111,
+      "panels": [],
+      "title": "Protocol & Workload Breakdown",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Finance Broker canonical gRPC Kline traffic compared with persistent market-ingest WebSocket traffic.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 22
+      },
+      "id": 30,
+      "description": "Compares the live Binance WebSocket receive rate with successful canonical Kafka publishes from finance-kline-ingest.",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(rate(finance_mw_service_operations_total{job=\"finance-kline-ingest\",appname=\"finance-kline-ingest\",appname=~\"$application\",service=\"kafka\",operation=\"publish_binance_message\",status=\"success\"}[$__rate_interval]))",
+          "legendFormat": "Kafka publish",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum(rate(finance_mw_websocket_messages_total{appname=\"finance-kline-ingest\",appname=~\"$application\",direction=\"received\"}[$__rate_interval]))",
+          "legendFormat": "WebSocket receive",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "WebSocket Receive vs Kafka Publish Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Completed unary gRPC calls per second.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 22
+      },
+      "id": 31,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, service, method) (rate(finance_mw_grpc_requests_total{appname=~\"$application\",type=\"unary\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} {{service}}/{{method}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, operation, status) (rate(finance_live_action_worker_operations_total{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",operation=\"grpc_get_metrics\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} {{operation}} {{status}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "gRPC Unary Call Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Completed gRPC streaming RPCs per second. Active long-lived streams are shown in Concurrency / Active Work.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 22
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, service, method) (rate(finance_mw_grpc_requests_total{appname=~\"$application\",type=\"stream\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} {{service}}/{{method}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, operation, status) (rate(finance_live_action_worker_operations_total{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",operation=~\"grpc_stream(_all)?_metrics\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} {{operation}} {{status}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "gRPC Stream Call Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Messages sent and received inside gRPC streams, separated from stream lifecycle calls.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 22
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, direction) (rate(finance_mw_grpc_stream_messages_total{appname=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} {{direction}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "gRPC Stream Message Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Current outbound WebSocket connections by provider and stream.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 29
+      },
+      "id": 34,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, provider) (finance_mw_websocket_connections_active{appname=~\"$application\"})",
+          "legendFormat": "{{appname}} {{provider}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "WebSocket Active Connections",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "WebSocket reconnect attempts per second, grouped by bounded reason labels.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 29
+      },
+      "id": 35,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, provider) (rate(finance_mw_websocket_reconnects_total{appname=~\"$application\"}[$__rate_interval])) or (0 * sum by (appname, provider) (finance_mw_websocket_connections_active{appname=~\"$application\"}))",
+          "legendFormat": "{{appname}} · {{provider}} · reconnects",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, provider, direction) (rate(finance_mw_websocket_messages_total{appname=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} {{provider}} messages {{direction}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "WebSocket Messages & Reconnects",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Long-running MW workers and ready Finance Live Action Rust workers currently active.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 29
+      },
+      "id": 36,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, worker) (finance_mw_worker_active{appname=~\"$application\"})",
+          "legendFormat": "{{appname}} {{worker}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, instrument, broker, market_type, base_asset, quote_asset) (finance_live_action_worker_ready{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "{{appname}} {{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Worker Active",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "MW worker lifecycle events and Finance Live Action Rust operation completion rates.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 29
+      },
+      "id": 37,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, worker, status) (rate(finance_mw_worker_runs_total{appname=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} {{worker}} {{status}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, operation, status) (rate(finance_live_action_worker_operations_total{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} {{operation}} {{status}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Worker Lifecycle Rate",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": 109,
+      "panels": [],
+      "title": "Process Resources - All Runtimes",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 38
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "100 * rate(process_cpu_seconds_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[$__rate_interval])",
+          "legendFormat": "CPU",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Process CPU Usage",
+      "type": "timeseries",
+      "description": "CPU consumed by each selected application process, independent of language runtime."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 38
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "process_resident_memory_bytes{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} RSS",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "process_virtual_memory_bytes{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} VIRT",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Process Memory",
+      "type": "timeseries",
+      "description": "Resident and virtual process memory, available for Go, Python, and Rust exporters."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 38
+      },
+      "id": 27,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "process_open_fds{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} open",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "process_max_fds{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} max",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "File Descriptors",
+      "type": "timeseries",
+      "description": "Open and maximum file descriptors per selected application process."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 46
+      },
+      "id": 110,
+      "panels": [],
+      "title": "Host Capacity & Network I/O",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 47
+      },
+      "id": 28,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "node_memory_SwapTotal_bytes{job=\"finance-node\"} - node_memory_SwapFree_bytes{job=\"finance-node\"}",
+          "legendFormat": "swap used",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "node_memory_SwapTotal_bytes{job=\"finance-node\"}",
+          "legendFormat": "swap total",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Host Swap Memory",
+      "type": "timeseries",
+      "description": "Host swap usage and capacity. This is a host-level signal shared by all Finance services."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 47
+      },
+      "id": 29,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(node_network_receive_bytes_total{job=\"finance-node\",device!~\"lo|veth.*|br-.*|docker.*\"}[$__rate_interval])",
+          "legendFormat": "{{device}} receive",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(node_network_transmit_bytes_total{job=\"finance-node\",device!~\"lo|veth.*|br-.*|docker.*\"}[$__rate_interval])",
+          "legendFormat": "{{device}} transmit",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Host Network I/O",
+      "type": "timeseries",
+      "description": "Host receive and transmit throughput, excluding loopback and container bridge devices."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      },
+      "id": 104,
+      "panels": [],
+      "title": "Runtime Detection",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Detects language runtime collectors. Rust has no universal runtime_info metric, so process metrics remain the baseline.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "count by (appname, __name__) ({job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\", __name__=~\"go_info|python_info|rust_info\"})",
+          "legendFormat": "{{appname}} {{__name__}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Detected Runtime Collectors",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "id": 102,
+      "panels": [],
+      "title": "Go Runtime",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 61
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "go_goroutines{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} goroutines",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "go_threads{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} OS threads",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Go Concurrency",
+      "type": "timeseries",
+      "description": "Go-specific goroutine and OS-thread concurrency."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 61
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(go_gc_duration_seconds_count{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[$__rate_interval])",
+          "legendFormat": "GC cycles / second",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "1000 * rate(go_gc_duration_seconds_sum{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[$__rate_interval]) / clamp_min(rate(go_gc_duration_seconds_count{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[$__rate_interval]), 0.001)",
+          "legendFormat": "average pause (ms)",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Go Garbage Collection",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Go heap allocation, in-use heap, reserved heap, and the next GC target.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 61
+      },
+      "id": 46,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "go_memstats_heap_alloc_bytes{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} allocated",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "go_memstats_heap_inuse_bytes{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} in use",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "go_memstats_heap_sys_bytes{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} reserved",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "editorMode": "code",
+          "expr": "go_memstats_next_gc_bytes{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} next GC target",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "Go Heap Memory",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 69
+      },
+      "id": 106,
+      "panels": [],
+      "title": "Python Runtime",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Python prometheus_client garbage collector counters by generation.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 70
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(python_gc_objects_collected_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[$__rate_interval])",
+          "legendFormat": "{{appname}} gen {{generation}} collected/s",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(python_gc_objects_uncollectable_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[$__rate_interval])",
+          "legendFormat": "{{appname}} gen {{generation}} uncollectable/s",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(python_gc_collections_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\", appname=~\"$application\"}[$__rate_interval])",
+          "legendFormat": "{{appname}} gen {{generation}} collections/s",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Python Garbage Collection",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "CPU consumed by processes that expose python_info.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 70
+      },
+      "id": 47,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "(100 * rate(process_cpu_seconds_total{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}[$__rate_interval])) and on(appname) python_info{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} CPU",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Python Process CPU",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Resident and virtual memory for processes that expose python_info.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 70
+      },
+      "id": 48,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "process_resident_memory_bytes{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"} and on(appname) python_info{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} RSS",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "process_virtual_memory_bytes{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"} and on(appname) python_info{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker\",appname=~\"$application\"}",
+          "legendFormat": "{{appname}} virtual",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Python Process Memory",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 78
+      },
+      "id": 107,
+      "panels": [],
+      "title": "Rust Runtime",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Rolling restart count derived from per-worker uptime resets. Uses only the canonical production scrape.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 79
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (instrument, broker, market_type, base_asset, quote_asset) (resets(finance_live_action_worker_uptime_seconds{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[1h]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}} · restarts",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Rust Worker Restarts / 1h",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Market-data ingestion and strategy-evaluation throughput handled by Rust workers.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 79
+      },
+      "id": 49,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (instrument, broker, market_type, base_asset, quote_asset) (rate(finance_live_action_market_data_events_total{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}} · market events / second",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (instrument, broker, market_type, base_asset, quote_asset) (rate(finance_live_action_strategy_evaluations_total{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}} · evaluations / second",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Rust Worker Throughput",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "P50 and P95 duration of Rust worker operations, aggregated across instruments from the canonical production scrape.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 87
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.50, sum by (le, operation) (rate(finance_live_action_worker_operation_duration_seconds_bucket{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval])))",
+          "legendFormat": "{{operation}} p50",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(finance_live_action_worker_operation_duration_seconds_bucket{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval])))",
+          "legendFormat": "{{operation}} p95",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Rust Worker Operation Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Current Rust worker operations and completed operation throughput from the canonical production scrape.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 87
+      },
+      "id": 50,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (operation) (finance_live_action_worker_operations_in_flight{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "{{operation}} in flight",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (operation, status) (rate(finance_live_action_worker_operations_total{job=\"finance-live-action\",monitor=\"finance-vmagent\",deploy_env=\"production\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval]))",
+          "legendFormat": "{{operation}} {{status}} / second",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Rust Worker Operations",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 95
+      },
+      "id": 112,
+      "panels": [],
+      "title": "Finance Live Action",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Number of healthy Finance Live Action scrape targets for the selected application.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 15
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 96
+      },
+      "id": 38,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(up{job=\"finance-live-action\",appname=~\"$application\"})",
+          "legendFormat": "targets",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Live Action Scrape Targets",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 15
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 96
+      },
+      "id": 39,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(finance_live_action_worker_ready{job=\"finance-live-action\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "ready",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Live Action Workers Ready",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 15
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 96
+      },
+      "id": 40,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(finance_live_action_grpc_serving{job=\"finance-live-action\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "serving",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Live Action gRPC Serving",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 15
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 96
+      },
+      "id": 41,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(finance_live_action_redis_available{job=\"finance-live-action\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "available",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Live Action Redis Available",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 100
+      },
+      "id": 42,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (instrument, broker, market_type, base_asset, quote_asset) (rate(finance_live_action_market_data_events_total{job=\"finance-live-action\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Live Action Market Data Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 100
+      },
+      "id": 43,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (instrument, broker, market_type, base_asset, quote_asset) (rate(finance_live_action_strategy_signals_total{job=\"finance-live-action\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Live Action Strategy Signal Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 100
+      },
+      "id": 44,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "time() - max by (instrument, broker, market_type, base_asset, quote_asset) (finance_live_action_market_data_last_processed_timestamp_seconds{job=\"finance-live-action\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"} > 0)",
+          "legendFormat": "transport · {{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "time() - max by (instrument, broker, market_type, base_asset, quote_asset) (finance_live_action_market_data_last_closed_primary_kline_timestamp_seconds{job=\"finance-live-action\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"} > 0)",
+          "legendFormat": "closed primary · {{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Live Action Market Data Freshness — Transport vs Closed Primary",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "End-to-end Kafka-to-checkpoint latency, split between open and exchange-finalized klines.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 108
+      },
+      "id": 45,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.50, sum by (le, finality) (rate(finance_live_action_kline_processing_duration_seconds_bucket{job=\"finance-live-action\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval])))",
+          "legendFormat": "p50 {{finality}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, finality) (rate(finance_live_action_kline_processing_duration_seconds_bucket{job=\"finance-live-action\",appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval])))",
+          "legendFormat": "p95 {{finality}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Live Action Kline Processing Latency — Open vs Closed",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 116
+      },
+      "id": 113,
+      "panels": [],
+      "title": "Finance MW Data Path Diagnostics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 1
+          },
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 117
+      },
+      "id": 52,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "100 * max by (appname, database) (finance_mw_db_connections{appname=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker\",state=\"in_use\"}) / clamp_min(max by (appname, database) (finance_mw_db_max_connections{appname=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker\"}), 1)",
+          "legendFormat": "{{appname}} {{database}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Database Pool Utilization",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 117
+      },
+      "id": 53,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (appname, database) (rate(finance_mw_db_wait_total{appname=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker\"}[$__rate_interval]))",
+          "legendFormat": "{{appname}} {{database}} waits/s",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Database Connection Wait Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 125
+      },
+      "id": 54,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max by (broker, market_type, base_asset, quote_asset, interval) (finance_mw_kline_ingest_gap_missing{appname=\"finance-kline-ingest\"})",
+          "legendFormat": "{{broker}} {{market_type}} {{base_asset}}/{{quote_asset}} {{interval}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Kline Persistence Gaps",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 133
+      },
+      "id": 55,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (broker, market_type, base_asset, quote_asset, interval, reason) (increase(finance_mw_kline_ingest_invalid_total{appname=\"finance-kline-ingest\"}[$__rate_interval]))",
+          "legendFormat": "{{broker}} {{market_type}} {{base_asset}}/{{quote_asset}} {{interval}} — {{reason}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Rejected Invalid Klines",
+      "type": "timeseries"
+    }
+  ],
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 41,
+  "tags": [
+    "finance",
+    "application",
+    "production",
+    "runtime"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "prometheus",
+          "value": "cfbt2db7nwwlce"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "allValue": "finance-.*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(up{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker|finance-live-action\",appname=~\"finance-.*\"}, appname)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Application",
+        "multi": true,
+        "name": "application",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=~\"finance-mw|finance-kline-ingest|finance-trading-worker|finance-english-worker|finance-social-worker|finance-tvl-worker|finance-broker|finance-live-action\",appname=~\"finance-.*\"}, appname)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(finance_live_action_worker_info{appname=~\"$application\"}, market_type)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Type",
+        "multi": true,
+        "name": "market_type",
+        "options": [],
+        "query": {
+          "query": "label_values(finance_live_action_worker_info{appname=~\"$application\"}, market_type)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(finance_live_action_worker_info{appname=~\"$application\",market_type=~\"$market_type\"}, broker)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Broker",
+        "multi": true,
+        "name": "broker",
+        "options": [],
+        "query": {
+          "query": "label_values(finance_live_action_worker_info{appname=~\"$application\",market_type=~\"$market_type\"}, broker)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(finance_live_action_worker_info{appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\"}, base_asset)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Base",
+        "multi": true,
+        "name": "base_asset",
+        "options": [],
+        "query": {
+          "query": "label_values(finance_live_action_worker_info{appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\"}, base_asset)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(finance_live_action_worker_info{appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\"}, quote_asset)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Quote",
+        "multi": true,
+        "name": "quote_asset",
+        "options": [],
+        "query": {
+          "query": "label_values(finance_live_action_worker_info{appname=~\"$application\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\"}, quote_asset)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Finance Application Production",
+  "uid": "finance-mw-prod",
+  "version": 18,
+  "weekStart": ""
+}

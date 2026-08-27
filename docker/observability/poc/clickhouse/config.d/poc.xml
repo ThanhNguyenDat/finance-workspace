@@ -1,0 +1,29 @@
+<clickhouse>
+    <!-- Mounting this directory SHADOWS the image's own
+         config.d/docker_related_config.xml, which is the only thing that makes
+         ClickHouse listen on anything but loopback. Without these three lines
+         the native port 9000 refuses every connection from another container
+         while the HTTP healthcheck on 8123 still passes from inside. -->
+    <listen_host>::</listen_host>
+    <listen_host>0.0.0.0</listen_host>
+    <listen_try>1</listen_try>
+
+    <!-- The container is capped at 1500M by compose. ClickHouse otherwise
+         sizes its caches from total HOST memory, not the cgroup limit, and
+         gets OOM-killed on a laptop. -->
+    <max_server_memory_usage>1000000000</max_server_memory_usage>
+    <mark_cache_size>268435456</mark_cache_size>
+    <uncompressed_cache_size>0</uncompressed_cache_size>
+
+    <logger>
+        <level>information</level>
+        <console>1</console>
+    </logger>
+
+    <!-- A Kafka engine table that cannot parse a message must not spin the
+         consumer. With handle_error_mode='stream' the bad record is routed to
+         the *_ingest_errors table instead. -->
+    <kafka>
+        <auto_offset_reset>earliest</auto_offset_reset>
+    </kafka>
+</clickhouse>

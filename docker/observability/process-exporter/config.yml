@@ -1,0 +1,6 @@
+process_names:
+  # Group by executable command, never by PID. This keeps cardinality bounded
+  # while still exposing the host's CPU, resident memory, and disk I/O owners.
+  - name: "{{.Comm}}"
+    cmdline:
+      - ".+"

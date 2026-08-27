@@ -1,0 +1,154 @@
+x-container-shared: &container-shared
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - finance
+
+networks:
+  finance:
+    name: finance
+    external: true
+
+volumes:
+  finance-kafka-node1:
+    name: finance-kafka-node1
+    driver: local
+  research-replay-redis-data:
+    name: finance-research-replay-redis-data
+    driver: local
+
+services:
+  finance-kafka-node1:
+    <<: *container-shared
+    image: bitnamilegacy/kafka:3.3.2
+    container_name: finance-kafka-node1
+    hostname: finance-kafka-node1
+    cpus: "1"
+    mem_limit: "1536M"
+    deploy:
+      resources:
+        limits:
+          memory: "1536M"
+          cpus: "1"
+    volumes:
+      - finance-kafka-node1:/bitnami
+    ports:
+      # Research access is available only through an authenticated SSH tunnel.
+      - "127.0.0.1:19092:9094"
+    environment:
+      # KRaft core
+      KAFKA_CFG_ENABLE_KRAFT: "true"
+      KAFKA_KRAFT_CLUSTER_ID: ySdconqiTDSXashszqKXlw
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_NODE_ID: 0
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@finance-kafka-node1:9093
+
+      # Internal clients keep using Docker DNS; EXTERNAL is loopback-only.
+      KAFKA_CFG_LISTENERS: CLIENT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: CLIENT://finance-kafka-node1:9092,EXTERNAL://localhost:19092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT:SASL_PLAINTEXT,CONTROLLER:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: CLIENT
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+
+      # Authentication and deny-by-default KRaft authorization.
+      KAFKA_CFG_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_CFG_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_CFG_SASL_MECHANISM_CONTROLLER_PROTOCOL: PLAIN
+      KAFKA_CLIENT_USERS: ${KAFKA_CLIENT_USERS:?KAFKA_CLIENT_USERS is required}
+      KAFKA_CLIENT_PASSWORDS: ${KAFKA_CLIENT_PASSWORDS:?KAFKA_CLIENT_PASSWORDS is required}
+      KAFKA_CFG_INTER_BROKER_USER: ${KAFKA_CFG_INTER_BROKER_USER:-interbroker_user}
+      KAFKA_CFG_INTER_BROKER_PASSWORD: ${KAFKA_CFG_INTER_BROKER_PASSWORD:?KAFKA_CFG_INTER_BROKER_PASSWORD is required}
+      KAFKA_CONTROLLER_USER: ${KAFKA_CONTROLLER_USER:-controller_user}
+      KAFKA_CONTROLLER_PASSWORD: ${KAFKA_CONTROLLER_PASSWORD:?KAFKA_CONTROLLER_PASSWORD is required}
+      KAFKA_CFG_AUTHORIZER_CLASS_NAME: org.apache.kafka.metadata.authorizer.StandardAuthorizer
+      KAFKA_CFG_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      KAFKA_CFG_SUPER_USERS: "User:finance-runtime;User:interbroker_user;User:controller_user"
+
+      # Retention and bounded runtime resources.
+      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
+      KAFKA_CFG_LOG_RETENTION_HOURS: 168
+      KAFKA_CFG_LOG_RETENTION_BYTES: 2147483648
+      KAFKA_CFG_LOG_SEGMENT_BYTES: 134217728
+      KAFKA_CFG_MESSAGE_MAX_BYTES: 10485760
+      KAFKA_CFG_REPLICA_FETCH_MAX_BYTES: 10485760
+      KAFKA_CFG_FETCH_MESSAGE_MAX_BYTES: 10485760
+      KAFKA_CFG_MAX_REQUEST_SIZE: 10485760
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - kafka-topics.sh --bootstrap-server localhost:9092 --command-config /opt/bitnami/kafka/config/consumer.properties --list >/dev/null 2>&1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  kafka-research-acl-init:
+    image: bitnamilegacy/kafka:3.3.2
+    restart: "no"
+    depends_on:
+      finance-kafka-node1:
+        condition: service_healthy
+    networks:
+      - finance
+    cpus: "0.25"
+    mem_limit: "256M"
+    deploy:
+      resources:
+        limits:
+          memory: "256M"
+          cpus: "0.25"
+    environment:
+      KAFKA_RUNTIME_PASSWORD: ${KAFKA_RUNTIME_PASSWORD:?KAFKA_RUNTIME_PASSWORD is required}
+    entrypoint:
+      - bash
+      - -ec
+    command:
+      - |
+        umask 077
+        printf '%s\n' \
+          'security.protocol=SASL_PLAINTEXT' \
+          'sasl.mechanism=PLAIN' \
+          "sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username=\"finance-runtime\" password=\"$${KAFKA_RUNTIME_PASSWORD}\";" \
+          >/tmp/admin.properties
+        kafka-acls.sh --bootstrap-server finance-kafka-node1:9092 \
+          --command-config /tmp/admin.properties --add \
+          --allow-principal User:research-replay-ro \
+          --operation READ --operation DESCRIBE \
+          --topic market.kline.v2 --resource-pattern-type prefixed
+        kafka-acls.sh --bootstrap-server finance-kafka-node1:9092 \
+          --command-config /tmp/admin.properties --add \
+          --allow-principal User:research-replay-ro \
+          --operation READ --group research-replay- \
+          --resource-pattern-type prefixed
+
+  research-replay-redis:
+    <<: *container-shared
+    image: redis:7.2.4
+    container_name: finance-research-replay-redis
+    cpus: "0.25"
+    mem_limit: "256M"
+    deploy:
+      resources:
+        limits:
+          memory: "256M"
+          cpus: "0.25"
+    command:
+      - sh
+      - -ec
+      - exec redis-server --appendonly yes --requirepass "$$RESEARCH_REDIS_PASSWORD"
+    environment:
+      RESEARCH_REDIS_PASSWORD: ${RESEARCH_REDIS_PASSWORD:?RESEARCH_REDIS_PASSWORD is required}
+      REDISCLI_AUTH: "$${RESEARCH_REDIS_PASSWORD}"
+    volumes:
+      - research-replay-redis-data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - redis-cli --no-auth-warning ping | grep -q PONG
+      interval: 10s
+      timeout: 5s
+      retries: 5

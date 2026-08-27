@@ -1,0 +1,51 @@
+x-container-shared: &container-shared
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - finance
+  cpus: "1"
+  mem_limit: "512M"
+  deploy:
+    mode: global # custom only for node-exporter
+    resources:
+      limits:
+        memory: "512M"
+        cpus: "1"
+
+networks:
+  finance:
+    name: finance
+    external: true
+
+services:
+  kafka-ui:
+    <<: *container-shared
+    image: provectuslabs/kafka-ui:latest
+    container_name: finance-kafka-ui
+    hostname: finance-kafka-ui
+    ports:
+      - "8083:8080"
+    environment:
+      DYNAMIC_CONFIG_ENABLED: 'true'
+      AUTH_TYPE: "LOGIN_FORM"
+      SPRING_SECURITY_USER_NAME: "admin"
+      SPRING_SECURITY_USER_PASSWORD: ${KAFKA_UI_PASSWORD:?KAFKA_UI_PASSWORD is required}
+
+      KAFKA_CLUSTERS_0_NAME: system-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: finance-kafka-node1:9092
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM: PLAIN
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: >
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="${KAFKA_CLIENT_USERNAME:?KAFKA_CLIENT_USERNAME is required}"
+        password="${KAFKA_CLIENT_PASSWORDS:?KAFKA_CLIENT_PASSWORDS is required}";
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

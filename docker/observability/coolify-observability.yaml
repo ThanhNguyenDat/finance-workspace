@@ -1,0 +1,666 @@
+# Production source for the single Coolify service `finance-observability`
+# (`vc0gwk040csg4cwg88000k48`). Metrics, traces, logs, dashboards, and
+# host exporters share one deploy/redeploy lifecycle. Do not run any former
+# split Coolify Compose source as a second owner.
+#
+# Historical data remains in the exact volumes created by the retired split
+# resources. These absolute bind mounts are intentional. Do not delete or
+# rename the legacy-named Docker volumes until a separately verified data
+# migration moves them to canonical host paths. `/data/es/filebeat/data` must
+# exist and be owned by uid/gid 1000 so registry offsets survive redeploys.
+x-kibana-secure-entrypoint: &kibana-secure-entrypoint |
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  # The Kibana Docker entrypoint converts setting-shaped environment variables
+  # into command-line flags. Keep credentials and encryption keys out of argv by
+  # moving them to a private, ephemeral Kibana keystore before starting Kibana.
+  readonly source_config_dir="$${FINANCE_KIBANA_SOURCE_CONFIG_DIR:-/usr/share/kibana/config}"
+  readonly runtime_config_dir="$${FINANCE_KIBANA_RUNTIME_CONFIG_DIR:-/tmp/finance-kibana-config}"
+  readonly kibana_bin_dir="$${FINANCE_KIBANA_BIN_DIR:-/usr/share/kibana/bin}"
+  readonly kibana_docker_entrypoint="$${FINANCE_KIBANA_DOCKER_ENTRYPOINT:-/usr/local/bin/kibana-docker}"
+
+  if [[ "$$runtime_config_dir" != "/tmp/finance-kibana-config" ]]; then
+    printf 'Refusing unsafe Kibana runtime config directory\n' >&2
+    exit 2
+  fi
+
+  required_secret_names=(
+    FINANCE_KIBANA_ELASTICSEARCH_PASSWORD
+    FINANCE_KIBANA_SECURITY_ENCRYPTION_KEY
+    FINANCE_KIBANA_REPORTING_ENCRYPTION_KEY
+    FINANCE_KIBANA_SAVED_OBJECTS_ENCRYPTION_KEY
+  )
+
+  for secret_name in "$${required_secret_names[@]}"; do
+    secret_value="$${!secret_name:-}"
+    if [[ $${#secret_value} -lt 32 || ! "$$secret_value" =~ ^[A-Za-z0-9_-]+$ ]]; then
+      printf 'Kibana secret %s must be at least 32 safe characters\n' \
+        "$$secret_name" >&2
+      exit 2
+    fi
+  done
+
+  if [[ -n "$${KIBANA_DECRYPTION_ONLY_KEY:-}" && \
+    ( $${#KIBANA_DECRYPTION_ONLY_KEY} -lt 32 || \
+      ! "$$KIBANA_DECRYPTION_ONLY_KEY" =~ ^[A-Za-z0-9_-]+$ ) ]]; then
+    printf 'KIBANA_DECRYPTION_ONLY_KEY must be empty or at least 32 safe characters\n' >&2
+    exit 2
+  fi
+
+  umask 077
+  rm -rf -- "$$runtime_config_dir"
+  install -d -m 700 "$$runtime_config_dir"
+  if [[ -f "$$source_config_dir/kibana.yml" ]]; then
+    install -m 600 "$$source_config_dir/kibana.yml" \
+      "$$runtime_config_dir/kibana.yml"
+  else
+    : >"$$runtime_config_dir/kibana.yml"
+    chmod 600 "$$runtime_config_dir/kibana.yml"
+  fi
+
+  if [[ -n "$${KIBANA_DECRYPTION_ONLY_KEY:-}" ]]; then
+    printf '\nxpack.encryptedSavedObjects.keyRotation.decryptionOnlyKeys: ["%s"]\n' \
+      "$$KIBANA_DECRYPTION_ONLY_KEY" >>"$$runtime_config_dir/kibana.yml"
+  fi
+
+  export KBN_PATH_CONF="$$runtime_config_dir"
+  "$$kibana_bin_dir/kibana-keystore" create >/dev/null
+  printf '%s' "$$FINANCE_KIBANA_ELASTICSEARCH_PASSWORD" |
+    "$$kibana_bin_dir/kibana-keystore" add --stdin --force elasticsearch.password >/dev/null
+  printf '%s' "$$FINANCE_KIBANA_SECURITY_ENCRYPTION_KEY" |
+    "$$kibana_bin_dir/kibana-keystore" add --stdin --force xpack.security.encryptionKey >/dev/null
+  printf '%s' "$$FINANCE_KIBANA_REPORTING_ENCRYPTION_KEY" |
+    "$$kibana_bin_dir/kibana-keystore" add --stdin --force xpack.reporting.encryptionKey >/dev/null
+  printf '%s' "$$FINANCE_KIBANA_SAVED_OBJECTS_ENCRYPTION_KEY" |
+    "$$kibana_bin_dir/kibana-keystore" add --stdin --force \
+      xpack.encryptedSavedObjects.encryptionKey >/dev/null
+  chmod 600 "$$runtime_config_dir/kibana.yml" "$$runtime_config_dir/kibana.keystore"
+
+  unset FINANCE_KIBANA_ELASTICSEARCH_PASSWORD FINANCE_KIBANA_SECURITY_ENCRYPTION_KEY \
+    FINANCE_KIBANA_REPORTING_ENCRYPTION_KEY FINANCE_KIBANA_SAVED_OBJECTS_ENCRYPTION_KEY \
+    KIBANA_DECRYPTION_ONLY_KEY FINANCE_KIBANA_SOURCE_CONFIG_DIR \
+    FINANCE_KIBANA_RUNTIME_CONFIG_DIR FINANCE_KIBANA_BIN_DIR \
+    FINANCE_KIBANA_DOCKER_ENTRYPOINT secret_name secret_value
+
+  exec "$$kibana_docker_entrypoint"
+
+services:
+  grafana:
+    image: grafana/grafana-oss@sha256:ba93c9d192e58b23e064c7f501d453426ccf4a85065bf25b705ab1e98602bfb1
+    environment:
+    - SERVICE_URL_GRAFANA_3000
+    - GF_SERVER_ROOT_URL=${SERVICE_URL_GRAFANA}
+    - GF_SERVER_DOMAIN=${SERVICE_URL_GRAFANA}
+    - GF_SECURITY_ADMIN_PASSWORD=${SERVICE_PASSWORD_GRAFANA}
+    - GF_DATABASE_TYPE=postgres
+    - GF_DATABASE_HOST=postgresql
+    - GF_DATABASE_USER=$SERVICE_USER_POSTGRES
+    - GF_DATABASE_PASSWORD=$SERVICE_PASSWORD_POSTGRES
+    - GF_DATABASE_NAME=${POSTGRES_DB:-grafana}
+    volumes:
+    - /var/lib/docker/volumes/vc0gwk040csg4cwg88000k48_grafana-data/_data:/var/lib/grafana
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://127.0.0.1:3000/api/health
+      interval: 5s
+      timeout: 20s
+      retries: 10
+    depends_on:
+    - postgresql
+    labels:
+    - traefik.docker.network=vc0gwk040csg4cwg88000k48
+    networks:
+      finance: {}
+      default: {}
+    cpus: '1.0'
+    mem_limit: 512m
+    memswap_limit: 512m
+    pids_limit: 256
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512m
+          pids: 256
+  postgresql:
+    image: postgres@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6
+    volumes:
+    - /var/lib/docker/volumes/vc0gwk040csg4cwg88000k48_postgresql-data/_data:/var/lib/postgresql/data
+    environment:
+    - POSTGRES_USER=$SERVICE_USER_POSTGRES
+    - POSTGRES_PASSWORD=$SERVICE_PASSWORD_POSTGRES
+    - POSTGRES_DB=${POSTGRES_DB:-grafana}
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+      interval: 5s
+      timeout: 20s
+      retries: 10
+    cpus: '1.0'
+    mem_limit: 2g
+    memswap_limit: 2g
+    pids_limit: 512
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2g
+          pids: 512
+    networks:
+      default: {}
+      finance: {}
+  victoriametrics:
+    image: victoriametrics/victoria-metrics@sha256:2ec9b49446cb36cff751d2920de34f3fd80e9d90ea460ce469c1e57878bff55a
+    restart: unless-stopped
+    environment:
+    - VM_httpAuth_username=${VM_HTTP_AUTH_USERNAME:-finance-monitor}
+    - VM_httpAuth_password=${VM_HTTP_AUTH_PASSWORD:?VM_HTTP_AUTH_PASSWORD is required}
+    cpus: '1.0'
+    mem_limit: 512M
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+          pids: 256
+    command:
+    - --envflag.enable
+    - --envflag.prefix=VM_
+    - --retentionPeriod=3
+    - --storageDataPath=/storage
+    volumes:
+    - /var/lib/docker/volumes/u0s884skc4cgwoss8s0c8o0s_victoriametricsdata/_data:/storage
+    expose:
+    - '8428'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+      finance:
+        aliases:
+        - finance-victoriametrics
+      default: {}
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - -q
+      - --spider
+      - http://127.0.0.1:8428/health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    memswap_limit: 512M
+    pids_limit: 256
+  kafka-exporter:
+    image: danielqsj/kafka-exporter@sha256:4150e46b2e9697ac30e4be8de03ec1704b4bdc7037577b83b8d35a32be298c16
+    restart: unless-stopped
+    cpus: '0.5'
+    mem_limit: 128M
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+          pids: 128
+    command:
+    - --kafka.server=finance-kafka-node1:9092
+    - --kafka.version=3.3.2
+    - --sasl.enabled
+    - --sasl.mechanism=plain
+    - --sasl.username=${KAFKA_EXPORTER_USERNAME:?KAFKA_EXPORTER_USERNAME is required}
+    - --sasl.password=${KAFKA_EXPORTER_PASSWORD}
+    - --kafka.labels=finance-production
+    - --topic.filter=^$
+    - --group.filter=.*
+    - --no-offset.show-all
+    expose:
+    - '9308'
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - -q
+      - --spider
+      - http://127.0.0.1:9308/healthz
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+      finance:
+        aliases:
+        - finance-kafka-exporter
+      default: {}
+    memswap_limit: 128M
+    pids_limit: 128
+  node-exporter:
+    image: quay.io/prometheus/node-exporter@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
+    restart: unless-stopped
+    cpus: '0.5'
+    mem_limit: 128M
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+          pids: 128
+    pid: host
+    volumes:
+    - /proc:/host/proc:ro
+    - /run/udev/data:/run/udev/data:ro
+    - /sys:/host/sys:ro
+    - /:/host:ro,rslave
+    command:
+    - --path.rootfs=/host
+    - --path.procfs=/host/proc
+    - --path.sysfs=/host/sys
+    - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($$|/)
+    expose:
+    - '9100'
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - -q
+      - --spider
+      - http://127.0.0.1:9100/
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+      finance:
+        aliases:
+        - finance-node-exporter-prometheus
+      default: {}
+    memswap_limit: 128M
+    pids_limit: 128
+  process-exporter:
+    image: ncabatoff/process-exporter@sha256:bc2363ff7e05ada1b2a694f06c43dc824dc26cd6e487b5d36b66b1a40df4e842
+    restart: unless-stopped
+    cpus: '0.25'
+    mem_limit: 128M
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+          pids: 128
+    user: 0:0
+    pid: host
+    read_only: true
+    security_opt:
+    - no-new-privileges:true
+    volumes:
+    - /proc:/host/proc:ro
+    - /opt/finance-monitor/process-exporter/config.yml:/config/config.yml:ro
+    command:
+    - --procfs
+    - /host/proc
+    - -config.path
+    - /config/config.yml
+    - -threads=false
+    - -remove-empty-groups
+    expose:
+    - '9256'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+      finance:
+        aliases:
+        - finance-process-exporter
+      default: {}
+    healthcheck:
+      test:
+      - CMD
+      - /bin/process-exporter
+      - -version
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    memswap_limit: 128M
+    pids_limit: 128
+  vmagent:
+    image: victoriametrics/vmagent@sha256:2a97e8c8b3f659dd22331826673a81f71bf8079a392433c7a809df463b4df385
+    restart: unless-stopped
+    environment:
+    - VM_remoteWrite_basicAuth_username=${VM_HTTP_AUTH_USERNAME:-finance-monitor}
+    - VM_remoteWrite_basicAuth_password=${VM_REMOTE_WRITE_PASSWORD:?VM_REMOTE_WRITE_PASSWORD is required}
+    cpus: '0.5'
+    mem_limit: 256M
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+          pids: 256
+    depends_on:
+      kafka-exporter:
+        condition: service_healthy
+      node-exporter:
+        condition: service_healthy
+    volumes:
+    - /opt/finance-monitor/vmagent/scrape.yml:/etc/vmagent/scrape.yml:ro
+    - /var/lib/docker/volumes/eymjp5p32qjrv09tc4xzs6vm_finance-vmagent-data/_data:/vmagent-remotewrite-data
+    command:
+    - -envflag.enable
+    - -envflag.prefix=VM_
+    - -promscrape.config=/etc/vmagent/scrape.yml
+    - -remoteWrite.url=http://victoriametrics:8428/api/v1/write
+    - -remoteWrite.tmpDataPath=/vmagent-remotewrite-data
+    - -httpListenAddr=:8429
+    expose:
+    - '8429'
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - -q
+      - --spider
+      - http://127.0.0.1:8429/health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+      finance:
+        aliases:
+        - finance-vmagent
+      default: {}
+    memswap_limit: 256M
+    pids_limit: 256
+  tempo:
+    image: grafana/tempo@sha256:cda87c212d8c584dc0b89e337e7ed648a5100feb657e5d528480ee4fa03dbbe3
+    restart: unless-stopped
+    cpus: '1.0'
+    # Raised from 1G (2026-08-25, production-incident-debugging skill,
+    # trace.id fe76ea4c7f5488ab3c097e3150658050): found continuously
+    # OOM-killing under 1G (docker events showed repeated oom/die/start
+    # cycles, RestartCount climbing ~3-4/min) while reloading a ~6000-block
+    # compaction backlog on every restart, leaving its live-store partition
+    # ring perpetually unable to converge (`FindTraceByID` failed with
+    # "empty ring" on every attempt) and the otel-collector's trace exporter
+    # continuously refused (`connection refused` to :4317, retried every
+    # ~1-2s) -- tracing was fully non-functional for however long this had
+    # been running. Host has ~6.8GiB available at the time of this change;
+    # 2G is a conservative first step, not a tuned final value.
+    mem_limit: 2G
+    memswap_limit: 2G
+    pids_limit: 512
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+          pids: 512
+    command:
+    - -target=all
+    - -config.file=/etc/tempo/tempo.yaml
+    volumes:
+    - /opt/finance-monitor/tracing/tempo.yaml:/etc/tempo/tempo.yaml:ro
+    - /data/monitor/tempo:/var/tempo
+    expose:
+    - '3200'
+    - '4317'
+    - '4318'
+    healthcheck:
+      test:
+      - CMD
+      - /tempo
+      - -config.file=/etc/tempo/tempo.yaml
+      - -config.verify=true
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+      finance:
+        aliases:
+        - finance-tempo
+      default: {}
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib@sha256:1f2c54a30e713fac6b3ae77a1ec84010c2007e29ced8ec666214fc2f6739c1cc
+    restart: unless-stopped
+    cpus: '0.5'
+    mem_limit: 512M
+    memswap_limit: 512M
+    pids_limit: 256
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+          pids: 256
+    depends_on:
+      tempo:
+        condition: service_healthy
+    command:
+    - --config=/etc/otelcol-contrib/config.yaml
+    volumes:
+    - /opt/finance-monitor/tracing/collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    expose:
+    - '4317'
+    - '4318'
+    - '8888'
+    - '13133'
+    healthcheck:
+      test:
+      - CMD
+      - /otelcol-contrib
+      - validate
+      - --config=/etc/otelcol-contrib/config.yaml
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+      finance:
+        aliases:
+        - finance-otel-collector
+        - otel-collector
+      default: {}
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.2
+    hostname: finance-elasticsearch
+    restart: unless-stopped
+    environment:
+    - ELASTIC_PASSWORD=${SERVICE_PASSWORD_ELASTICSEARCH}
+    - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    - discovery.type=single-node
+    - bootstrap.memory_lock=true
+    - xpack.security.enabled=true
+    - xpack.security.http.ssl.enabled=false
+    - xpack.security.transport.ssl.enabled=false
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /var/lib/docker/volumes/hk8c084wkgwso8ks8ko4g0o8_elasticsearch-data/_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - printf 'user = "elastic:%s"\n' "$${SERVICE_PASSWORD_ELASTICSEARCH}" | curl --config - --silent --fail http://localhost:9200/_cluster/health >/dev/null || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 24
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
+          pids: 1024
+    networks:
+      default: {}
+      finance: {}
+    cpus: '2'
+    mem_limit: 2G
+    memswap_limit: 2G
+    pids_limit: 1024
+  kibana:
+    image: kibana:9.1.2
+    hostname: finance-kibana
+    restart: unless-stopped
+    entrypoint:
+    - /usr/bin/env
+    - bash
+    - -c
+    - *kibana-secure-entrypoint
+    environment:
+    - SERVICE_URL_KIBANA_5601
+    - SERVER_NAME=${SERVICE_URL_KIBANA}
+    - SERVER_PUBLICBASEURL=${SERVICE_URL_KIBANA}
+    - ELASTICSEARCH_HOSTS=http://finance-elasticsearch:9200
+    - ELASTICSEARCH_USERNAME=kibana_system
+    - FINANCE_KIBANA_ELASTICSEARCH_PASSWORD=${SERVICE_PASSWORD_KIBANA}
+    - FINANCE_KIBANA_SECURITY_ENCRYPTION_KEY=${SERVICE_PASSWORD_XPACKSECURITY}
+    - FINANCE_KIBANA_REPORTING_ENCRYPTION_KEY=${SERVICE_PASSWORD_XPACKREPORTING}
+    - FINANCE_KIBANA_SAVED_OBJECTS_ENCRYPTION_KEY=${SERVICE_PASSWORD_XPACKENCRYPTEDSAVEDOBJECTS}
+    - KIBANA_DECRYPTION_ONLY_KEY=${KIBANA_DECRYPTION_ONLY_KEY:-}
+    - TELEMETRY_OPTIN=${TELEMETRY_OPTIN:-false}
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /var/lib/docker/volumes/hk8c084wkgwso8ks8ko4g0o8_kibana-data/_data:/usr/share/kibana/data
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -s http://localhost:5601/api/status | grep -q '"level":"available"' || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+          pids: 512
+    networks:
+      default: {}
+      finance: {}
+    cpus: '1'
+    mem_limit: 1G
+    memswap_limit: 1G
+    pids_limit: 512
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.2
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    exclude_from_hc: true
+    environment:
+    - ELASTIC_PASSWORD=${SERVICE_PASSWORD_ELASTICSEARCH}
+    - KIBANA_PASSWORD=${SERVICE_PASSWORD_KIBANA}
+    entrypoint:
+    - sh
+    - -c
+    - "set -eu\numask 077\nauth_config=/tmp/elasticsearch-auth.curl\npassword_body=/tmp/kibana-password.json\ncleanup() {\n  rm -f \"$${auth_config}\" \"$${password_body}\"\n}\ntrap cleanup EXIT\nprintf 'user = \"elastic:%s\"\\n' \"$${ELASTIC_PASSWORD}\" > \"$${auth_config}\"\nuntil curl --config \"$${auth_config}\" --silent --fail http://elasticsearch:9200/_cluster/health >/dev/null; do\n  sleep 2\ndone\nprintf '{\"password\":\"%s\"}' \"$${KIBANA_PASSWORD}\" > \"$${password_body}\"\ncurl --config \"$${auth_config}\" --silent --fail --request POST \\\n  --header \"Content-Type: application/json\" \\\n  --data-binary \"@$${password_body}\" \\\n  http://elasticsearch:9200/_security/user/kibana_system/_password >/dev/null\n"
+    restart: 'no'
+    networks:
+      default: {}
+      finance: {}
+    cpus: '0.5'
+    mem_limit: 256M
+    memswap_limit: 256M
+    pids_limit: 128
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+          pids: 128
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:9.1.2
+    restart: unless-stopped
+    command:
+    - -e
+    - -c
+    - /usr/share/filebeat/filebeat.yml
+    environment:
+    - ELASTIC_PASSWORD=${SERVICE_PASSWORD_ELASTICSEARCH}
+    volumes:
+    - /data/es/filebeat/config/config.yml:/usr/share/filebeat/filebeat.yml:ro
+    - /data/es/filebeat/config/ilm-policy.json:/usr/share/filebeat/ilm-policy.json:ro
+    - /data/log:/data/log:ro
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    - /data/es/filebeat/data:/usr/share/filebeat/data
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - filebeat test output -c /usr/share/filebeat/filebeat.yml >/dev/null
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+          pids: 512
+    networks:
+      default: {}
+      finance: {}
+    cpus: '1'
+    mem_limit: 1G
+    memswap_limit: 1G
+    pids_limit: 512
+    user: 0:1000
+    read_only: true
+    cap_drop:
+    - ALL
+    security_opt:
+    - no-new-privileges:true
+networks:
+  default: {}
+  finance:
+    name: finance
+    external: true

@@ -1,0 +1,43 @@
+{
+  "index_patterns": [
+    "app-logs"
+  ],
+  "data_stream": {},
+  "priority": 500,
+  "template": {
+    "settings": {
+      "index.lifecycle.name": "finance-logs-7d",
+      "index.lifecycle.prefer_ilm": true,
+      "index.codec": "best_compression"
+    },
+    "mappings": {
+      "dynamic": true,
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "message": {
+          "type": "match_only_text"
+        },
+        "service.name": {
+          "type": "keyword"
+        },
+        "service.environment": {
+          "type": "keyword"
+        },
+        "event.dataset": {
+          "type": "keyword"
+        },
+        "log.level": {
+          "type": "keyword"
+        },
+        "trace.id": {
+          "type": "keyword"
+        }
+      }
+    }
+  },
+  "_meta": {
+    "description": "Finance application JSONL logs data stream template"
+  }
+}

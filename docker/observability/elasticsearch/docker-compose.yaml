@@ -1,0 +1,7 @@
+name: finance
+
+include:
+  - path: 
+    - es.yaml
+    - kibana.yaml
+    - filebeat.yaml

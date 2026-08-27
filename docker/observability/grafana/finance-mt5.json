@@ -1,0 +1,121 @@
+{
+  "annotations": {"list": []},
+  "description": "Production MT5 adapter availability, private gRPC traffic, terminal reachability, canonical market-data freshness, process resources, and immutable build identity.",
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "max(up{job=\"finance-mt5\"})", "legendFormat": "scrape", "refId": "A"}],
+      "title": "MT5 Scrape Up",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "max(mt5_grpc_server_ready{job=\"finance-mt5\"})", "legendFormat": "ready", "refId": "A"}],
+      "title": "gRPC Server Ready",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "max(mt5_terminal_available{job=\"finance-mt5\"})", "legendFormat": "terminal", "refId": "A"}],
+      "title": "Terminal Available",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "s", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 600}, {"color": "red", "value": 900}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "options": {"colorMode": "background", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "time() - (max(mt5_market_data_last_success_timestamp_seconds{job=\"finance-mt5\"}) or max(process_start_time_seconds{job=\"finance-mt5\"}))", "legendFormat": "age", "refId": "A"}],
+      "title": "Last Market Data Success Age",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 4},
+      "id": 5,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by (service, method) (rate(mt5_grpc_requests_total{job=\"finance-mt5\"}[$__rate_interval])) or vector(0)", "legendFormat": "{{service}} · {{method}}", "refId": "A"}],
+      "title": "gRPC Request Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 4},
+      "id": 6,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by (service, method, code) (rate(mt5_grpc_requests_total{job=\"finance-mt5\",code!=\"OK\"}[$__rate_interval])) or vector(0)", "legendFormat": "{{service}} · {{method}} · {{code}}", "refId": "A"}],
+      "title": "gRPC Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 4},
+      "id": 7,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le, service, method) (rate(mt5_grpc_request_duration_seconds_bucket{job=\"finance-mt5\"}[$__rate_interval]))) or vector(0)", "legendFormat": "{{service}} · {{method}}", "refId": "A"}],
+      "title": "gRPC p95 Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 12},
+      "id": 8,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by (base_asset, quote_asset, interval) (rate(mt5_market_data_klines_total{job=\"finance-mt5\"}[$__rate_interval])) or vector(0)", "legendFormat": "{{base_asset}}/{{quote_asset}} · {{interval}}", "refId": "A"}],
+      "title": "Klines Returned",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 12},
+      "id": 9,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "100 * rate(process_cpu_seconds_total{job=\"finance-mt5\"}[$__rate_interval])", "legendFormat": "CPU %", "refId": "A"},
+        {"expr": "process_resident_memory_bytes{job=\"finance-mt5\"} / 1024 / 1024", "legendFormat": "RSS MiB", "refId": "B"}
+      ],
+      "title": "Process CPU and Memory",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
+      "id": 10,
+      "options": {"showHeader": true},
+      "targets": [{"expr": "mt5_info{job=\"finance-mt5\"}", "format": "table", "instant": true, "legendFormat": "identity", "refId": "A"}],
+      "title": "Build Identity",
+      "transformations": [{"id": "labelsToFields", "options": {}}],
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["finance", "production", "mt5", "exness"],
+  "templating": {"list": [{"name": "DS_PROMETHEUS", "label": "Datasource", "type": "datasource", "query": "prometheus", "refresh": 1}]},
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "title": "Finance MT5 Production",
+  "uid": "finance-mt5-prod",
+  "version": 1
+}

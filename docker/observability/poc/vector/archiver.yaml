@@ -1,0 +1,98 @@
+# s3-archiver (spec: "S3 archiver").
+#
+# Consumes observability.logs.canonical.v1 as consumer group
+# observability-s3-archiver-v1 and writes immutable compressed objects
+# partitioned by environment / service / UTC date / hour. Independent of the
+# search and ClickHouse branches: an Elasticsearch or ClickHouse outage cannot
+# stall this consumer group, and an S3 outage cannot stall theirs.
+
+data_dir: /var/lib/vector
+
+api:
+  enabled: false
+
+sources:
+  canonical:
+    type: kafka
+    bootstrap_servers: ${KAFKA_BOOTSTRAP:-kafka:9092}
+    group_id: observability-s3-archiver-v1
+    topics: ["observability.logs.canonical.v1"]
+    auto_offset_reset: earliest
+    decoding:
+      codec: json
+    topic_key: kafka_topic
+    partition_key: kafka_partition
+    offset_key: kafka_offset
+
+  internal:
+    type: internal_metrics
+    scrape_interval_secs: 15
+
+transforms:
+  partitioned:
+    type: remap
+    inputs: [canonical]
+    source: |
+      ts = parse_timestamp(to_string(."@timestamp") ?? "", "%+") ?? now()
+      .archive.env = to_string(.service.environment) ?? "unknown"
+      .archive.service = to_string(.service.name) ?? "unknown"
+      .archive.date = format_timestamp!(ts, format: "%Y-%m-%d", timezone: "UTC")
+      .archive.hour = format_timestamp!(ts, format: "%H", timezone: "UTC")
+      .archive.topic = to_string(.kafka_topic) ?? "observability.logs.canonical.v1"
+      .archive.partition = to_string(.kafka_partition) ?? "0"
+      # Offsets are kept on the event so an archived object can be reconciled
+      # against a Kafka offset range during replay.
+      # Vector cannot name an object after an offset RANGE, so the range is
+      # reconstructed from the events instead: every archived record carries
+      # its own topic/partition/offset. See poc/README.md, "Known deviations".
+      .kafka.topic = .archive.topic
+      .kafka.partition = .kafka_partition
+      .kafka.offset = .kafka_offset
+      del(.kafka_topic)
+      del(.kafka_partition)
+      del(.kafka_offset)
+
+sinks:
+  archive:
+    type: aws_s3
+    inputs: [partitioned]
+    bucket: ${S3_BUCKET:-finance-observability}
+    region: ${S3_REGION:-us-east-1}
+    endpoint: ${S3_ENDPOINT:-http://minio:9000}
+    # MinIO (and most S3-compatible stores that are not AWS) needs path-style
+    # addressing; virtual-host style would resolve to bucket.minio, which has
+    # no DNS record inside the compose network.
+    force_path_style: true
+    auth:
+      access_key_id: ${S3_ACCESS_KEY:-finance}
+      secret_access_key: ${S3_SECRET_KEY:-finance-observability}
+    # Object layout: environment / service / UTC date / hour, then topic and
+    # partition. Every event inside one object therefore shares a partition,
+    # which is what makes an offset range meaningful per object.
+    key_prefix: "logs/env={{ archive.env }}/service={{ archive.service }}/date={{ archive.date }}/hour={{ archive.hour }}/topic={{ archive.topic }}/partition={{ archive.partition }}/"
+    filename_time_format: "%Y%m%dT%H%M%SZ"
+    filename_append_uuid: true
+    compression: zstd
+    # JSON Lines, not a JSON array. Vector's default s3 framing wraps a batch
+    # in `[...]`, which makes an object unreadable line by line and unusable
+    # for a streaming replay tool. The spec asks for "JSON Lines nen Zstandard".
+    framing:
+      method: newline_delimited
+    encoding:
+      codec: json
+      except_fields: [archive]
+    # Objects are immutable once written; the archiver never rewrites one.
+    acknowledgements:
+      enabled: true
+    batch:
+      max_bytes: 10485760 # 10 MiB
+      timeout_secs: 60
+    buffer:
+      - type: disk
+        max_size: 268435488 # Vector's minimum disk-buffer size (256 MiB + 32 B)
+        when_full: block
+
+  metrics:
+    type: prometheus_exporter
+    inputs: [internal]
+    address: 0.0.0.0:9598

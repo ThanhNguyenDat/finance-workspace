@@ -1,0 +1,7 @@
+name: finance
+
+include:
+  - path: 
+    - pgbouncer.yaml
+    # - postgres.yaml
+    - timescaledb.yaml

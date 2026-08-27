@@ -1,0 +1,262 @@
+filebeat.inputs:
+  - type: filestream
+    id: application-json-logs
+    enabled: true
+    paths:
+      - /data/log/**/stdout*.jsonl
+      - /data/log/**/stderr*.jsonl
+      - /data/log/finance-web/access.jsonl
+
+    prospector.scanner.fingerprint.enabled: false
+    file_identity.native: ~
+    exclude_files:
+      - '^/data/log/finance-filebeat/'
+
+    parsers:
+      - ndjson:
+          target: ""
+          add_error_key: true
+          overwrite_keys: true
+          expand_keys: true
+          document_id: event.id
+
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      host: unix:///var/run/docker.sock
+      hints.enabled: false
+      labels.dedot: true
+      templates:
+        - condition:
+            and:
+              - equals:
+                  container.labels.coolify.resourceName: finance-observability
+              - equals:
+                  container.labels.coolify.serviceName: tempo
+              - equals:
+                  docker.container.name: tempo-vc0gwk040csg4cwg88000k48
+          config:
+            - type: filestream
+              id: coolify-observability-tempo-v2-${data.docker.container.id}
+              enabled: true
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              prospector.scanner.fingerprint.enabled: false
+              file_identity.native: ~
+              close.on_state_change.removed: false
+              parsers:
+                - container: ~
+              fields_under_root: true
+              fields:
+                log:
+                  level: info
+                service:
+                  name: finance-tempo
+                  environment: production
+                  version: 3.0.2
+                  instance:
+                    id: ${data.docker.container.id}
+                event:
+                  dataset: finance-tempo.container
+              processors:
+                - fingerprint:
+                    fields: ["@timestamp", service.name, service.instance.id, message]
+                    target_field: "@metadata._id"
+                    method: sha256
+                    ignore_missing: false
+                    fail_on_error: true
+                - dissect:
+                    tokenizer: "level=%{log.level} %{tempo.log_payload}"
+                    field: message
+                    target_prefix: ""
+                    overwrite_keys: true
+                    ignore_failure: true
+        - condition:
+            and:
+              - equals:
+                  container.labels.coolify.resourceName: finance-observability
+              - equals:
+                  container.labels.coolify.serviceName: otel-collector
+              - equals:
+                  docker.container.name: otel-collector-vc0gwk040csg4cwg88000k48
+          config:
+            - type: filestream
+              id: coolify-observability-otel-collector-v2-${data.docker.container.id}
+              enabled: true
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              prospector.scanner.fingerprint.enabled: false
+              file_identity.native: ~
+              close.on_state_change.removed: false
+              parsers:
+                - container: ~
+              fields_under_root: true
+              fields:
+                log:
+                  level: info
+                service:
+                  name: finance-otel-collector
+                  environment: production
+                  version: 0.159.0
+                  instance:
+                    id: ${data.docker.container.id}
+                event:
+                  dataset: finance-otel-collector.container
+              processors:
+                - fingerprint:
+                    fields: ["@timestamp", service.name, service.instance.id, message]
+                    target_field: "@metadata._id"
+                    method: sha256
+                    ignore_missing: false
+                    fail_on_error: true
+                - dissect:
+                    tokenizer: "%{otel.timestamp}\t%{log.level}\t%{otel.logger}\t%{otel.log_payload}"
+                    field: message
+                    target_prefix: ""
+                    overwrite_keys: true
+                    ignore_failure: true
+
+processors:
+  - copy_fields:
+      fields:
+        - from: "@metadata._id"
+          to: event.id
+      fail_on_error: true
+      ignore_missing: false
+  - drop_event:
+      when:
+        not:
+          has_fields:
+            - "@timestamp"
+            - log.level
+            - message
+            - service.name
+            - service.environment
+            - service.instance.id
+            - event.id
+            - event.dataset
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+  - add_fields:
+      target: host
+      fields:
+        name: ${ECS_HOST_NAME:finance-prod-primary}
+        id: ${ECS_HOST_ID:finance-prod-primary}
+  - add_host_metadata:
+      replace_fields: false
+  - add_fields:
+      target: observer
+      fields:
+        name: ${ECS_COLLECTOR_NAME:finance-filebeat}
+        type: filebeat
+  - add_fields:
+      target: labels
+      fields:
+        server_id: ${ECS_SERVER_ID:finance-prod-primary}
+  - add_fields:
+      target: labels
+      fields:
+        broker: unknown
+      when:
+        not:
+          has_fields: [labels.broker]
+  - add_fields:
+      target: labels
+      fields:
+        market_type: unknown
+      when:
+        not:
+          has_fields: [labels.market_type]
+  - add_fields:
+      target: labels
+      fields:
+        base_asset: unknown
+      when:
+        not:
+          has_fields: [labels.base_asset]
+  - add_fields:
+      target: labels
+      fields:
+        quote_asset: unknown
+      when:
+        not:
+          has_fields: [labels.quote_asset]
+  - add_fields:
+      target: labels
+      fields:
+        interval: unknown
+      when:
+        not:
+          has_fields: [labels.interval]
+  - add_fields:
+      target: event
+      fields:
+        kind: event
+      when:
+        not:
+          has_fields: [event.kind]
+  - add_fields:
+      target: service
+      fields:
+        version: unknown
+      when:
+        not:
+          has_fields: [service.version]
+  - copy_fields:
+      fields:
+        - from: span.trace.id
+          to: trace.id
+      fail_on_error: false
+      ignore_missing: true
+      when:
+        not:
+          has_fields: [trace.id]
+  - copy_fields:
+      fields:
+        - from: span.span.id
+          to: span.id
+      fail_on_error: false
+      ignore_missing: true
+      when:
+        not:
+          has_fields: [span.id]
+  - copy_fields:
+      fields:
+        - from: service.instance.id
+          to: container.id
+      fail_on_error: false
+      ignore_missing: true
+      when:
+        not:
+          has_fields: [container.id]
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  username: "elastic"
+  password: "${ELASTIC_PASSWORD}"
+  index: "app-logs"
+
+setup.kibana:
+  host: "http://kibana:5601"
+
+setup.template.name: "app-logs"
+setup.template.pattern: "app-logs"
+setup.template.type: data_stream
+setup.template.settings:
+  index.lifecycle.name: "finance-logs-7d"
+setup.ilm.enabled: false
+
+# ================================== Logging ===================================
+logging.level: info
+logging.to_stderr: true
+logging.to_stdout: false
+logging.to_files: false
+
+filebeat.monitoring:
+  enabled: true
+  metrics: true
+  logs: false
+
+http.enabled: true
+http.port: 5066   # port mà Prometheus sẽ scrape

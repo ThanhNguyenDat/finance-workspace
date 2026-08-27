@@ -1,0 +1,60 @@
+name: finance-observability-local
+
+# Isolated local POC only. Production tracing is part of the single Coolify
+# resource described by coolify-observability.yaml and uses a separate host path.
+services:
+  tempo:
+    image: grafana/tempo:3.0.2
+    user: "0:0"
+    restart: unless-stopped
+    command:
+      - -target=all
+      - -config.file=/etc/tempo/tempo.yaml
+    volumes:
+      - ./tempo/tempo-local.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-local-wal:/var/tempo/wal
+      - tempo-local-blocks:/var/tempo/blocks
+    expose:
+      - "3200"
+      - "4317"
+      - "4318"
+    cpus: "1.0"
+    mem_limit: 1G
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+    logging: &bounded-logs
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.159.0
+    restart: unless-stopped
+    depends_on:
+      tempo:
+        condition: service_started
+    command:
+      - --config=/etc/otelcol-contrib/config.yaml
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    expose:
+      - "4317"
+      - "4318"
+      - "8888"
+      - "13133"
+    cpus: "0.5"
+    mem_limit: 512M
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    logging: *bounded-logs
+
+volumes:
+  tempo-local-wal:
+  tempo-local-blocks:

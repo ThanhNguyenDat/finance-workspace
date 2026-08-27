@@ -1,0 +1,33 @@
+x-container-shared: &container-shared
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - finance
+  cpus: "1"
+  mem_limit: "2G"
+  deploy:
+    mode: global # custom only for node-exporter
+    resources:
+      limits:
+        memory: "2G"
+        cpus: "1"
+
+networks:
+  finance:
+    name: finance
+    external: true
+
+services:
+  redisinsight:
+    <<: *container-shared
+    image: redis/redisinsight:2.70.1
+    container_name: finance-redisinsight
+    hostname: finance-redisinsight
+    ports:
+      - "5540:5540"
+    volumes:
+      - /data/redisinsight/data:/data

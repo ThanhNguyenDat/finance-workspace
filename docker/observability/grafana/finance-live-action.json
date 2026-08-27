@@ -1,0 +1,1731 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "green",
+                "value": 4
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(up{job=\"finance-live-action\",monitor=\"finance-vmagent\"} * on(instance) group_left(instrument, broker, market_type, quote_asset) max by (instance, instrument, broker, market_type, quote_asset) (finance_live_action_worker_info{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}))",
+          "legendFormat": "scrape targets",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Scrape Targets Up",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "green",
+                "value": 4
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(finance_live_action_worker_ready{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "ready workers",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum(finance_live_action_kafka_available{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "Kafka available",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Workers Ready",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "green",
+                "value": 4
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(finance_live_action_grpc_serving{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "gRPC serving",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "gRPC Serving",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "green",
+                "value": 4
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(finance_live_action_redis_available{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "Redis available",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Redis Available",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (instrument, broker, market_type, base_asset, quote_asset) (rate(finance_live_action_market_data_events_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Market Data Event Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (instrument, broker, market_type, base_asset, quote_asset) (rate(finance_live_action_strategy_signals_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Strategy Signal Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (instrument, broker, market_type, base_asset, quote_asset, operation, status) (rate(finance_live_action_worker_operations_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",status!=\"success\"}[$__rate_interval]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}} · {{operation}} {{status}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Worker Operation Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "time() - max by (instrument, broker, market_type, base_asset, quote_asset) (finance_live_action_market_data_last_processed_timestamp_seconds{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"} > 0)",
+          "legendFormat": "transport · {{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "time() - max by (instrument, broker, market_type, base_asset, quote_asset) (finance_live_action_market_data_last_closed_primary_kline_timestamp_seconds{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"} > 0)",
+          "legendFormat": "closed primary · {{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Market Data Freshness — Transport vs Closed Primary",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "End-to-end worker processing time from Kafka delivery through strategy evaluation and Redis checkpoint. Open means the exchange can still update the candle; closed means the candle is final.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.50, sum by (le, event_interval, finality) (rate(finance_live_action_kline_processing_duration_seconds_bucket{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",event_interval=~\"$event_interval\"}[$__rate_interval])))",
+          "legendFormat": "p50 {{event_interval}} {{finality}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, event_interval, finality) (rate(finance_live_action_kline_processing_duration_seconds_bucket{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",event_interval=~\"$event_interval\"}[$__rate_interval])))",
+          "legendFormat": "p95 {{event_interval}} {{finality}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Kline Processing Latency — Open vs Closed",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Strategy evaluation throughput per instrument. A healthy market identity can evaluate often while emitting only occasional trade signals.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 30
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (instrument, broker, market_type, base_asset, quote_asset) (rate(finance_live_action_strategy_evaluations_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Strategy Evaluation Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Share of strategy evaluations that emitted a signal. A low value is normal for selective strategies; zero alongside nonzero evaluations points to strategy conditions not triggering.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (instrument, broker, market_type, base_asset, quote_asset) (rate(finance_live_action_strategy_signals_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval])) / clamp_min(sum by (instrument, broker, market_type, base_asset, quote_asset) (rate(finance_live_action_strategy_evaluations_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[$__rate_interval])), 1e-9)",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Strategy Signal Yield",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "id": 12,
+      "panels": [],
+      "title": "Alert Diagnostics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Worker uptime used by the crash-loop alert. Repeated drops back toward zero identify a worker that restarts instead of remaining healthy.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 39
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "asc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "min by (instance, instrument, broker, market_type, base_asset, quote_asset) (finance_live_action_worker_uptime_seconds{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}} · {{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Worker Uptime",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "History events over fifteen minutes. Quality errors page because they invalidate readiness; accepted same-open-time revisions remain diagnostic and do not page.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 39
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (instance, instrument, broker, market_type, base_asset, quote_asset) (increase(finance_live_action_kline_history_quality_errors_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[15m]))",
+          "legendFormat": "quality error · {{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}} · {{instance}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (instance, instrument, broker, market_type, base_asset, quote_asset) (increase(finance_live_action_kline_history_revisions_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}[15m]))",
+          "legendFormat": "accepted revision · {{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}} · {{instance}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Kline History Events",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "History readiness gate used by the one-hour not-ready alert. Zero means strategy evaluation remains blocked for that market identity.",
+      "fieldConfig": {
+        "defaults": {
+          "max": 1,
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 47
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "asc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "min by (instance, instrument, broker, market_type, base_asset, quote_asset) (finance_live_action_kline_history_ready{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}} · {{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Kline History Ready",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Maximum Kafka lag per consumer group. This is the same signal used by the consumer-lag alert and shows whether a group is recovering or continuing to fall behind.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 47
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max by (consumergroup) (kafka_consumergroup_lag{consumergroup=~\"finance-live-action-(binance[.]perpetual_future[.](btc|xau)[.]usdt|bybit[.](perpetual_future[.]btc|spot[.]xaut)[.]usdt|exness[.]cfd[.](btc|xau)[.]usd)[.](5m|15m|30m|1h|2h|4h|12h|1d)\"})",
+          "legendFormat": "{{consumergroup}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Kafka Consumer Lag",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Signed safety margin between the decision clock and the newest input actually visible at each evaluation boundary. Zero is the current closed candle, positive is older evidence, and any negative value is a lookahead violation. Runtime and historical backtest are reported separately.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "decision as-of minus input",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "asc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "min by (instance, instrument, broker, market_type, base_asset, quote_asset, workflow, evidence_interval) (finance_live_action_no_lookahead_input_lag_seconds{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",evidence_interval=~\"$event_interval\"} and on(instance, instrument, interval, broker, market_type, base_asset, quote_asset, workflow, evidence_interval) finance_live_action_no_lookahead_checks_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",evidence_interval=~\"$event_interval\"} > 0)",
+          "legendFormat": "{{workflow}} · {{evidence_interval}} · {{base_asset}}/{{quote_asset}} · {{broker}} {{market_type}} · {{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "No-Lookahead Verification — Runtime vs Backtest",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 64
+      },
+      "id": 18,
+      "panels": [],
+      "title": "Interval and Trading Layer Monitoring",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Closed Kafka events processed by the actual candle interval. Over 24h a continuously traded instrument should receive 288/96/48/24/12/6/2/1 candles for 5m through 1d.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 65
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (base_asset, quote_asset, event_interval) (increase(finance_live_action_market_data_interval_events_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",event_interval=~\"$event_interval\",finality=\"closed\"}[24h]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{event_interval}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Closed Klines Processed — 24h",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Age of the last closed candle received for each interval. Before the first close after a deploy, age is measured from worker startup so long intervals get an expected grace window without becoming invisible.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 65
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "time() - max by (base_asset, quote_asset, event_interval) (finance_live_action_market_data_interval_last_kline_close_timestamp_seconds{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",event_interval=~\"$event_interval\",finality=\"closed\"})",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{event_interval}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Last Closed Kline Age by Interval",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Actual evaluation throughput filterable by Alpha or Portfolio layer, configured setup, and event interval.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 73
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (base_asset, quote_asset, layer, setup, event_interval) (rate(finance_live_action_layer_evaluations_total{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",event_interval=~\"$event_interval\",layer=~\"$layer\",setup=~\"$setup\"}[$__rate_interval]))",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{layer}} · {{setup}} · {{event_interval}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Evaluation Rate by Layer and Setup",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Primary 5m Portfolio boundaries waiting for all synchronized interval evidence. Sustained non-zero values mean a higher timeframe is missing or late.",
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 73
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max by (instance, base_asset, quote_asset) (finance_live_action_portfolio_pending_boundaries{monitor=\"finance-vmagent\",market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"})",
+          "legendFormat": "{{base_asset}}/{{quote_asset}} · {{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Portfolio Pending Boundaries",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Actual candle counts used by the latest production-data portfolio research run. The source commit and run ID labels make each observation auditable.",
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 81
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "last_over_time(finance_research_backtest_candles[30d])",
+          "legendFormat": "{{instrument}} · {{interval}} · {{window}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Backtest Candles by Window",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Seconds since the latest successful portfolio research run published candle-count evidence. A growing value means the one-shot research workflow has not completed recently.",
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 604800},
+              {"color": "red", "value": 1209600}
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 81
+      },
+      "id": 24,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "time() - last_over_time(finance_research_backtest_last_success_timestamp_seconds[30d])",
+          "legendFormat": "{{instrument}} · {{interval}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Last Backtest Evidence Age",
+      "type": "stat"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 41,
+  "tags": [
+    "finance",
+    "live-action",
+    "production"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "prometheus",
+          "value": "cfbt2db7nwwlce"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(finance_live_action_worker_info, market_type)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Type",
+        "multi": true,
+        "name": "market_type",
+        "options": [],
+        "query": {
+          "query": "label_values(finance_live_action_worker_info, market_type)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(finance_live_action_worker_info{market_type=~\"$market_type\"}, broker)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Broker",
+        "multi": true,
+        "name": "broker",
+        "options": [],
+        "query": {
+          "query": "label_values(finance_live_action_worker_info{market_type=~\"$market_type\"}, broker)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(finance_live_action_worker_info{market_type=~\"$market_type\",broker=~\"$broker\"}, base_asset)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Base",
+        "multi": true,
+        "name": "base_asset",
+        "options": [],
+        "query": {
+          "query": "label_values(finance_live_action_worker_info{market_type=~\"$market_type\",broker=~\"$broker\"}, base_asset)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(finance_live_action_worker_info{market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\"}, quote_asset)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Quote",
+        "multi": true,
+        "name": "quote_asset",
+        "options": [],
+        "query": {
+          "query": "label_values(finance_live_action_worker_info{market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\"}, quote_asset)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(finance_live_action_market_data_interval_events_total{market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}, event_interval)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Interval",
+        "multi": true,
+        "name": "event_interval",
+        "options": [],
+        "query": {
+          "query": "label_values(finance_live_action_market_data_interval_events_total{market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\"}, event_interval)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Layer",
+        "multi": true,
+        "name": "layer",
+        "options": [],
+        "query": "Alpha : alpha, Portfolio : portfolio",
+        "type": "custom"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(finance_live_action_layer_evaluations_total{market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",event_interval=~\"$event_interval\",layer=~\"$layer\"}, setup)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Setup",
+        "multi": true,
+        "name": "setup",
+        "options": [],
+        "query": {
+          "query": "label_values(finance_live_action_layer_evaluations_total{market_type=~\"$market_type\",broker=~\"$broker\",base_asset=~\"$base_asset\",quote_asset=~\"$quote_asset\",event_interval=~\"$event_interval\",layer=~\"$layer\"}, setup)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Finance Live Action Production",
+  "uid": "finance-live-action-prod",
+  "version": 1,
+  "weekStart": ""
+}

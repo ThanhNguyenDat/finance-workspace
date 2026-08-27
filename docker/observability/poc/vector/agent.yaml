@@ -1,0 +1,185 @@
+# Node collection agent (spec: "Agent thu thập cục bộ trên node").
+#
+# Reads the runtime-managed Docker json-file stream -- NOT the application's
+# own /data/log/*.jsonl files, which the spec explicitly forbids treating as a
+# durable source. One instance per host; on Kubernetes this same config runs as
+# a DaemonSet with the `kubernetes_logs` source instead of `docker_logs`.
+#
+# The agent never validates the full canonical contract. That is the
+# log-processor's job. The agent only: attaches runtime metadata the
+# application cannot know, does a first-pass secret scrub before data leaves
+# the node, and publishes to the raw topic with a bounded local disk buffer.
+
+data_dir: /var/lib/vector
+
+api:
+  enabled: false
+
+sources:
+  docker:
+    type: docker_logs
+    # Only containers that opt in. Without this the agent would also ingest
+    # Kafka/ClickHouse/MinIO container logs and feed its own pipeline.
+    include_labels:
+      - finance.observability.collect=true
+    # Docker's json-file driver is the short-term emergency buffer. Retention
+    # is owned by the runtime (see the logging: block in compose.yaml).
+    host_key: host.name
+
+  internal:
+    type: internal_metrics
+    scrape_interval_secs: 15
+
+transforms:
+  # Step 1: the application contract is one JSON object per line. Parse it when
+  # it is valid JSON; keep the line as an unstructured message otherwise so a
+  # crash dump or a panic trace is never silently discarded here.
+  parsed:
+    type: remap
+    inputs: [docker]
+    source: |
+      container_id = string!(.container_id)
+      container_name = string!(.container_name)
+      image = string!(.image)
+      host_name = to_string(.host.name) ?? "unknown"
+      stream = to_string(.stream) ?? "stdout"
+      ingest_time = to_string(now())
+
+      # VRL narrows the type of `.` after a literal assignment, so building
+      # the record in a variable and coercing once with object!() is what keeps
+      # the nested assignments below legal for BOTH branches.
+      raw_line = string!(.message)
+      decoded, err = parse_json(raw_line)
+
+      # Declared before the branch: VRL scopes a variable to the block it is
+      # first assigned in, so assigning `record` only inside if/else would
+      # leave it undefined afterwards.
+      record = {}
+      if err == null && is_object(decoded) {
+        record = merge(object!(decoded), { "observability": { "parse_ok": true } })
+      } else {
+        # A non-JSON line still has to be attributable, so give it the weakest
+        # possible defaults and let the processor decide whether to DLQ it.
+        fallback_level = "info"
+        if stream == "stderr" { fallback_level = "error" }
+        record = {
+          "message": raw_line,
+          "log": { "level": fallback_level },
+          "event": { "dataset": "runtime.unstructured" },
+          "observability": { "parse_ok": false }
+        }
+      }
+      . = object!(record)
+
+      # Step 2: runtime metadata the application cannot know for certain.
+      # Assigned as whole objects, not path by path: once VRL has seen a
+      # literal it treats that object's shape as closed, and a later
+      # `.container.image.name = ...` on a closed `.container` is a type error.
+      .host = merge(object(.host) ?? {}, { "name": host_name })
+      .container = {
+        "id": container_id,
+        "name": container_name,
+        "image": { "name": image }
+      }
+      .log = merge(object(.log) ?? {}, { "file": { "stream": stream } })
+
+      # service.instance.id must never be a static value shared by replicas.
+      # The container id is the strongest per-instance identity available on a
+      # Docker host; Kubernetes uses the pod uid instead.
+      if !exists(.service.instance.id) {
+        .service.instance.id = container_id
+      }
+
+      # Step 3: first-pass secret scrub. This is deliberately duplicated in the
+      # processor -- this pass keeps secrets from leaving the node at all, the
+      # processor pass is the one that is authoritative for the canonical topic.
+      del(.authorization)
+      del(.cookie)
+      del(.http.request.headers)
+      del(.http.request.body)
+      del(.http.response.body)
+      del(.password)
+      del(.token)
+      del(.api_key)
+      del(.secret)
+
+      # Field deletion alone is not enough: a credential pasted into the log
+      # text would otherwise leave the node in the clear. Same two rules, same
+      # order as the processor. The processor pass stays authoritative for the
+      # canonical topic; this one exists so the raw topic is not a leak.
+      scrubbed = to_string(.message) ?? ""
+      scrubbed = replace(scrubbed, r'(?i)\b(bearer|basic|token)\s+[A-Za-z0-9._~+/=-]{8,}', "$$1 [REDACTED]")
+      scrubbed = replace(scrubbed, r'(?i)(authorization|api[_-]?key|password|secret|token)\s*[:=]\s*\S+', "$$1=[REDACTED]")
+      .message = scrubbed
+
+      # Observed ingest time at the node, so end-to-end lag is measurable
+      # independently of the application's own clock.
+      .observability = merge(.observability, {
+        "agent": { "ingested_at": ingest_time, "name": "finance-vector-agent" }
+      })
+
+      # Kafka partition key. The spec requires log ordering per instance:
+      # service.name + service.instance.id. Stripped from the payload by the
+      # sink encoding below so it never pollutes the canonical schema.
+      svc = to_string(.service.name) ?? "unknown"
+      .kafka_partition_key = svc + "/" + (to_string(.service.instance.id) ?? "unknown")
+
+  # The spec's backpressure policy: when local storage pressure forces a drop,
+  # sampled DEBUG/INFO goes first and WARN/ERROR/security is protected. Vector
+  # expresses that as two sinks onto the same topic with different `when_full`
+  # behaviour, so route the stream in two.
+  by_priority:
+    type: route
+    inputs: [parsed]
+    route:
+      high: |
+        includes(["warn", "warning", "error", "fatal", "critical"],
+                 downcase(to_string(.log.level) ?? "info")) ||
+        starts_with(to_string(.event.dataset) ?? "", "security")
+
+sinks:
+  # High-priority events block rather than drop. If this buffer fills, the
+  # agent applies backpressure to itself, never to the application (the
+  # application already wrote to the Docker stream and moved on).
+  raw_high:
+    type: kafka
+    inputs: [by_priority.high]
+    bootstrap_servers: ${KAFKA_BOOTSTRAP:-kafka:9092}
+    topic: observability.logs.raw.v1
+    key_field: kafka_partition_key
+    compression: zstd
+    encoding:
+      codec: json
+      except_fields: [kafka_partition_key]
+    librdkafka_options:
+      "message.timeout.ms": "300000"
+    buffer:
+      - type: disk
+        max_size: 268435488 # Vector's minimum disk-buffer size (256 MiB + 32 B)
+        when_full: block
+
+  # Everything else is droppable under pressure. `drop_newest` keeps the older
+  # backlog draining instead of thrashing, and increments
+  # vector_buffer_discarded_events_total, which is the "dropped event" counter
+  # the spec requires an alert on.
+  raw_low:
+    type: kafka
+    inputs: [by_priority._unmatched]
+    bootstrap_servers: ${KAFKA_BOOTSTRAP:-kafka:9092}
+    topic: observability.logs.raw.v1
+    key_field: kafka_partition_key
+    compression: zstd
+    encoding:
+      codec: json
+      except_fields: [kafka_partition_key]
+    librdkafka_options:
+      "message.timeout.ms": "60000"
+    buffer:
+      - type: disk
+        max_size: 268435488 # Vector's minimum disk-buffer size (256 MiB + 32 B)
+        when_full: drop_newest
+
+  metrics:
+    type: prometheus_exporter
+    inputs: [internal]
+    address: 0.0.0.0:9598

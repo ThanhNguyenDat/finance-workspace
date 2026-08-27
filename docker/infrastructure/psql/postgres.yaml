@@ -1,0 +1,115 @@
+x-container-shared: &container-shared
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - finance
+  cpus: "1"
+  mem_limit: "2G"
+  deploy:
+    resources:
+      limits:
+        memory: "2G"
+        cpus: "1"
+
+networks:
+  finance:
+    name: finance
+    external: true
+
+volumes:
+  postgres-primary-data:
+    name: finance-postgres-primary-data
+    # driver_opts:
+    #   type: none
+    #   device: "/data2/pg_storage/trades/v1/shard1/data"
+    #   o: bind
+  postgres-migrate-data:
+    name: finance-postgres-migrate-data
+
+x-postgres-container-shared: &postgres-container-shared
+  <<: *container-shared
+  shm_size: 1g
+  healthcheck:
+    test: 'pg_isready -U ${POSTGRES_USERNAME:-postgres} --dbname=${POSTGRES_DB:-postgres}'
+    interval: 10s
+    timeout: 5s
+    retries: 5
+  expose:
+    - 5432
+
+x-primary-container-shared: &primary-container-shared
+  <<: *postgres-container-shared
+  image: postgres:15
+  user: postgres # must be postgres
+  environment:
+    POSTGRES_DB: postgres
+    POSTGRES_USERNAME: postgres
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+  command: |
+    postgres 
+    -c wal_level=logical
+    -c hot_standby=on
+    -c max_wal_senders=10
+    -c max_replication_slots=10
+    -c shared_buffers=4GB \
+    -c work_mem=64MB \
+    -c max_connections=50
+    -c maintenance_work_mem=1GB \
+    -c effective_cache_size=8GB \
+    -c max_wal_size=4GB \
+    -c min_wal_size=1GB \
+    -c wal_buffers=256MB \
+    -c random_page_cost=1.1 \
+    -c effective_io_concurrency=200 \
+    -c max_worker_processes=8 \
+    -c max_parallel_workers=8 \
+    -c max_parallel_workers_per_gather=4
+
+x-replica-container-shared: &replica-container-shared
+  <<: *postgres-container-shared
+  image: postgres_replica:15
+  user: postgres # must be postgres
+  build:
+    context: ./replica
+    dockerfile: Dockerfile
+    args:
+      POSTGRES_VERSION: 15
+  environment:
+    POSTGRES_DB: postgres
+    POSTGRES_USERNAME: postgres
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+
+services:
+  ### Primary
+  primary:
+    <<: *primary-container-shared
+    container_name: finance-postgres-primary
+    hostname: finance-postgres-primary
+    volumes:
+      - postgres-primary-data:/var/lib/postgresql/data
+      - ./primary/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./primary/tmp/:/tmp/
+    ports:
+      - "4432:5432"
+
+  # ### Replica
+  # replica:
+  #   <<: *replica-container-shared
+  #   volumes:
+  #     - ./replica/tmp/:/tmp/
+
+  primary_exporter:
+    <<: *container-shared
+    image: prometheuscommunity/postgres-exporter
+    container_name: finance-postgres-primary-exporter
+    hostname: finance-postgres-primary-exporter
+    expose:
+      - 9187
+    environment:
+      DATA_SOURCE_URI: "finance-postgres-primary:5432/postgres?sslmode=disable"
+      DATA_SOURCE_USER: postgres
+      DATA_SOURCE_PASS: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}

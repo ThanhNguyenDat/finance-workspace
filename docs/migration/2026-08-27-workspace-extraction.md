@@ -32,6 +32,32 @@ Evidence local hiện tại:
 - Cả hai commit mới chỉ tồn tại local theo owner-held push gate; chưa có CI,
   GitHub hoặc Coolify deployment.
 
+## Finance Web cutover (local)
+
+Finance Web đã được seed sang repository riêng và kiểm tra local:
+
+- Commit source ban đầu: `6eaf2b7` (`chore(web): seed standalone finance-web repository`).
+- Commit chuẩn hóa Makefile/README: `7fd7dc1` (`chore(web): make standalone repository commands self-contained`).
+- `npm run test`: 50 test files, 328 tests pass.
+- `npm run lint`: pass, chỉ còn một warning hook đã tồn tại trong source.
+- `npm run build`: pass.
+
+Chưa xóa `finance-mw/web` vì workflow hiện tại vẫn build/verify trực tiếp
+`web/`, `docker/compose.web.yaml`, Makefile và các script production-web. Cần
+tách job CI/CD và chuyển các script sở hữu web trước; nếu xóa source trước bước
+đó, pipeline Finance MW sẽ fail-closed do thiếu path.
+
+## Shared Docker ownership cutover (local)
+
+Đã seed bản canonical local sang `docker/infrastructure/` (20 file) và
+`docker/observability/` (41 file), gồm cả POC Kafka/ClickHouse/S3 mới. Không
+copy `elasticsearch/.env` hoặc `.env.poc` vì đây là credential/runtime state.
+
+Chưa xóa bản trong `finance-mw`: Makefile, Coolify resource scripts, workflow
+path filters và nhiều contract tests vẫn đọc trực tiếp `docker/infrastructure/*`
+hoặc `docker/observability/*`. Cần chuyển các consumer này sang workspace hoặc
+repo hạ tầng riêng, sau đó mới xoá compatibility copy trong một commit độc lập.
+
 ## Quy tắc sau migration
 
 1. Task/research/handoff bắt đầu tại `raw/handoff_agent.md` trong workspace.
@@ -54,3 +80,10 @@ Evidence local hiện tại:
 - [ ] CI/workflow của từng repo code không còn phụ thuộc bản copy cũ, hoặc đã
       có compatibility pointer được review.
 - [ ] Sau khi đạt các cổng trên mới xóa tài liệu duplicate khỏi `finance-mw`.
+- [ ] Finance Web CI/CD độc lập đã xanh và `finance-mw` không còn build/verify
+      hoặc include `web/`.
+- [ ] Sau khi cutover trên xanh, xóa `web/` và web-owned compose/script khỏi
+      `finance-mw` bằng commit riêng.
+- [ ] Các consumer hạ tầng (Make/script/test/workflow/Coolify raw Compose) đã
+      dùng source workspace; sau đó xoá `docker/infrastructure/` và
+      `docker/observability/` khỏi `finance-mw`.

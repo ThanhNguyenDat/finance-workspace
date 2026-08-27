@@ -1,0 +1,61 @@
+x-container-shared: &container-shared
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - finance
+  cpus: "1"
+  mem_limit: "1G"
+  deploy:
+    resources:
+      limits:
+        memory: "1G"
+        cpus: "1"
+
+networks:
+  finance:
+    name: finance
+    external: true
+
+services:
+  filebeat:
+    <<: *container-shared
+    image: docker.elastic.co/beats/filebeat:9.1.2
+    user: "0:1000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    container_name: finance-filebeat
+    hostname: finance-filebeat
+    command: [ "-e", "-c", "/usr/share/filebeat/filebeat.yml" ]
+    environment:
+      - 'ELASTIC_PASSWORD=${SERVICE_PASSWORD_ELASTICSEARCH}'
+      - 'ECS_HOST_NAME=${ECS_HOST_NAME:-finance-prod-primary}'
+      - 'ECS_HOST_ID=${ECS_HOST_ID:-finance-prod-primary}'
+      - 'ECS_SERVER_ID=${ECS_SERVER_ID:-finance-prod-primary}'
+      - 'ECS_COLLECTOR_NAME=${ECS_COLLECTOR_NAME:-finance-filebeat}'
+    volumes:
+      - /data/es/filebeat/config/config.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /data/es/filebeat/config/ilm-policy.json:/usr/share/filebeat/ilm-policy.json:ro
+      - /data/log:/data/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /data/es/filebeat/data:/usr/share/filebeat/data
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'filebeat test output -c /usr/share/filebeat/filebeat.yml >/dev/null'
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30s

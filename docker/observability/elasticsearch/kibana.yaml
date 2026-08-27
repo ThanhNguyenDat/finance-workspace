@@ -1,0 +1,81 @@
+x-container-shared: &container-shared
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - finance
+  cpus: "1"
+  mem_limit: "2G"
+  deploy:
+    resources:
+      limits:
+        memory: "2G"
+        cpus: "1"
+
+networks:
+  finance:
+    name: finance
+    external: true
+
+volumes:
+  kibana-data:
+    name: finance-kibana-data
+    driver_opts:
+      type: none
+      device: "/data/es/kibana/data"
+      o: bind
+
+services:
+  kibana:
+    <<: *container-shared
+    image: 'kibana:9.1.2'
+    container_name: finance-kibana
+    hostname: finance-kibana
+    entrypoint:
+      - /usr/bin/env
+      - bash
+      - /usr/share/kibana/finance-kibana-entrypoint.sh
+    environment:
+      - 'ELASTICSEARCH_HOSTS=http://elasticsearch:9200'
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - 'FINANCE_KIBANA_ELASTICSEARCH_PASSWORD=${SERVICE_PASSWORD_KIBANA}'
+      - 'FINANCE_KIBANA_SECURITY_ENCRYPTION_KEY=${SERVICE_PASSWORD_XPACKSECURITY}'
+      - 'FINANCE_KIBANA_REPORTING_ENCRYPTION_KEY=${SERVICE_PASSWORD_XPACKREPORTING}'
+      - 'FINANCE_KIBANA_SAVED_OBJECTS_ENCRYPTION_KEY=${SERVICE_PASSWORD_XPACKENCRYPTEDSAVEDOBJECTS}'
+      - 'KIBANA_DECRYPTION_ONLY_KEY=${KIBANA_DECRYPTION_ONLY_KEY:-}'
+      - 'TELEMETRY_OPTIN=${TELEMETRY_OPTIN:-false}'
+    volumes:
+      - '/etc/localtime:/etc/localtime:ro'
+      - '../kibana-secure-entrypoint.sh:/usr/share/kibana/finance-kibana-entrypoint.sh:ro'
+      - 'kibana-data:/usr/share/kibana/data'
+    ports: [ "5601:5601" ]
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'curl -s http://localhost:5601/api/status | grep -q ''"level":"available"'' || exit 1'
+      interval: 10s
+      timeout: 10s
+      retries: 120
+  setup:
+    <<: *container-shared
+    image: 'docker.elastic.co/elasticsearch/elasticsearch:9.1.2'
+    container_name: finance-kibana-setup
+    hostname: finance-kibana-setup
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    # exclude_from_hc: true
+    environment:
+      - 'ELASTIC_PASSWORD=${SERVICE_PASSWORD_ELASTICSEARCH}'
+      - 'KIBANA_PASSWORD=${SERVICE_PASSWORD_KIBANA}'
+    entrypoint:
+      - sh
+      - '-c'
+      - "set -eu\numask 077\nauth_config=/tmp/elasticsearch-auth.curl\npassword_body=/tmp/kibana-password.json\ncleanup() {\n  rm -f \"$${auth_config}\" \"$${password_body}\"\n}\ntrap cleanup EXIT\nprintf 'user = \\\"elastic:%s\\\"\\n' \"$${ELASTIC_PASSWORD}\" >\"$${auth_config}\"\nuntil curl --config \"$${auth_config}\" --silent --fail http://elasticsearch:9200/_cluster/health >/dev/null; do\n  sleep 2\ndone\nprintf '{\\\"password\\\":\\\"%s\\\"}' \"$${KIBANA_PASSWORD}\" >\"$${password_body}\"\ncurl --config \"$${auth_config}\" --silent --fail --request POST \\\n  --header \"Content-Type: application/json\" \\\n  --data-binary \"@$${password_body}\" \\\n  http://elasticsearch:9200/_security/user/kibana_system/_password >/dev/null\n"
+    restart: 'no'

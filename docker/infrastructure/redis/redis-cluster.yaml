@@ -1,0 +1,149 @@
+x-container-shared: &container-shared
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - finance
+  cpus: "1"
+  mem_limit: "2G"
+  deploy:
+    mode: global # custom only for node-exporter
+    resources:
+      limits:
+        memory: "2G"
+        cpus: "1"
+
+networks:
+  finance:
+    name: finance
+    external: true
+
+volumes:
+  finance-redis-cluster-node1-data:
+    name: finance-redis-cluster-node1-data
+    driver: local
+  finance-redis-cluster-node2-data:
+    name: finance-redis-cluster-node2-data
+    driver: local
+  finance-redis-cluster-node3-data:
+    name: finance-redis-cluster-node3-data
+    driver: local
+  finance-redis-cluster-node4-data:
+    name: finance-redis-cluster-node4-data
+    driver: local
+  finance-redis-cluster-node5-data:
+    name: finance-redis-cluster-node5-data
+    driver: local
+  finance-redis-cluster-node6-data:
+    name: finance-redis-cluster-node6-data
+    driver: local
+
+#############################################################################################
+###################################       ENVIRONMENT     ###################################
+#############################################################################################
+x-redis-environment-common: &redis-environment-common
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+
+
+#############################################################################################
+###################################       PROFILES        ###################################
+#############################################################################################
+x-redis-cluster-profiles-shared: &redis-cluster-profiles-shared
+  <<: *container-shared
+  profiles: ["cluster"]
+
+
+#############################################################################################
+###################################       CONTAINER       ###################################
+#############################################################################################
+x-redis-cluster-container-shared: &redis-cluster-container-shared
+  <<: *redis-cluster-profiles-shared
+  image: redis:7.2.4
+  environment:
+    <<: *redis-environment-common
+  expose:
+    - 6379
+  healthcheck:
+    test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+    interval: 1s
+    timeout: 3s
+    retries: 5
+  command: ["/bin/bash", "-c", "/scripts/redis-cluster-init.sh"]
+
+x-redis-container-cluster-exporter-shared: &redis-container-cluster-exporter-shared
+  <<: *redis-cluster-profiles-shared
+  image: bitnami/redis-exporter:latest
+  expose:
+    - 9121
+
+
+#############################################################################################
+###################################       SERVICES        ###################################
+#############################################################################################
+services:
+  redis-cluster-node1:
+    <<: *redis-cluster-container-shared
+    container_name: finance-redis-cluster-node1
+    hostname: finance-redis-cluster-node1
+    volumes:
+      - ./cluster/scripts:/scripts
+      - finance-redis-cluster-node1-data:/data
+    ports:
+      - 7001:6379
+  redis-cluster-node2:
+    <<: *redis-cluster-container-shared
+    container_name: finance-redis-cluster-node2
+    hostname: finance-redis-cluster-node2
+    volumes:
+      - ./cluster/scripts:/scripts
+      - finance-redis-cluster-node2-data:/data
+    ports:
+      - 7002:6379
+  redis-cluster-node3:  
+    <<: *redis-cluster-container-shared
+    container_name: finance-redis-cluster-node3
+    hostname: finance-redis-cluster-node3
+    volumes:
+      - ./cluster/scripts:/scripts
+      - finance-redis-cluster-node3-data:/data
+    ports:
+      - 7003:6379
+  redis-cluster-node4:  
+    <<: *redis-cluster-container-shared
+    container_name: finance-redis-cluster-node4
+    hostname: finance-redis-cluster-node4
+    volumes:
+      - ./cluster/scripts:/scripts
+      - finance-redis-cluster-node4-data:/data
+    ports:
+      - 7004:6379
+  redis-cluster-node5:
+    <<: *redis-cluster-container-shared
+    container_name: finance-redis-cluster-node5
+    hostname: finance-redis-cluster-node5
+    volumes:
+      - ./cluster/scripts:/scripts
+      - finance-redis-cluster-node5-data:/data
+    ports:
+      - 7005:6379
+  redis-cluster-node6:  
+    <<: *redis-cluster-container-shared
+    container_name: finance-redis-cluster-node6
+    hostname: finance-redis-cluster-node6
+    volumes:
+      - ./cluster/scripts:/scripts
+      - finance-redis-cluster-node6-data:/data
+    ports:
+      - 7006:6379
+
+  redis-cluster-exporter:
+    <<: *redis-container-cluster-exporter-shared
+    container_name: finance-redis-cluster-exporter
+    hostname: finance-redis-cluster-exporter
+    environment:
+      <<: *redis-environment-common
+      REDIS_ADDR: redis://finance-redis-cluster-node1:6379
+      REDIS_EXPORTER_IS_CLUSTER: true

@@ -1,0 +1,18 @@
+apiVersion: 1
+
+datasources:
+  - name: Finance Tempo
+    uid: finance-tempo
+    type: tempo
+    access: proxy
+    url: http://finance-tempo:3200
+    isDefault: false
+    editable: false
+    jsonData:
+      httpMethod: GET
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      traceQuery:
+        timeShiftEnabled: true

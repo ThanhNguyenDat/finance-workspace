@@ -1,0 +1,50 @@
+<clickhouse>
+    <!-- Users are defined here rather than through the image's CLICKHOUSE_USER
+         env var on purpose. That env var makes the entrypoint WRITE a
+         default-user.xml into this directory, which fails when the directory is
+         mounted read-only. Declaring the users ourselves keeps the mount
+         read-only and keeps the identities reviewable in git. -->
+    <profiles>
+        <!-- Research identity (spec: "Research/optimization query ClickHouse
+             qua read-only identity va bounded resource quota"). The point is
+             that a runaway research query cannot evict the ingest path's
+             memory or run unbounded. -->
+        <readonly_research>
+            <readonly>1</readonly>
+            <max_memory_usage>2000000000</max_memory_usage>
+            <max_execution_time>60</max_execution_time>
+            <max_result_rows>1000000</max_result_rows>
+            <max_rows_to_read>500000000</max_rows_to_read>
+        </readonly_research>
+    </profiles>
+
+    <users>
+        <!-- The image's built-in `default` user is passwordless. Give it a
+             password so nothing on the compose network can reach ClickHouse
+             unauthenticated. -->
+        <default>
+            <password from_env="CH_APP_PASSWORD"/>
+            <profile>default</profile>
+            <networks><ip>::/0</ip></networks>
+            <quotas><quota>default</quota></quotas>
+            <access_management>1</access_management>
+        </default>
+
+        <research>
+            <password from_env="CH_RESEARCH_PASSWORD"/>
+            <profile>readonly_research</profile>
+            <networks><ip>::/0</ip></networks>
+            <quotas><quota>research</quota></quotas>
+        </research>
+    </users>
+
+    <quotas>
+        <research>
+            <interval>
+                <duration>3600</duration>
+                <queries>1000</queries>
+                <execution_time>1800</execution_time>
+            </interval>
+        </research>
+    </quotas>
+</clickhouse>

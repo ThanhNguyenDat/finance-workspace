@@ -1,0 +1,55 @@
+x-container-shared: &container-shared
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - finance
+  cpus: "2"
+  mem_limit: "2G"
+  deploy:
+    resources:
+      limits:
+        memory: "2G"
+        cpus: "2"
+
+networks:
+  finance:
+    name: finance
+    external: true
+
+volumes:
+  es-data:
+    name: finance-elasticsearch-data
+    driver_opts:
+      type: none
+      device: "/data/es/es/data"
+      o: bind
+
+services:
+  elasticsearch:
+    <<: *container-shared
+    image: 'docker.elastic.co/elasticsearch/elasticsearch:9.1.2'
+    container_name: finance-elasticsearch
+    hostname: finance-elasticsearch
+    environment:
+      - 'ELASTIC_PASSWORD=${SERVICE_PASSWORD_ELASTICSEARCH}'
+      - 'ES_JAVA_OPTS=-Xms512m -Xmx512m'
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    volumes:
+      - '/etc/localtime:/etc/localtime:ro'
+      - 'es-data:/usr/share/elasticsearch/data'
+    ports: [ "9200:9200" ]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'printf ''user = "elastic:%s"\n'' "$${SERVICE_PASSWORD_ELASTICSEARCH}" | curl --config - --silent --fail http://localhost:9200/_cluster/health >/dev/null || exit 1'
+      interval: 10s
+      timeout: 10s
+      retries: 24

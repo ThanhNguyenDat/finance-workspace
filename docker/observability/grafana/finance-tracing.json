@@ -1,0 +1,128 @@
+{
+  "annotations": {"list": []},
+  "description": "Operational health of the OpenTelemetry Collector and Tempo trace backend. Trace search itself lives in Grafana Explore using the Finance Tempo datasource.",
+  "editable": true,
+  "graphTooltip": 1,
+  "links": [
+    {"title": "Explore traces in Tempo", "type": "link", "url": "/explore", "targetBlank": false}
+  ],
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "min(up{job=~\"finance-otel-collector|finance-tempo\"})", "legendFormat": "trace backends", "refId": "A"}],
+      "title": "Trace Backends Up",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(rate(otelcol_receiver_accepted_spans{job=\"finance-otel-collector\"}[5m]))", "legendFormat": "accepted spans/s", "refId": "A"}],
+      "title": "Collector Accepted Spans",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.5}, {"color": "red", "value": 0.8}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "max(otelcol_exporter_queue_size{job=\"finance-otel-collector\"} / clamp_min(otelcol_exporter_queue_capacity{job=\"finance-otel-collector\"}, 1))", "legendFormat": "queue", "refId": "A"}],
+      "title": "Collector Export Queue Utilization",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "otelcol_process_memory_rss{job=\"finance-otel-collector\"}", "legendFormat": "collector", "refId": "A"}, {"expr": "process_resident_memory_bytes{job=\"finance-tempo\"}", "legendFormat": "tempo", "refId": "B"}],
+      "title": "Trace Backend Memory",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "id": 5,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"]}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "sum by (transport) (rate(otelcol_receiver_accepted_spans{job=\"finance-otel-collector\"}[$__rate_interval]))", "legendFormat": "accepted {{transport}}", "refId": "A"},
+        {"expr": "sum by (transport) (rate(otelcol_receiver_refused_spans{job=\"finance-otel-collector\"}[$__rate_interval]))", "legendFormat": "refused {{transport}}", "refId": "B"},
+        {"expr": "sum by (transport) (rate(otelcol_receiver_failed_spans{job=\"finance-otel-collector\"}[$__rate_interval]))", "legendFormat": "failed {{transport}}", "refId": "C"},
+        {"expr": "sum(rate(otelcol_exporter_sent_spans{job=\"finance-otel-collector\"}[$__rate_interval]))", "legendFormat": "exported", "refId": "D"}
+      ],
+      "title": "Collector Span Flow",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "id": 6,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"]}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "sum by (decision) (rate(otelcol_processor_tail_sampling_global_count_traces_sampled{job=\"finance-otel-collector\"}[$__rate_interval]))", "legendFormat": "{{decision}}", "refId": "A"},
+        {"expr": "rate(otelcol_processor_tail_sampling_sampling_trace_dropped_too_early{job=\"finance-otel-collector\"}[$__rate_interval])", "legendFormat": "dropped too early", "refId": "B"},
+        {"expr": "rate(otelcol_processor_tail_sampling_sampling_policy_evaluation_error{job=\"finance-otel-collector\"}[$__rate_interval])", "legendFormat": "policy errors", "refId": "C"}
+      ],
+      "title": "Tail Sampling Decisions",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "id": 7,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"]}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "sum(rate(tempo_distributor_spans_received_total{job=\"finance-tempo\"}[$__rate_interval]))", "legendFormat": "distributor received", "refId": "A"},
+        {"expr": "sum(rate(tempo_receiver_accepted_spans{job=\"finance-tempo\"}[$__rate_interval]))", "legendFormat": "receiver accepted", "refId": "B"},
+        {"expr": "sum(rate(tempo_receiver_refused_spans{job=\"finance-tempo\"}[$__rate_interval]))", "legendFormat": "receiver refused", "refId": "C"}
+      ],
+      "title": "Tempo Ingestion",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "id": 8,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"]}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "sum(rate(tempo_backend_scheduler_work_flushes_failed_total{job=\"finance-tempo\"}[$__rate_interval]))", "legendFormat": "backend flush failures", "refId": "A"},
+        {"expr": "sum(rate(tempo_live_store_failed_completions_total{job=\"finance-tempo\"}[$__rate_interval]))", "legendFormat": "completion failures", "refId": "B"},
+        {"expr": "sum(rate(tempo_live_store_local_failed_flushes_total{job=\"finance-tempo\"}[$__rate_interval]))", "legendFormat": "WAL flush failures", "refId": "C"},
+        {"expr": "sum(rate(tempo_dns_failures_total{job=\"finance-tempo\"}[$__rate_interval]))", "legendFormat": "DNS failures", "refId": "D"}
+      ],
+      "title": "Tempo Storage and Runtime Failures",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1, "decimals": 4, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 0.99}, {"color": "green", "value": 0.999}]}}, "overrides": []},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 20},
+      "id": 9,
+      "options": {"colorMode": "background", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(rate(otelcol_exporter_sent_spans{job=\"finance-otel-collector\"}[$__rate_interval])) / clamp_min(sum(rate(otelcol_receiver_accepted_spans{job=\"finance-otel-collector\"}[$__rate_interval])), 1)", "legendFormat": "exported / accepted", "refId": "A"}],
+      "title": "Trace Delivery Ratio",
+      "type": "stat"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["finance", "production", "opentelemetry", "tempo"],
+  "templating": {"list": [{"name": "DS_PROMETHEUS", "label": "Metrics datasource", "type": "datasource", "query": "prometheus", "refresh": 1}]},
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "title": "Finance OpenTelemetry & Tempo",
+  "uid": "finance-tracing-prod",
+  "version": 1
+}

@@ -1,0 +1,37 @@
+x-container-shared: &container-shared
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks:
+    - finance
+  cpus: "1"
+  mem_limit: "2G"
+  deploy:
+    resources:
+      limits:
+        memory: "2G"
+        cpus: "1"
+
+networks:
+  finance:
+    name: finance
+    external: true
+
+services:
+  rabbitmq:
+    <<: *container-shared
+    image: rabbitmq:management
+    container_name: finance-rabbitmq
+    hostname: finance-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: appuser
+      RABBITMQ_DEFAULT_PASS: apppass
+      RABBITMQ_DEFAULT_VHOST: myvhost
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 30s
+      retries: 3

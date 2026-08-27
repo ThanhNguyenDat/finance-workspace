@@ -1,0 +1,73 @@
+# elastic-indexer (spec: "Elasticsearch/OpenSearch indexer").
+#
+# Consumer group observability-elastic-indexer-v1 on the canonical topic.
+# The one property that matters here is document identity: _id is the
+# producer's event.id, so an at-least-once redelivery or a full offset replay
+# overwrites the same document instead of creating a duplicate. The search
+# index is a rebuildable projection, never the only durable copy.
+
+data_dir: /var/lib/vector
+
+api:
+  enabled: false
+
+sources:
+  canonical:
+    type: kafka
+    bootstrap_servers: ${KAFKA_BOOTSTRAP:-kafka:9092}
+    group_id: observability-elastic-indexer-v1
+    topics: ["observability.logs.canonical.v1"]
+    auto_offset_reset: earliest
+    decoding:
+      codec: json
+
+  internal:
+    type: internal_metrics
+    scrape_interval_secs: 15
+
+transforms:
+  prepared:
+    type: remap
+    inputs: [canonical]
+    source: |
+      # Carried out of band so it can be used as _id without also being
+      # duplicated into the document body.
+      .doc_id = to_string(.event.id) ?? ""
+
+sinks:
+  elasticsearch:
+    type: elasticsearch
+    inputs: [prepared]
+    endpoints: ["${ES_ENDPOINT:-http://elasticsearch:9200}"]
+    auth:
+      strategy: basic
+      user: ${ES_USER:-elastic}
+      password: ${ES_PASSWORD}
+    mode: bulk
+    bulk:
+      action: index
+      index: "app-logs-poc-%Y.%m.%d"
+    # This is the idempotency contract: id_key names the field whose value
+    # becomes the bulk document _id.
+    id_key: doc_id
+    encoding:
+      except_fields: [doc_id]
+    acknowledgements:
+      enabled: true
+    batch:
+      max_events: 1000
+      timeout_secs: 5
+    request:
+      timeout_secs: 30
+      retry_attempts: 5
+      retry_initial_backoff_secs: 1
+      retry_max_duration_secs: 60
+    buffer:
+      - type: disk
+        max_size: 268435488 # Vector's minimum disk-buffer size (256 MiB + 32 B)
+        when_full: block
+
+  metrics:
+    type: prometheus_exporter
+    inputs: [internal]
+    address: 0.0.0.0:9598
