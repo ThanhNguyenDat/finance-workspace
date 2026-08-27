@@ -124,3 +124,7 @@ sang resolver ở `bde66e7`; local 19/19 test pass khi đọc manifest workspace
 Commit `474b337` bổ sung resolver vào path filters monitor/deployment để các
 thay đổi consumer Docker không bị CI bỏ qua. Workflow chưa tự checkout workspace
 canonical vì cần owner xác nhận remote SHA trước khi pin dependency.
+
+Layout contract `943d2de` cũng kiểm tra thư mục canonical trong workspace (và
+fallback khi CI chỉ có một repo), nên không còn false-fail bởi thư mục
+`finance-mw/docker/monitor` root-owned cũ.
