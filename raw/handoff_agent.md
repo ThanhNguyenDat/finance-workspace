@@ -213,6 +213,8 @@ backtest numbers) points to a file under `raw/explain/`.
 
 ## Verify
 
+- **[observability][high][2026-08-27] Tách Finance Web khỏi finance-mw — đã deploy, chờ Claude verify độc lập:** runner `finance-web-ci` và Coolify app `dlcu7tfxpr466w4il0mr16f7` đã được sửa đúng repo; CI/CD `33097913042` xanh quality/image/deploy, Coolify deployment `nundidnpyjnnzt417fri6t0x` finished, production source SHA `511e518feeef5e04b257989df66014f5f38de6e2`, image digest `sha256:5e3ecabfc43ba6e2685825b5f6b23a29aefef741eced60bdc2408dcd80f1b4ac`, `/` và `/healthz` HTTP 200, container healthy/restart 0/OOM false. Claude cần kiểm tra độc lập rồi mới chuyển Done.
+
 
 - **[observability][evidence][2026-08-14] `/loop` production-verify watcher (standing):** Claude's own dynamic self-paced loop (session-only, not a real cron) re-reads this file each cycle — verifies `Verify` items independently (SHA/CI/curl) before moving to `Done`, reviews (but doesn't move) `Dev-done` items, curls `/healthz`/`/trading`/`/metrics`, and tracks `raw/proposal/portfolio-profitability-improvements.md` progress. Silent (noop) when nothing changed. (Standing description of the mechanism itself, not a task — kept here permanently, not moved to Done.)
 
