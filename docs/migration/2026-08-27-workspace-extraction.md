@@ -66,6 +66,14 @@ path filters và nhiều contract tests vẫn đọc trực tiếp `docker/infra
 hoặc `docker/observability/*`. Cần chuyển các consumer này sang workspace hoặc
 repo hạ tầng riêng, sau đó mới xoá compatibility copy trong một commit độc lập.
 
+Đã chuyển một phần consumer local trong Finance MW bằng commit `cc4e65a`:
+Makefile và các script Grafana (`deploy_grafana_dashboards.py`,
+`deploy_grafana_alerts.py`, `validate-grafana-dashboards.py`) ưu tiên
+`FINANCE_WORKSPACE_ROOT` khi sibling workspace có đủ manifest, nhưng vẫn fallback
+về compatibility copy để checkout CI đơn repo không bị gãy. Đây chưa phải
+consumer cutover hoàn chỉnh; Coolify scripts, contract tests và workflow filters
+vẫn cần chuyển có kiểm soát trước khi xóa bản copy.
+
 ## Quy tắc sau migration
 
 1. Task/research/handoff bắt đầu tại `raw/handoff_agent.md` trong workspace.
