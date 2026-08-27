@@ -24,6 +24,14 @@ Không chuyển code Go/Rust/TypeScript, `node_modules`, `dist`, credential file
 Docker runtime state hoặc production checkout. `finance-web` là repository code
 riêng, không nằm trong workspace.
 
+Evidence local hiện tại:
+
+- Workspace seed commit: `1b0ac09` (`chore(workspace): centralize finance docs
+  and agent contracts`).
+- `finance-mw` compatibility-pointer commit: `f1a22a6`.
+- Cả hai commit mới chỉ tồn tại local theo owner-held push gate; chưa có CI,
+  GitHub hoặc Coolify deployment.
+
 ## Quy tắc sau migration
 
 1. Task/research/handoff bắt đầu tại `raw/handoff_agent.md` trong workspace.
