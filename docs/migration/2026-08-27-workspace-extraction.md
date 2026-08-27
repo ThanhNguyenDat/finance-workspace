@@ -66,8 +66,8 @@ path filters và nhiều contract tests vẫn đọc trực tiếp `docker/infra
 hoặc `docker/observability/*`. Cần chuyển các consumer này sang workspace hoặc
 repo hạ tầng riêng, sau đó mới xoá compatibility copy trong một commit độc lập.
 
-Đã chuyển một phần consumer local trong Finance MW bằng các commit `cc4e65a` và
-`0fadc9e`, `ab4864c`:
+Đã chuyển một phần consumer local trong Finance MW bằng các commit `cc4e65a`,
+`0fadc9e`, `ab4864c` và `c9078f0`:
 Makefile và các script Grafana (`deploy_grafana_dashboards.py`,
 `deploy_grafana_alerts.py`, `validate-grafana-dashboards.py`), validator tracing,
 Kibana rotation và hai contract test ưu tiên `FINANCE_WORKSPACE_ROOT` khi sibling
@@ -110,3 +110,7 @@ trước khi xóa bản copy.
 Các asset Elasticsearch mà `coolify-resources.sh` cài đặt cũng đã dùng resolver
 chung ở `ab4864c`. Fallback vẫn giữ nguyên để các workflow checkout riêng
 không fail trước khi CI được chuyển sang checkout workspace.
+
+Bốn contract test Compose/Filebeat/Elasticsearch/Kline-maintenance dùng cùng
+resolver ở `c9078f0`; local đã chạy trên manifest workspace và giữ fallback cho
+CI checkout đơn repo. Các test và workflow còn lại là cổng cutover tiếp theo.
