@@ -31,9 +31,14 @@ research từ workspace, sau đó sửa đúng repository sở hữu code.
 .agents/   rule và skill dùng chung
 docs/      spec, runbook, sơ đồ và kế hoạch
 raw/       handoff, research history, report và evidence
+docker/    source hạ tầng dùng chung và observability/POC
 AGENTS.md  contract cho Codex và agent tương thích
 CLAUDE.md  hướng dẫn riêng cho Claude
 ```
 
 `raw/` là audit history. Không rewrite hoặc xóa lịch sử chỉ để làm gọn repo;
 không ghi credential/token/secret vào đó.
+
+`docker/infrastructure/` và `docker/observability/` là source canonical cho
+stack dùng chung. Các repo application chỉ giữ compatibility copy trong giai
+đoạn cutover; không coi bản copy đó là ownership lâu dài.
