@@ -8,6 +8,8 @@ chuyên trách được liệt kê trong [README](../README.md).
 - `diagram/`: sơ đồ luồng giữa browser, middleware, worker và broker.
 - `runbooks/`: quy trình vận hành, production verification và maintenance.
 - `specs/`: contract/kiến trúc đích, gồm observability và decision pipeline.
+- `architecture/`: ADR và kế hoạch thay đổi kiến trúc cần owner review trước
+  khi mutate production.
 - `migration/`: các ghi nhận migration/cutover còn đang có hiệu lực.
 
 ## Lịch sử
