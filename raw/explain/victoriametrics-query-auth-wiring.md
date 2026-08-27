@@ -30,6 +30,8 @@ Finance MW commit local: `aaab7a9`.
 - `bash -n` cho rotation/deploy script: pass.
 - `test_victoriametrics_http_auth_rotation.sh`: pass.
 - `test_coolify-deploy.sh`: pass, durable query keys không bị DELETE.
+- `go test -timeout=10m ./pkg/observability ./pkg/setting ./internal/interfaces/http`: pass.
+- `go vet ./pkg/observability ./pkg/setting ./internal/interfaces/http`: pass.
 - Workflow YAML parse: pass.
 
 ## Chưa thực hiện
