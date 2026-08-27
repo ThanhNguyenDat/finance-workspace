@@ -61,20 +61,22 @@ Coolify hay production verification.
 `docker/observability/` (41 file), gồm cả POC Kafka/ClickHouse/S3 mới. Không
 copy `elasticsearch/.env` hoặc `.env.poc` vì đây là credential/runtime state.
 
-Chưa xóa bản trong `finance-mw`: Makefile, Coolify resource scripts, workflow
-path filters và nhiều contract tests vẫn đọc trực tiếp `docker/infrastructure/*`
-hoặc `docker/observability/*`. Cần chuyển các consumer này sang workspace hoặc
-repo hạ tầng riêng, sau đó mới xoá compatibility copy trong một commit độc lập.
+Chưa xóa bản compatibility trong `finance-mw`: các consumer code hiện ưu tiên
+`FINANCE_WORKSPACE_ROOT` và chỉ fallback về bản copy khi checkout CI đơn repo
+không có sibling workspace. Audit hiện tại không còn Coolify script nào đọc trực
+tiếp source cũ; các chuỗi `docker/infrastructure/*` và `docker/observability/*`
+còn lại chỉ là nhãn tương đối trong contract test, tài liệu hoặc fallback có chủ
+đích.
 
-Đã chuyển một phần consumer local trong Finance MW bằng các commit `cc4e65a`,
-`0fadc9e`, `ab4864c` và `c9078f0`:
-Makefile và các script Grafana (`deploy_grafana_dashboards.py`,
-`deploy_grafana_alerts.py`, `validate-grafana-dashboards.py`), validator tracing,
-Kibana rotation và hai contract test ưu tiên `FINANCE_WORKSPACE_ROOT` khi sibling
-workspace có đủ manifest, nhưng vẫn fallback về compatibility copy để checkout
-CI đơn repo không bị gãy. Đây chưa phải consumer cutover hoàn chỉnh; Coolify
-scripts còn lại, contract tests và workflow filters vẫn cần chuyển có kiểm soát
-trước khi xóa bản copy.
+Consumer local đã chuyển qua resolver bằng các commit `cc4e65a`, `0fadc9e`,
+`ab4864c`, `c9078f0`, `5e05a73`, `bde66e7`, `474b337`, `943d2de`, `db1b76e`,
+`d8ca6a4` và `2ed7c18`: Makefile, script Grafana, validator tracing, Kibana
+rotation, Coolify asset installer, toàn bộ contract test hạ tầng/observability,
+path filters và Compose validation đều đã chạy local trên manifest canonical.
+Consumer cutover chưa thể đóng vì workflow GitHub chưa checkout workspace ở SHA
+bất biến; remote `finance-workspace` hiện vẫn rỗng (`isEmpty=true`). Sau khi owner
+publish `main` và xác nhận SHA, mới thêm checkout/pin workflow rồi xóa
+compatibility copy trong một commit độc lập.
 
 ## Quy tắc sau migration
 
@@ -103,9 +105,9 @@ trước khi xóa bản copy.
       owner mở push gate).
 - [x] Đã xóa `web/` và web-owned compose/script khỏi `finance-mw` bằng commit
       `ad43acd` sau khi workflow standalone local pass.
-- [ ] Các consumer hạ tầng (Make/script/test/workflow/Coolify raw Compose) đã
-      dùng source workspace; sau đó xoá `docker/infrastructure/` và
-      `docker/observability/` khỏi `finance-mw`.
+- [ ] Các workflow đã checkout/pin source workspace ở SHA bất biến; sau đó xoá
+      `docker/infrastructure/` và `docker/observability/` compatibility copy khỏi
+      `finance-mw`.
 
 Các asset Elasticsearch mà `coolify-resources.sh` cài đặt cũng đã dùng resolver
 chung ở `ab4864c`. Fallback vẫn giữ nguyên để các workflow checkout riêng
