@@ -120,3 +120,7 @@ Contract healthcheck hạ tầng cũng đã chuyển sang resolver ở `5e05a73`
 
 Bốn Python contract test memory/process/Prometheus/retired-metrics đã chuyển
 sang resolver ở `bde66e7`; local 19/19 test pass khi đọc manifest workspace.
+
+Commit `474b337` bổ sung resolver vào path filters monitor/deployment để các
+thay đổi consumer Docker không bị CI bỏ qua. Workflow chưa tự checkout workspace
+canonical vì cần owner xác nhận remote SHA trước khi pin dependency.
