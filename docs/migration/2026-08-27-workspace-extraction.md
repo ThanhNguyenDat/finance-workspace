@@ -47,8 +47,8 @@ Chưa xóa `finance-mw/web` vì workflow hiện tại vẫn build/verify trực 
 tách job CI/CD và chuyển các script sở hữu web trước; nếu xóa source trước bước
 đó, pipeline Finance MW sẽ fail-closed do thiếu path.
 
-Đã hoàn tất cutover local ngày 2026-08-27 UTC+7: `finance-mw` commit
-`ad43acd` xoá `web/`, `docker/compose.web.yaml`, các verifier/detector web,
+Đã hoàn tất cutover local ngày 2026-08-27 UTC+7: `finance-mw` commits
+`ad43acd` + `d450876` xoá `web/`, `docker/compose.web.yaml`, các verifier/detector web,
 workflow `verify-web.yml`, và các job publish/deploy web khỏi pipeline MW.
 Makefile, Docker builder, runtime-env/Compose contracts và tài liệu đã được cập
 nhật; Go test/vet/build, shell contracts và workflow YAML parse đều xanh. Repo
