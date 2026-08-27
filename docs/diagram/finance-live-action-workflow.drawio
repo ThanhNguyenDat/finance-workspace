@@ -1,0 +1,376 @@
+<mxfile host="app.diagrams.net" modified="2026-07-28T00:00:00.000Z" agent="Codex" version="24.7.17" type="device" compressed="false">
+  <diagram id="end-to-end" name="01 End-to-end">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="FINANCE END-TO-END · CURRENT WIRED FLOW · reviewed 2026-07-28" style="text;html=1;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="1000" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="web-box" value="finance-web · React/Vite" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="300" height="400" as="geometry"/>
+        </mxCell>
+        <mxCell id="web-ui" value="TradeLayerPage&lt;br&gt;&lt;b&gt;Alpha / Portfolio / Live tabs&lt;/b&gt;&lt;br&gt;catalog 5m · 15m · 30m · 1h · 4h · 1d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="75" y="165" width="230" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="web-data" value="useTradingData&lt;br&gt;REST bootstrap&lt;br&gt;+ WebSocket snapshots" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="75" y="285" width="105" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="web-metrics" value="useTradingMetrics&lt;br&gt;REST bootstrap&lt;br&gt;+ WebSocket metrics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="285" width="105" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="mw-box" value="finance-mw · request plane + history plane" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="390" y="100" width="480" height="730" as="geometry"/>
+        </mxCell>
+        <mxCell id="mw-http" value="Authenticated HTTP + WebSocket&lt;br&gt;/v1/trading/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="430" y="165" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mw-router" value="Symbol router&lt;br&gt;symbol → worker gRPC client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="650" y="165" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mw-hubs" value="Shared stream hubs&lt;br&gt;&lt;b&gt;exactly 1 upstream/type/worker&lt;/b&gt;&lt;br&gt;snapshot · metrics · all-interval kline&lt;br&gt;cache + browser fan-out" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="485" y="290" width="260" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="mw-kline" value="KlineService gRPC&lt;br&gt;canonical 9-interval contract" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="430" y="505" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mw-cache" value="MW Redis&lt;br&gt;completed UTC day-cache" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="650" y="485" width="160" height="95" as="geometry"/>
+        </mxCell>
+        <mxCell id="mw-pg" value="PostgreSQL / Timescale&lt;br&gt;canonical klines&lt;br&gt;1m · 5m · 15m · 30m · 1h&lt;br&gt;2h · 4h · 12h · 1d" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="650" y="630" width="160" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="mw-ingest" value="Binance WS producer&lt;br&gt;realtime 1m · 5m · 15m · 1h · 4h&lt;br&gt;→ MarketEventV2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="430" y="670" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mw-persist" value="kline-ingest Kafka consumer&lt;br&gt;closed → Redis queue → DB flusher" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="430" y="600" width="180" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="mw-rest-sync" value="Scheduled REST sync → Kafka&lt;br&gt;5m · 15m · 30m · 1h · 2h · 4h · 12h · 1d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="430" y="765" width="380" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="fla-box" value="finance-live-action · one worker per symbol" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="930" y="100" width="500" height="730" as="geometry"/>
+        </mxCell>
+        <mxCell id="fla-consumer" value="One Kafka consumer group / symbol worker&lt;br&gt;&lt;b&gt;active MTF 5m · 15m · 1h · 4h&lt;/b&gt;&lt;br&gt;1m event filtered out" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="980" y="165" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="fla-quality" value="Route identity + history quality&lt;br&gt;closed-candle gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="165" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="fla-engine" value="StrategyEngine&lt;br&gt;&lt;b&gt;candle_momentum&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="980" y="300" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="fla-runtime" value="TradingRuntime&lt;br&gt;Alpha matrix → MTF evidence&lt;br&gt;→ 4 Portfolio rule ledgers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="285" width="180" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="fla-redis" value="Live Action Redis&lt;br&gt;runtime state + ledgers&lt;br&gt;pending evidence + Kafka offset" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="980" y="475" width="180" height="115" as="geometry"/>
+        </mxCell>
+        <mxCell id="fla-grpc" value="WebDataService gRPC&lt;br&gt;snapshot · metrics · kline streams&lt;br&gt;scoped unary history" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="475" width="180" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="fla-live" value="LIVE/BROKER CONTEXT&lt;br&gt;&lt;b&gt;NOT CREATED&lt;/b&gt;&lt;br&gt;has_broker_keys = false" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1085" y="675" width="220" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="binance" value="Binance perpetual-futures WebSocket" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="70" y="700" width="230" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="kafka" value="Kafka&lt;br&gt;&lt;b&gt;market.kline.v2.* (per pair + interval)&lt;/b&gt;&lt;br&gt;realtime includes all 9 intervals&lt;br&gt;durable event log" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="925" y="875" width="170" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="truth-note" value="Truth boundaries&lt;br&gt;Kafka = durable event log&lt;br&gt;Live Action Redis = runtime checkpoint&lt;br&gt;MW PG/Redis = historical kline source&lt;br&gt;Browser = presentation cache only" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1190" y="870" width="260" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-web-http" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="web-data" target="mw-http">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-web-metrics" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="web-metrics" target="mw-http">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-http-router" value="unary" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="mw-http" target="mw-router">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-http-hubs" value="browser WS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="mw-http" target="mw-hubs">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-router-grpc" value="symbol-routed unary" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="mw-router" target="fla-grpc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-hub-grpc" value="shared upstreams" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="mw-hubs" target="fla-grpc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-binance-ingest" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="binance" target="mw-ingest">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-ingest-kafka" value="normalized events" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="mw-ingest" target="kafka">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-rest-sync-kafka" value="historical events" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="mw-rest-sync" target="kafka">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-kafka-persist" value="persistence group" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="kafka" target="mw-persist">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-persist-pg" value="closed klines" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="mw-persist" target="mw-pg">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-kafka-consumer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="kafka" target="fla-consumer">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-consumer-quality" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="fla-consumer" target="fla-quality">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-quality-engine" value="closed + ready" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="fla-quality" target="fla-engine">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-engine-runtime" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="fla-engine" target="fla-runtime">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-runtime-redis" value="checkpoint first" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#b85450;fontStyle=1;" edge="1" parent="1" source="fla-runtime" target="fla-redis">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-redis-kafka" value="success → ack offset" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="1" source="fla-redis" target="kafka">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-runtime-grpc" value="publish after checkpoint" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="fla-runtime" target="fla-grpc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-runtime-history" value="startup replay" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;endArrow=block;endFill=1;" edge="1" parent="1" source="fla-runtime" target="mw-kline">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-kline-cache" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="mw-kline" target="mw-cache">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-cache-pg" value="cache miss" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="mw-cache" target="mw-pg">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="layers" name="02 Alpha-Portfolio-Live">
+    <mxGraphModel dx="1700" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="20" />
+        <mxCell id="21" parent="20"/>
+        <mxCell id="l-title" value="FINANCE-LIVE-ACTION LAYERS · CURRENT VS LIVE TARGET BOUNDARY" style="text;html=1;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;" vertex="1" parent="21">
+          <mxGeometry x="420" y="20" width="1000" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-input" value="L0 · Market event integrity&lt;br&gt;route identity · final candle&lt;br&gt;contiguous history · warm-up" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="21">
+          <mxGeometry x="60" y="120" width="210" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-interval-note" value="INTERVAL BOUNDARY&lt;br&gt;MW canonical: 9 intervals&lt;br&gt;WS realtime: 1m · 5m · 15m · 1h · 4h&lt;br&gt;REST backfill: 5m · 15m · 30m · 1h · 2h · 4h · 12h · 1d&lt;br&gt;active strategy: 5m · 15m · 1h · 4h&lt;br&gt;&lt;b&gt;other Kafka intervals are not evaluated&lt;/b&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="21">
+          <mxGeometry x="60" y="255" width="220" height="145" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-engine" value="L1 · StrategyEngine&lt;br&gt;&lt;b&gt;candle_momentum only&lt;/b&gt;&lt;br&gt;body ≥ 0.1%&lt;br&gt;up LONG · down SHORT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="21">
+          <mxGeometry x="330" y="105" width="220" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-helpers" value="Indicator helpers&lt;br&gt;ATR · Bollinger · EMA&lt;br&gt;MACD · RSI · SMA&lt;br&gt;&lt;b&gt;NOT registered strategies&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="21">
+          <mxGeometry x="330" y="275" width="220" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-demo-box" value="L2 · DEMO · signal quality · WIRED" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=15;" vertex="1" parent="21">
+          <mxGeometry x="620" y="85" width="420" height="360" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-d5" value="strategy × 5m&lt;br&gt;forward + backtest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="21">
+          <mxGeometry x="650" y="145" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-d15" value="strategy × 15m&lt;br&gt;forward + backtest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="21">
+          <mxGeometry x="845" y="145" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-d1h" value="strategy × 1h&lt;br&gt;forward + backtest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="21">
+          <mxGeometry x="650" y="245" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-d4h" value="strategy × 4h&lt;br&gt;forward + backtest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="21">
+          <mxGeometry x="845" y="245" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-demo-rule" value="Every Alpha ledger: fixed $5 notional · no SL/TP&lt;br&gt;hold until opposite · reverse same candle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="21">
+          <mxGeometry x="700" y="345" width="260" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-evidence-box" value="L3 · MTF EVIDENCE BARRIER · WIRED" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=15;" vertex="1" parent="21">
+          <mxGeometry x="1110" y="85" width="680" height="360" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-position" value="Persistent Alpha position evidence&lt;br&gt;each strategy × interval&lt;br&gt;open strength=1 · flat=0" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="21">
+          <mxGeometry x="1140" y="145" width="190" height="95" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-primary" value="5m primary pending queue&lt;br&gt;oldest close first&lt;br&gt;state survives checkpoint" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="21">
+          <mxGeometry x="1370" y="145" width="180" height="95" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-sync" value="Synchronization fail-closed&lt;br&gt;all strategies × 4 intervals&lt;br&gt;latest fully closed boundary&lt;br&gt;reject future/missing/stale/unsynced" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="21">
+          <mxGeometry x="1580" y="135" width="180" height="115" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-entry" value="ENTRY&lt;br&gt;5m × 0.15&lt;br&gt;15m × 0.25" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="21">
+          <mxGeometry x="1200" y="300" width="135" height="85" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-trend" value="TREND&lt;br&gt;1h × 0.25&lt;br&gt;4h × 0.35" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="21">
+          <mxGeometry x="1390" y="300" width="135" height="85" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-gate" value="Both |score| ≥ 0.10&lt;br&gt;AND same sign?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="21">
+          <mxGeometry x="1600" y="290" width="145" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-paper-box" value="L4 · PAPER RULE GRID · WIRED · same decision, independent ledgers" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=15;" vertex="1" parent="21">
+          <mxGeometry x="120" y="520" width="990" height="310" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-hold" value="FAIL → HOLD&lt;br&gt;explicit gate reason" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="21">
+          <mxGeometry x="145" y="600" width="150" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-decision" value="PASS → one aggregate&lt;br&gt;LONG / SHORT decision" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="21">
+          <mxGeometry x="345" y="600" width="175" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-p1" value="fixed-pct&lt;br&gt;$5 notional&lt;br&gt;SL 0.5% · TP 1%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="21">
+          <mxGeometry x="580" y="585" width="140" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-p2" value="compounding-pct&lt;br&gt;10% equity&lt;br&gt;SL 0.5% · TP 1%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="21">
+          <mxGeometry x="750" y="585" width="140" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-p3" value="fixed-atr&lt;br&gt;$5 notional&lt;br&gt;SL 2×ATR14 · TP 4×" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="21">
+          <mxGeometry x="580" y="710" width="140" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-p4" value="compounding-atr&lt;br&gt;10% equity&lt;br&gt;SL 2×ATR14 · TP 4×" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="21">
+          <mxGeometry x="750" y="710" width="140" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-sim" value="Simulation common&lt;br&gt;equity 10,000 · fee 5 bps/side&lt;br&gt;slippage 2 bps/side · funding 1 bp/8h&lt;br&gt;protective exit before reversal&lt;br&gt;stop wins if stop+TP hit same candle" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="21">
+          <mxGeometry x="930" y="585" width="155" height="195" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-live-box" value="L5 · LIVE SAFETY / BROKER · IMPLEMENTED DOMAIN CONTRACTS, NOT WIRED" style="swimlane;html=1;rounded=1;startSize=32;dashed=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=15;" vertex="1" parent="21">
+          <mxGeometry x="1170" y="520" width="620" height="580" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-env" value="ExecutionDecisionEnvelope&lt;br&gt;Offline · Paper · Shadow&lt;br&gt;Canary · ApprovedLive" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="21">
+          <mxGeometry x="1205" y="585" width="190" height="95" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-fresh" value="Freshness + continuity&lt;br&gt;6 source watermarks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="21">
+          <mxGeometry x="1430" y="585" width="150" height="95" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-halt" value="Execution halt&lt;br&gt;+ performance halt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="21">
+          <mxGeometry x="1615" y="585" width="140" height="95" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-risk" value="Risk gate&lt;br&gt;order/symbol/account&lt;br&gt;leverage/open orders" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="21">
+          <mxGeometry x="1205" y="735" width="150" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-cost" value="Precision + cost gate&lt;br&gt;tick/step/min notional&lt;br&gt;total cost budget" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="21">
+          <mxGeometry x="1400" y="735" width="150" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-recon" value="Position reconciliation&lt;br&gt;local ↔ broker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="21">
+          <mxGeometry x="1595" y="735" width="150" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-broker" value="finance-broker adapter&lt;br&gt;Redis idempotency&lt;br&gt;&lt;b&gt;currently Spot /api/v3/order&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="21">
+          <mxGeometry x="1320" y="890" width="230" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-block" value="CURRENT BLOCKER&lt;br&gt;No Broker execution context&lt;br&gt;has_broker_keys = false&lt;br&gt;no safety orchestration in finance-api" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="21">
+          <mxGeometry x="1580" y="885" width="175" height="135" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-context-note" value="Current context count with 1 strategy&lt;br&gt;&lt;b&gt;1 runtime + 8 Alpha + 8 Portfolio = 17&lt;/b&gt;&lt;br&gt;16 independent simulated ledgers" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="21">
+          <mxGeometry x="120" y="900" width="300" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="l-replay-note" value="Replay → forward invariant&lt;br&gt;same strategy/rule + interval lane&lt;br&gt;seed forward only if untouched&lt;br&gt;contract version = 7" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="21">
+          <mxGeometry x="500" y="900" width="280" height="115" as="geometry"/>
+        </mxCell>
+        <mxCell id="le-input-engine" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-input" target="l-engine"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-helper-engine" value="not registered" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;endArrow=open;endFill=0;" edge="1" parent="21" source="l-helpers" target="l-engine"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-engine-d5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-engine" target="l-d5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-engine-d15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-engine" target="l-d15"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-engine-d1h" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-engine" target="l-d1h"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-engine-d4h" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-engine" target="l-d4h"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-demo-pos" value="ledger position" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-demo-box" target="l-position"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-pos-primary" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-position" target="l-primary"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-primary-sync" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-primary" target="l-sync"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-sync-entry" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-sync" target="l-entry"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-sync-trend" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-sync" target="l-trend"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-entry-gate" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-entry" target="l-gate"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-trend-gate" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-trend" target="l-gate"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-gate-hold" value="fail" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="21" source="l-gate" target="l-hold"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-gate-decision" value="pass" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#82b366;" edge="1" parent="21" source="l-gate" target="l-decision"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-decision-p1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-decision" target="l-p1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-decision-p2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-decision" target="l-p2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-decision-p3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-decision" target="l-p3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-decision-p4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="21" source="l-decision" target="l-p4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-paper-live" value="future promotion only" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;endArrow=open;endFill=0;strokeColor=#b85450;" edge="1" parent="21" source="l-paper-box" target="l-env"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-env-fresh" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="21" source="l-env" target="l-fresh"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-fresh-halt" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="21" source="l-fresh" target="l-halt"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-halt-risk" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="21" source="l-halt" target="l-risk"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-risk-cost" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="21" source="l-risk" target="l-cost"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-cost-recon" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="21" source="l-cost" target="l-recon"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-recon-broker" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="21" source="l-recon" target="l-broker"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="le-block-env" value="not orchestrated" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;endArrow=open;endFill=0;strokeColor=#b85450;" edge="1" parent="21" source="l-block" target="l-env"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="state-and-replay" name="03 State-Replay-Streams">
+    <mxGraphModel dx="1500" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="30"/>
+        <mxCell id="31" parent="30"/>
+        <mxCell id="s-title" value="STATE, REPLAY AND READ-MODEL CONTRACTS" style="text;html=1;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;" vertex="1" parent="31">
+          <mxGeometry x="350" y="20" width="900" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-history" value="MW KlineService · canonical 9 intervals&lt;br&gt;Redis day-cache → PostgreSQL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="31">
+          <mxGeometry x="70" y="120" width="210" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-streams" value="4 active replay gRPC channels&lt;br&gt;5m · 15m · 1h · 4h&lt;br&gt;selected by PAPER_TIMEFRAMES" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="31">
+          <mxGeometry x="350" y="120" width="210" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-merge" value="Merge by close_time&lt;br&gt;same close: 5m → 15m → 1h → 4h" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="31">
+          <mxGeometry x="630" y="120" width="230" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-replay" value="Backtest Alpha + Portfolio ledgers&lt;br&gt;same strategy/rule semantics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="31">
+          <mxGeometry x="930" y="120" width="230" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-forward" value="Forward continuation&lt;br&gt;same lane only · seed if untouched&lt;br&gt;closed history joined, not copied" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="31">
+          <mxGeometry x="1230" y="110" width="240" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-event" value="Closed Kafka event" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="31">
+          <mxGeometry x="70" y="350" width="170" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-apply" value="Validate → evaluate → update&lt;br&gt;Alpha/Portfolio state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="31">
+          <mxGeometry x="310" y="340" width="200" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-checkpoint" value="Redis checkpoint&lt;br&gt;recent klines · signals · ledgers&lt;br&gt;evidence · pending primary&lt;br&gt;continuations · Kafka offset" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="31">
+          <mxGeometry x="590" y="310" width="220" height="145" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-ack" value="Checkpoint success&lt;br&gt;then Kafka acknowledge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="31">
+          <mxGeometry x="890" y="340" width="190" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-publish" value="Publish worker updates&lt;br&gt;only after checkpoint" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="31">
+          <mxGeometry x="1160" y="340" width="190" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-snap" value="StreamSnapshots&lt;br&gt;live state only" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="31">
+          <mxGeometry x="230" y="620" width="170" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-metrics" value="StreamAllTradingMetrics&lt;br&gt;all contexts + sequence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="31">
+          <mxGeometry x="470" y="620" width="190" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-kline" value="StreamKlines&lt;br&gt;all intervals" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="31">
+          <mxGeometry x="730" y="620" width="170" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-trades" value="ListHistoryTrades unary&lt;br&gt;scope_id + run_id&lt;br&gt;replay + forward history" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="31">
+          <mxGeometry x="970" y="610" width="190" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-hub" value="finance-mw shared hubs&lt;br&gt;1 upstream/type/worker&lt;br&gt;fan-out + scope filtering" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="31">
+          <mxGeometry x="540" y="790" width="260" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-browser" value="Browser read model&lt;br&gt;REST-loaded closed history preserved&lt;br&gt;WS updates current state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="31">
+          <mxGeometry x="920" y="790" width="280" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="s-db-note" value="Important&lt;br&gt;Simulated trades are served from worker ledgers/checkpoint.&lt;br&gt;Current path does NOT write them to MW PostgreSQL trades." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="31">
+          <mxGeometry x="1290" y="590" width="250" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="se-history-streams" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-history" target="s-streams"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-streams-merge" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-streams" target="s-merge"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-merge-replay" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-merge" target="s-replay"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-replay-forward" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-replay" target="s-forward"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-event-apply" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-event" target="s-apply"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-apply-checkpoint" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="31" source="s-apply" target="s-checkpoint"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-checkpoint-ack" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="31" source="s-checkpoint" target="s-ack"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-ack-publish" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-ack" target="s-publish"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-publish-snap" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-publish" target="s-snap"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-publish-metrics" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-publish" target="s-metrics"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-publish-kline" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-publish" target="s-kline"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-publish-trades" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-publish" target="s-trades"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-snap-hub" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-snap" target="s-hub"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-metrics-hub" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-metrics" target="s-hub"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-kline-hub" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-kline" target="s-hub"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-trades-browser" value="REST unary" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-trades" target="s-browser"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="se-hub-browser" value="WebSocket fan-out" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;" edge="1" parent="31" source="s-hub" target="s-browser"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

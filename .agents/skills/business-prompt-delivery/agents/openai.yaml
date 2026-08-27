@@ -1,0 +1,4 @@
+interface:
+  display_name: "Business Prompt Delivery"
+  short_description: "Track and deliver Finance ecosystem business prompts"
+  default_prompt: "Use $business-prompt-delivery to process the next Finance ecosystem business prompt through verified deployment."

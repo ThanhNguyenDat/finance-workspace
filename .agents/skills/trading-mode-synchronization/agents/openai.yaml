@@ -1,0 +1,6 @@
+interface:
+  display_name: "Trading Mode Synchronization"
+  short_description: "Lock Alpha/Portfolio no-lookahead flow"
+  default_prompt: "Use $trading-mode-synchronization to implement or review synchronized Alpha and Portfolio trading flows."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test Timeouts"
+  short_description: "Prevent test deadlocks with layered hard timeouts"
+  default_prompt: "Apply hard timeouts and kill grace to every test command and CI job."

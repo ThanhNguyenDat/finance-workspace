@@ -1,0 +1,15 @@
+# Local editor and operating-system files
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local temporary artifacts and credentials
+.tmp/
+*.local
+.env
+.env.*
+!.env.example
+*.log
+
+# Do not ignore raw/: handoff and research history are workspace artifacts.

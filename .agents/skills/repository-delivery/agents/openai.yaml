@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repository Delivery"
+  short_description: "Deliver immutable candidates with reviewed handoffs"
+  default_prompt: "Use $repository-delivery to continuously consume raw/handoff_agent.md during waits, record every new task immediately in Todo or Processing, deliver immutable application revisions through CI/CD and Coolify, keep durable infrastructure apps Coolify-owned and UI-manageable, verify production, and leave Codex-completed work in Verify for Claude review."
