@@ -117,3 +117,6 @@ CI checkout đơn repo. Các test và workflow còn lại là cổng cutover ti�
 
 Contract healthcheck hạ tầng cũng đã chuyển sang resolver ở `5e05a73`; local
 đã xác nhận toàn bộ service trên manifest workspace có healthcheck bounded.
+
+Bốn Python contract test memory/process/Prometheus/retired-metrics đã chuyển
+sang resolver ở `bde66e7`; local 19/19 test pass khi đọc manifest workspace.
