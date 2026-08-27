@@ -3,14 +3,19 @@
 `finance-workspace` giữ tài liệu điều phối chung; mã nguồn nằm ở các checkout
 chuyên trách được liệt kê trong [README](../README.md).
 
-- `diagram/`: sơ đồ luồng giữa browser, middleware, worker và broker.
-- `notes/`: ghi chú thiết kế và điều tra đã hoàn thành.
-- `runbooks/`: quy trình vận hành, production verification và maintenance.
-- `specs/`: contract/kiến trúc đích, bao gồm pipeline observability và
-  analytics.
-- `superpowers/`: kế hoạch/spec thay đổi sản phẩm cần đồng bộ nhiều repo.
+## Tài liệu đang dùng
 
-Các đường dẫn tới file code trong tài liệu cũ có thể trỏ tới checkout sibling
-(`../finance-mw`, `../finance-live-action`, `../finance-web`). Khi đọc trên
-GitHub, mở repository tương ứng và giữ nguyên commit/SHA được ghi trong
-evidence; không coi đường dẫn local là bằng chứng deployment.
+- `diagram/`: sơ đồ luồng giữa browser, middleware, worker và broker.
+- `runbooks/`: quy trình vận hành, production verification và maintenance.
+- `specs/`: contract/kiến trúc đích, gồm observability và decision pipeline.
+- `migration/`: các ghi nhận migration/cutover còn đang có hiệu lực.
+
+## Lịch sử
+
+Tài liệu nghiên cứu, kế hoạch triển khai và note đã supersede được giữ nguyên
+trong [`archive/`](archive/README.md) để phục vụ audit, nhưng không phải
+source-of-truth cho runtime mới.
+
+Khi tài liệu dẫn tới code, ưu tiên repository chuyên trách và SHA/deployed
+evidence được ghi trong handoff; đường dẫn checkout local chỉ là tiện ích cho
+máy phát triển.

@@ -11,10 +11,12 @@ Architecture review and editable diagrams:
 
 ## Repositories
 
-- Middleware and web:
-  `/home/lap13330/Desktop/finance-eco-system/software/finance-mw`
-- Strategy workers:
-  `/home/lap13330/Desktop/finance-eco-system/software/finance-live-action`
+- Middleware: `ThanhNguyenDat/finance-mw`
+- Web: `ThanhNguyenDat/finance-web`
+- Strategy workers: `ThanhNguyenDat/finance-live-action`
+
+Checkout local có thể đặt cạnh `finance-workspace`; không dùng đường dẫn máy
+cũ trong tài liệu này làm source-of-truth.
 
 Read each repository's `AGENTS.md` before editing.
 

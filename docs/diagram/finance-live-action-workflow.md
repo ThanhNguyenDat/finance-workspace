@@ -5,13 +5,15 @@ tags:
   - finance-live-action
   - trading
   - mermaid
-status: reviewed-current-code
+status: architecture-snapshot
 reviewed_at: 2026-07-28
 ---
 
 # Finance Live Action: toàn cảnh Web → Worker → DB
 
-> Review theo code hiện tại ngày **2026-07-28**.
+> Nội dung runtime là snapshot theo code ngày **2026-07-28**; không dùng ngày
+> review này để suy ra deployed revision hiện tại. Link code được chuẩn hóa lại
+> ngày **2026-08-27** sau khi tách `finance-web` và `finance-workspace`.
 > File Draw.io nhiều page: [finance-live-action-workflow.drawio](finance-live-action-workflow.drawio).
 
 ## Kết luận ngắn
@@ -437,7 +439,7 @@ route production là `perpetual_future`. Không được nối thẳng adapter n
 và reconciliation.
 
 Thiết kế layer đích chi tiết hơn nằm tại
-[trading-decision-pipeline-design.md](../superpowers/specs/2026-07-27-trading-decision-pipeline-design.md);
+[trading-decision-pipeline.md](../specs/trading-decision-pipeline.md);
 tài liệu đó là `TARGET`, không thay đổi trạng thái runtime nêu trên.
 
 ## 9. Store ownership
@@ -455,54 +457,54 @@ tài liệu đó là `TARGET`, không thay đổi trạng thái runtime nêu tr�
 ### finance-web / finance-mw
 
 - Browser state:
-  [`useTradingData.ts`](../../web/src/hooks/useTradingData.ts),
-  [`useTradingMetrics.ts`](../../web/src/hooks/useTradingMetrics.ts),
-  [`TradeLayerPage.tsx`](../../web/src/pages/TradeLayerPage.tsx)
+  [`useTradingData.ts`](https://github.com/ThanhNguyenDat/finance-web/blob/main/src/hooks/useTradingData.ts),
+  [`useTradingMetrics.ts`](https://github.com/ThanhNguyenDat/finance-web/blob/main/src/hooks/useTradingMetrics.ts),
+  [`TradeLayerPage.tsx`](https://github.com/ThanhNguyenDat/finance-web/blob/main/src/pages/TradeLayerPage.tsx)
 - Interval contracts and UI profiles:
-  [`enum.proto`](../../proto/enum.proto),
-  [`consts.go`](../../internal/interfaces/worker/consts.go),
-  [`intervals.ts`](../../web/src/constants/intervals.ts)
+  [`enum.proto`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/proto/enum.proto),
+  [`consts.go`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/internal/interfaces/worker/consts.go),
+  [`intervals.ts`](https://github.com/ThanhNguyenDat/finance-web/blob/main/src/constants/intervals.ts)
 - Lane classification:
-  [`tradingScope.ts`](../../web/src/utils/tradingScope.ts)
+  [`tradingScope.ts`](https://github.com/ThanhNguyenDat/finance-web/blob/main/src/utils/tradingScope.ts)
 - HTTP/WebSocket routes:
-  [`router.go`](../../internal/interfaces/http/router.go),
-  [`trading_controller.go`](../../internal/interfaces/http/controllers/trading_controller.go)
+  [`router.go`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/internal/interfaces/http/router.go),
+  [`trading_controller.go`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/internal/interfaces/http/controllers/trading_controller.go)
 - Symbol routing + shared upstream fan-out:
-  [`trading_gateway.go`](../../internal/interfaces/http/trading_gateway.go),
-  [`stream_hub.go`](../../internal/interfaces/http/stream_hub.go),
-  [`web_data_client.go`](../../internal/interfaces/grpc/clients/web_data_client.go)
+  [`trading_gateway.go`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/internal/interfaces/http/trading_gateway.go),
+  [`stream_hub.go`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/internal/interfaces/http/stream_hub.go),
+  [`web_data_client.go`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/internal/interfaces/grpc/clients/web_data_client.go)
 - Market ingest:
-  [`binance_ws_service.go`](../../internal/services/binance_ws_service.go),
-  [`writer.go`](../../pkg/kafka/writer.go)
+  [`binance_ws_service.go`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/internal/services/binance_ws_service.go),
+  [`writer.go`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/pkg/kafka/writer.go)
 - Historical kline:
-  [`kline_service_server.go`](../../internal/interfaces/grpc/servers/kline/kline_service_server.go),
-  [`repository_impl.go`](../../internal/repository/kline/repository_impl.go)
+  [`kline_service_server.go`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/internal/interfaces/grpc/servers/kline/kline_service_server.go),
+  [`repository_impl.go`](https://github.com/ThanhNguyenDat/finance-mw/blob/main/internal/repository/kline/repository_impl.go)
 
 ### finance-live-action
 
 - Worker ordering:
-  [`main.rs`](../../../finance-live-action/crates/finance-api/src/main.rs)
+  [`main.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-api/src/main.rs)
 - Contexts, Alpha/Portfolio rules, evidence and checkpoint state:
-  [`trading_api.rs`](../../../finance-live-action/crates/finance-api/src/trading_api.rs)
+  [`trading_api.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-api/src/trading_api.rs)
 - Strategy registration and implementation:
-  [`engine.rs`](../../../finance-live-action/crates/finance-strategy/src/engine.rs),
-  [`candle_momentum.rs`](../../../finance-live-action/crates/finance-strategy/src/candle_momentum.rs),
-  [`indicators.rs`](../../../finance-live-action/crates/finance-strategy/src/indicators.rs)
+  [`engine.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-strategy/src/engine.rs),
+  [`candle_momentum.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-strategy/src/candle_momentum.rs),
+  [`indicators.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-strategy/src/indicators.rs)
 - MTF policy + simulation:
-  [`trading_modes.rs`](../../../finance-live-action/crates/finance-core/src/trading_modes.rs)
+  [`trading_modes.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-core/src/trading_modes.rs)
 - Historical replay:
-  [`historical_replay.rs`](../../../finance-live-action/crates/finance-api/src/historical_replay.rs)
+  [`historical_replay.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-api/src/historical_replay.rs)
 - gRPC contract:
-  [`web_data.proto`](../../../finance-live-action/proto/web_data.proto),
-  [`grpc.rs`](../../../finance-live-action/crates/finance-api/src/grpc.rs)
+  [`web_data.proto`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/proto/web_data.proto),
+  [`grpc.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-api/src/grpc.rs)
 - Live safety contracts:
-  [`execution_decision.rs`](../../../finance-live-action/crates/finance-core/src/execution_decision.rs),
-  [`execution_freshness.rs`](../../../finance-live-action/crates/finance-core/src/execution_freshness.rs),
-  [`execution_halt.rs`](../../../finance-live-action/crates/finance-core/src/execution_halt.rs),
-  [`performance_halt.rs`](../../../finance-live-action/crates/finance-core/src/performance_halt.rs),
-  [`risk.rs`](../../../finance-live-action/crates/finance-core/src/risk.rs),
-  [`execution_cost.rs`](../../../finance-live-action/crates/finance-core/src/execution_cost.rs),
-  [`position_reconciliation.rs`](../../../finance-live-action/crates/finance-core/src/position_reconciliation.rs)
+  [`execution_decision.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-core/src/execution_decision.rs),
+  [`execution_freshness.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-core/src/execution_freshness.rs),
+  [`execution_halt.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-core/src/execution_halt.rs),
+  [`performance_halt.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-core/src/performance_halt.rs),
+  [`risk.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-core/src/risk.rs),
+  [`execution_cost.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-core/src/execution_cost.rs),
+  [`position_reconciliation.rs`](https://github.com/ThanhNguyenDat/finance-live-action/blob/main/crates/finance-core/src/position_reconciliation.rs)
 
 ## 11. Gaps cần giữ visible
 

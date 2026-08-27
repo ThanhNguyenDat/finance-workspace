@@ -1,4 +1,7 @@
-# Trading Decision Pipeline Design
+# Trading Decision Pipeline
+
+> Đây là contract kiến trúc đích. Hành vi production chỉ được coi là đã có
+> sau khi code repository sở hữu và deployed SHA chứng minh trong handoff.
 
 ## Goal
 

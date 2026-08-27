@@ -5,7 +5,7 @@ author: codex/executor
 status: complete-awaiting-human-verification
 related:
   - "[[prompts/2026-07-29-english-03-telegram-deep-link]]"
-  - "[[docs/notes/2026-07-29-english-web-chat-and-telegram-sync]]"
+  - "[[archive/notes/2026-07-29-english-web-chat-and-telegram-sync]]"
 ---
 
 # English Telegram Deep Link

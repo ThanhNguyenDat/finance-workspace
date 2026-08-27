@@ -28,7 +28,7 @@ Adding only a `paper` enum value would address the immediate label but would not
 
 > **Semantic correction (2026-07-27):** the earlier definition of Alpha as a
 > sample dataset is superseded by
-> [Trading Decision Pipeline Design](./2026-07-27-trading-decision-pipeline-design.md).
+> [Trading Decision Pipeline](../../../specs/trading-decision-pipeline.md).
 > Alpha is now an atomic strategy-by-interval simulated-execution lane. A sample
 > dataset, when needed, is only a data source and must not be presented as a
 > trading mode.

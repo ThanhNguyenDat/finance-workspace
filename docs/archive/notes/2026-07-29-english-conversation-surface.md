@@ -5,8 +5,8 @@ author: codex/executor
 status: complete-awaiting-human-verification
 related:
   - "[[prompts/2026-07-29-english-04-conversation-surface]]"
-  - "[[docs/notes/2026-07-29-english-voice-assistant]]"
-  - "[[docs/notes/2026-07-29-english-telegram-deep-link]]"
+  - "[[archive/notes/2026-07-29-english-voice-assistant]]"
+  - "[[archive/notes/2026-07-29-english-telegram-deep-link]]"
 ---
 
 # English Conversation Surface

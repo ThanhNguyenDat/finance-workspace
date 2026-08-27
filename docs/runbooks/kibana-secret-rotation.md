@@ -4,7 +4,7 @@ Production Kibana belongs to the Coolify Compose service
 `finance-observability` (`vc0gwk040csg4cwg88000k48`). Run only
 `scripts/kibana-secret-rotation.sh` by hand over guarded SSH
 (`ssh -A root@160.22.122.55`). This is infrastructure credential rotation for
-shared infrastructure, not finance-mw/web/live-action/broker/mt5 application
+shared infrastructure, not finance-mw/finance-web/live-action/broker/mt5 application
 code or its deploy, so it is delivered live-first — it does not run as a
 `.github/workflows/*.yml` file, even for the CI audit trail. See
 `.agents/skills/repository-delivery/SKILL.md`'s "Ownership and Delivery Lane"
