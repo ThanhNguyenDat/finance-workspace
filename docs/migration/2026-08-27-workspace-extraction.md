@@ -134,3 +134,16 @@ fallback khi CI chỉ có một repo), nên không còn false-fail bởi thư m�
 Quality workflow không còn hard-code ba compose hạ tầng; `db1b76e` thêm target
 `make validate-infrastructure-compose` dùng cùng resolver. Local validation
 với biến môi trường contract đã pass và workflow YAML parse pass.
+
+## Recheck local 16:12 UTC+7
+
+- Finance Web standalone đã recheck tại commit `49d6777`: test 50/50 file,
+  328/328 test pass; lint 0 error (chỉ còn một warning hook có sẵn);
+  production build TypeScript/Vite pass.
+- Finance MW baseline tại HEAD `22f2e7a`: `go test -timeout=10m ./...`,
+  `go vet ./...` và `go build ./...` đều pass; các contract hạ tầng/observability
+  tiếp tục pass với resolver canonical sibling workspace.
+- `git ls-remote origin refs/heads/main` của workspace và web không trả SHA;
+  GitHub API cũng xác nhận cả hai repository còn `isEmpty=true` và chưa có
+  default branch. Vì vậy các workflow chưa được checkout/pin workspace và bản
+  compatibility Docker trong `finance-mw` vẫn phải giữ nguyên.
