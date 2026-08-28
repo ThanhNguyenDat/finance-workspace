@@ -19,6 +19,26 @@ expect_failure() {
   fi
 }
 
+contains() {
+  local pattern="$1"
+  local file="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q "$pattern" "$file"
+  else
+    grep -Eq "$pattern" "$file"
+  fi
+}
+
+contains_i() {
+  local pattern="$1"
+  local file="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -qi "$pattern" "$file"
+  else
+    grep -Eqi "$pattern" "$file"
+  fi
+}
+
 workspace="$tmp/workspace"
 state_dir="$workspace/.ops/runtime/quant-research"
 mkdir -p -- "$workspace/.ops/changes" "$state_dir"
@@ -96,22 +116,22 @@ run_runtime unlock unavailable-fallback session-unavailable-fallback
 
 runner="$ROOT_DIR/.agents/scripts/run-codex-phase.sh"
 run_command="$ROOT_DIR/.claude/commands/ops/run.md"
-rg -q 'implementation_backend="\$\(jq -r' "$runner" \
+contains 'implementation_backend="\$\(jq -r' "$runner" \
   || fail 'Codex runner does not read persisted backend'
-rg -q 'Codex worker is not selected' "$runner" \
+contains 'Codex worker is not selected' "$runner" \
   || fail 'Codex runner has no backend guard'
-rg -q 'Modify only files required by the approved OpenSpec' "$runner" \
+contains 'Modify only files required by the approved OpenSpec' "$runner" \
   || fail 'Codex runner prompt is not generic'
-if rg -qi 'documentation-only|developer documentation file|finance-mw|smoke test' "$runner"; then
+if contains_i 'documentation-only|developer documentation file|finance-mw|smoke test' "$runner"; then
   fail 'Codex runner still contains smoke-specific wording'
 fi
-rg -q 'ops-runtime.sh route <change> <session-id> IMPLEMENT' "$run_command" \
+contains 'ops-runtime.sh route <change> <session-id> IMPLEMENT' "$run_command" \
   || fail 'ops run does not route IMPLEMENT from persisted state'
-rg -q 'ops-runtime.sh route <change> <session-id> FIX' "$run_command" \
+contains 'ops-runtime.sh route <change> <session-id> FIX' "$run_command" \
   || fail 'ops run does not route FIX from persisted state'
-rg -q 'never use a later setter or re-read quant state' "$run_command" \
+contains 'never use a later setter or re-read quant state' "$run_command" \
   || fail 'ops run does not document backend immutability'
-rg -q 'Do not invoke `claude`, `claude -p`,' "$run_command" \
+contains 'Do not invoke `claude`, `claude -p`,' "$run_command" \
   || fail 'fallback route does not prohibit nested Claude'
 
 printf 'test_quant_backend_routing: all checks passed\n'
