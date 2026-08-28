@@ -55,11 +55,105 @@ test "$(git -C "$web_worktree" rev-parse --is-inside-work-tree)" = true || fail 
 export OPS_ROOT="$workspace"
 export OPS_WORKSPACE_ROOT="$workspace"
 
+new_change() {
+  local change="$1"
+  local session="$2"
+  "$RUNTIME" lock "$change" "$session"
+  "$RUNTIME" init "$change" "$session"
+}
+
+new_change change-full session-full
+"$RUNTIME" lock-repos change-full session-full "$web_worktree"
+"$RUNTIME" phase change-full session-full IMPLEMENT
+"$RUNTIME" phase change-full session-full VERIFY
+"$RUNTIME" phase change-full session-full FIX
+"$RUNTIME" phase change-full session-full VERIFY
+"$RUNTIME" phase change-full session-full FINAL_VERIFY
+"$RUNTIME" phase change-full session-full RELEASE
+"$RUNTIME" phase change-full session-full DEPLOY_VERIFY
+"$RUNTIME" phase change-full session-full ARCHIVE
+full_archive="$("$RUNTIME" complete change-full session-full)"
+test "$(jq -r '.phase' "$full_archive/runtime/state.json")" = DONE || fail 'full transition flow did not complete'
+test ! -d "$workspace/.ops/changes/change-full/runtime/lock" || fail 'full completion leaked change lock'
+
+new_change change-dev session-dev
+"$RUNTIME" lock-repos change-dev session-dev "$mw"
+"$RUNTIME" phase change-dev session-dev IMPLEMENT
+"$RUNTIME" phase change-dev session-dev VERIFY
+"$RUNTIME" phase change-dev session-dev FINAL_VERIFY
+"$RUNTIME" phase change-dev session-dev ARCHIVE
+"$RUNTIME" complete change-dev session-dev >/dev/null
+
+new_change bad-plan session-bad-plan
+expect_failure "$RUNTIME" phase bad-plan session-bad-plan VERIFY
+expect_failure "$RUNTIME" phase bad-plan session-bad-plan ARCHIVE
+expect_failure "$RUNTIME" phase bad-plan session-bad-plan RELEASE
+"$RUNTIME" cleanup bad-plan session-bad-plan BLOCKED
+
+new_change bad-impl session-bad-impl
+"$RUNTIME" phase bad-impl session-bad-impl IMPLEMENT
+expect_failure "$RUNTIME" phase bad-impl session-bad-impl ARCHIVE
+"$RUNTIME" cleanup bad-impl session-bad-impl BLOCKED
+
+new_change bad-verify session-bad-verify
+"$RUNTIME" phase bad-verify session-bad-verify IMPLEMENT
+"$RUNTIME" phase bad-verify session-bad-verify VERIFY
+expect_failure "$RUNTIME" phase bad-verify session-bad-verify RELEASE
+"$RUNTIME" cleanup bad-verify session-bad-verify BLOCKED
+
+new_change bad-fix session-bad-fix
+"$RUNTIME" phase bad-fix session-bad-fix IMPLEMENT
+"$RUNTIME" phase bad-fix session-bad-fix VERIFY
+"$RUNTIME" phase bad-fix session-bad-fix FIX
+expect_failure "$RUNTIME" phase bad-fix session-bad-fix ARCHIVE
+"$RUNTIME" cleanup bad-fix session-bad-fix BLOCKED
+
+new_change bad-final session-bad-final
+"$RUNTIME" phase bad-final session-bad-final IMPLEMENT
+"$RUNTIME" phase bad-final session-bad-final VERIFY
+"$RUNTIME" phase bad-final session-bad-final FINAL_VERIFY
+expect_failure "$RUNTIME" phase bad-final session-bad-final IMPLEMENT
+"$RUNTIME" cleanup bad-final session-bad-final BLOCKED
+
+new_change bad-deploy session-bad-deploy
+"$RUNTIME" phase bad-deploy session-bad-deploy IMPLEMENT
+"$RUNTIME" phase bad-deploy session-bad-deploy VERIFY
+"$RUNTIME" phase bad-deploy session-bad-deploy FINAL_VERIFY
+"$RUNTIME" phase bad-deploy session-bad-deploy RELEASE
+"$RUNTIME" phase bad-deploy session-bad-deploy DEPLOY_VERIFY
+expect_failure "$RUNTIME" phase bad-deploy session-bad-deploy VERIFY
+"$RUNTIME" cleanup bad-deploy session-bad-deploy BLOCKED
+
+new_change bad-archive session-bad-archive
+"$RUNTIME" phase bad-archive session-bad-archive IMPLEMENT
+"$RUNTIME" phase bad-archive session-bad-archive VERIFY
+"$RUNTIME" phase bad-archive session-bad-archive FINAL_VERIFY
+"$RUNTIME" phase bad-archive session-bad-archive ARCHIVE
+expect_failure "$RUNTIME" phase bad-archive session-bad-archive IMPLEMENT
+"$RUNTIME" cleanup bad-archive session-bad-archive BLOCKED
+
+new_change phase-owner session-phase-owner
+expect_failure "$RUNTIME" phase phase-owner session-other IMPLEMENT
+"$RUNTIME" unlock phase-owner session-phase-owner
+expect_failure "$RUNTIME" phase phase-owner session-phase-owner IMPLEMENT
+"$RUNTIME" lock phase-owner session-phase-owner
+"$RUNTIME" cleanup phase-owner session-phase-owner BLOCKED
+
+new_change phase-mismatch session-phase-mismatch
+state_mismatch="$workspace/.ops/changes/phase-mismatch/runtime/state.json"
+jq '.session_id = "session-other"' "$state_mismatch" >"$state_mismatch.tmp"
+mv -- "$state_mismatch.tmp" "$state_mismatch"
+expect_failure "$RUNTIME" phase phase-mismatch session-phase-mismatch IMPLEMENT
+jq '.session_id = "session-phase-mismatch"' "$state_mismatch" >"$state_mismatch.tmp"
+mv -- "$state_mismatch.tmp" "$state_mismatch"
+"$RUNTIME" cleanup phase-mismatch session-phase-mismatch BLOCKED
+
 "$RUNTIME" lock change-a session-a
 expect_failure "$RUNTIME" lock change-a session-other
 expect_failure "$RUNTIME" unlock change-a session-other
+expect_failure "$RUNTIME" init change-a session-other
 "$RUNTIME" init change-a session-a
-"$RUNTIME" phase change-a IMPLEMENT 0
+"$RUNTIME" phase change-a session-a IMPLEMENT
 payload_a="$(jq -nc --arg cwd "$workspace" --arg sid session-a '{cwd: $cwd, session_id: $sid}')"
 expect_hook_blocked "$payload_a"
 "$RUNTIME" cleanup change-a session-a BLOCKED
@@ -108,13 +202,17 @@ esac
 MOCK
 chmod +x "$mock_bin/codex"
 
-timeout --signal=TERM --kill-after=10s 15s codex exec --cd "$workspace" \
-  --add-dir "$web_worktree" --ephemeral --approve-for-me --help >/dev/null \
-  || fail 'selected Codex invocation was rejected by the real CLI parser'
+if command -v codex >/dev/null 2>&1; then
+  timeout --signal=TERM --kill-after=10s 15s codex exec --cd "$workspace" \
+    --add-dir "$web_worktree" --ephemeral --approve-for-me --help >/dev/null \
+    || fail 'selected Codex invocation was rejected by the real CLI parser'
+else
+  printf '%s\n' 'real Codex parser check skipped: codex is unavailable'
+fi
 
 "$RUNTIME" lock change-runner session-runner
 "$RUNTIME" init change-runner session-runner
-"$RUNTIME" phase change-runner IMPLEMENT 0
+"$RUNTIME" phase change-runner session-runner IMPLEMENT
 "$RUNTIME" lock-repos change-runner session-runner "$web_worktree"
 MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
   MOCK_CODEX_MODE=success CODEX_TIMEOUT_SECONDS=2 "$RUNNER" change-runner "$web_worktree" IMPLEMENT
@@ -128,7 +226,7 @@ test "$(grep -Fc -- '--sandbox' "$tmp/mock-args" || true)" = 0 || fail 'conflict
 
 "$RUNTIME" lock change-no-repo session-no-repo
 "$RUNTIME" init change-no-repo session-no-repo
-"$RUNTIME" phase change-no-repo IMPLEMENT 0
+"$RUNTIME" phase change-no-repo session-no-repo IMPLEMENT
 expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
   "$RUNNER" change-no-repo "$web_worktree" IMPLEMENT
 "$RUNTIME" cleanup change-no-repo session-no-repo BLOCKED
@@ -138,20 +236,22 @@ expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args"
 "$RUNTIME" lock-repos change-repo-owner session-repo-owner "$mw"
 "$RUNTIME" lock change-repo-denied session-repo-denied
 "$RUNTIME" init change-repo-denied session-repo-denied
-"$RUNTIME" phase change-repo-denied IMPLEMENT 0
+"$RUNTIME" phase change-repo-denied session-repo-denied IMPLEMENT
 expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
   "$RUNNER" change-repo-denied "$mw" IMPLEMENT
 "$RUNTIME" cleanup change-repo-denied session-repo-denied BLOCKED
 "$RUNTIME" cleanup change-repo-owner session-repo-owner BLOCKED
 
 "$RUNTIME" round change-runner session-runner >/dev/null
-"$RUNTIME" phase change-runner FIX 1
+"$RUNTIME" phase change-runner session-runner VERIFY
+"$RUNTIME" phase change-runner session-runner FIX
 expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" MOCK_CODEX_MODE=failure CODEX_TIMEOUT_SECONDS=2 \
   "$RUNNER" change-runner "$web_worktree" FIX
 test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-fix-round-1.exit")" = 7 || fail 'Codex failure was not recorded'
 
 "$RUNTIME" round change-runner session-runner >/dev/null
-"$RUNTIME" phase change-runner FIX 2
+"$RUNTIME" phase change-runner session-runner VERIFY
+"$RUNTIME" phase change-runner session-runner FIX
 expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" MOCK_CODEX_MODE=timeout CODEX_TIMEOUT_SECONDS=1 \
   "$RUNNER" change-runner "$web_worktree" FIX
 test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-fix-round-2.exit")" = 124 || fail 'Codex timeout was not bounded'
@@ -160,7 +260,9 @@ expect_failure env PATH="$tmp/no-codex:/usr/bin:/bin" "$RUNNER" change-runner "$
 
 "$RUNTIME" lock change-fix-limit session-limit
 "$RUNTIME" init change-fix-limit session-limit
-"$RUNTIME" phase change-fix-limit FIX 0
+"$RUNTIME" phase change-fix-limit session-limit IMPLEMENT
+"$RUNTIME" phase change-fix-limit session-limit VERIFY
+"$RUNTIME" phase change-fix-limit session-limit FIX
 "$RUNTIME" lock-repos change-fix-limit session-limit "$web_worktree"
 "$RUNTIME" round change-fix-limit session-limit >/dev/null
 "$RUNTIME" round change-fix-limit session-limit >/dev/null
@@ -173,10 +275,10 @@ test -z "$active_after_limit" || fail "max-round cleanup left active workflow: $
 
 "$RUNTIME" lock hook-a session-hook-a
 "$RUNTIME" init hook-a session-hook-a
-"$RUNTIME" phase hook-a IMPLEMENT 0
+"$RUNTIME" phase hook-a session-hook-a IMPLEMENT
 "$RUNTIME" lock hook-b session-hook-b
 "$RUNTIME" init hook-b session-hook-b
-"$RUNTIME" phase hook-b IMPLEMENT 0
+"$RUNTIME" phase hook-b session-hook-b IMPLEMENT
 payload_a="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd, session_id: "session-hook-a"}')"
 payload_b="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd, session_id: "session-hook-b"}')"
 payload_unowned="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd, session_id: "session-unowned"}')"
@@ -190,7 +292,9 @@ printf '%s' "$payload_unowned" | "$HOOK" >/dev/null
 "$RUNTIME" lock change-cleanup-done session-cleanup-done
 "$RUNTIME" init change-cleanup-done session-cleanup-done
 expect_failure "$RUNTIME" cleanup change-cleanup-done session-cleanup-done DONE
-expect_failure "$RUNTIME" phase change-cleanup-done DONE 0
+expect_failure "$RUNTIME" phase change-cleanup-done session-cleanup-done DONE
+expect_failure "$RUNTIME" phase change-cleanup-done session-cleanup-done BLOCKED
+expect_failure "$RUNTIME" phase change-cleanup-done session-cleanup-done FAILED
 "$RUNTIME" cleanup change-cleanup-done session-cleanup-done BLOCKED
 
 "$RUNTIME" lock change-plan session-plan
@@ -200,14 +304,18 @@ expect_failure "$RUNTIME" archive change-plan session-plan
 
 "$RUNTIME" lock change-verify session-verify
 "$RUNTIME" init change-verify session-verify
-"$RUNTIME" phase change-verify VERIFY 0
+"$RUNTIME" phase change-verify session-verify IMPLEMENT
+"$RUNTIME" phase change-verify session-verify VERIFY
 expect_failure "$RUNTIME" archive change-verify session-verify
 "$RUNTIME" cleanup change-verify session-verify BLOCKED
 
 "$RUNTIME" lock change-archive session-archive
 "$RUNTIME" init change-archive session-archive
 "$RUNTIME" lock-repos change-archive session-archive "$web_worktree"
-"$RUNTIME" phase change-archive ARCHIVE 0
+"$RUNTIME" phase change-archive session-archive IMPLEMENT
+"$RUNTIME" phase change-archive session-archive VERIFY
+"$RUNTIME" phase change-archive session-archive FINAL_VERIFY
+"$RUNTIME" phase change-archive session-archive ARCHIVE
 archive_path="$("$RUNTIME" complete change-archive session-archive)"
 test "$(jq -r '.phase' "$archive_path/runtime/state.json")" = DONE || fail 'archive did not finalize state'
 test ! -d "$workspace/.ops/changes/change-archive/runtime/lock" || fail 'change lock survived completion'

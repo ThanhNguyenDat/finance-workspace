@@ -19,7 +19,7 @@ usage:
   ops-runtime.sh unlock-repos <change> <session-id>
   ops-runtime.sh cleanup <change> <session-id> <FAILED|BLOCKED>
   ops-runtime.sh assert-repo-lock <change> <session-id> <repository>
-  ops-runtime.sh phase <change> <phase> [round]
+  ops-runtime.sh phase <change> <session-id> <next-phase> [round]
   ops-runtime.sh round <change> <session-id>
   ops-runtime.sh state <change>
   ops-runtime.sh active <workspace-root> [session-id]
@@ -48,7 +48,17 @@ state_file() {
 
 valid_phase() {
   case "$1" in
-    PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY|RELEASE|DEPLOY_VERIFY|ARCHIVE|BLOCKED|FAILED)
+    PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY|RELEASE|DEPLOY_VERIFY|ARCHIVE)
+      return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+valid_transition() {
+  case "$1:$2" in
+    PLAN:IMPLEMENT|IMPLEMENT:VERIFY|VERIFY:FIX|VERIFY:FINAL_VERIFY|FIX:VERIFY|\
+    FINAL_VERIFY:RELEASE|FINAL_VERIFY:ARCHIVE|RELEASE:DEPLOY_VERIFY|\
+    RELEASE:ARCHIVE|DEPLOY_VERIFY:ARCHIVE)
       return 0 ;;
     *) return 1 ;;
   esac
@@ -250,20 +260,41 @@ unlock_repositories() {
 
 set_phase() {
   local change="$1"
-  local phase="$2"
-  local requested_round="${3-}"
-  local state
+  local session_id="$2"
+  local phase="$3"
+  local requested_round="${4-}"
+  local state current_round next_round
   state="$(state_file "$change")"
   valid_phase "$phase" || die "invalid phase: $phase"
   [ -f "$state" ] || die "runtime state not found: $state"
+  assert_active_change_owner "$change" "$session_id"
+  current_round="$(jq -r '.round' "$state")"
+  next_round="${requested_round:-$current_round}"
+  [[ "$next_round" =~ ^[0-9]+$ ]] || die 'phase round must be a non-negative integer'
+  current="$(jq -r '.phase' "$state")"
+  valid_transition "$current" "$phase" || die "invalid phase transition: $current -> $phase"
   jq \
     --arg phase "$phase" \
     --arg updated_at "$(now_utc)" \
-    --argjson round "${requested_round:-$(jq -r '.round' "$state")}" \
+    --argjson round "$next_round" \
     '.phase = $phase
     | .round = $round
-    | .status = (if ($phase == "DONE" or $phase == "BLOCKED" or $phase == "FAILED") then "terminal" else "running" end)
+    | .status = "running"
     | .updated_at = $updated_at' \
+    "$state" | atomic_write_state "$state"
+}
+
+set_terminal_phase() {
+  local change="$1"
+  local session_id="$2"
+  local phase="$3"
+  local state
+  case "$phase" in BLOCKED|FAILED) ;; *) die 'invalid terminal phase' ;; esac
+  state="$(state_file "$change")"
+  [ -f "$state" ] || die "runtime state not found: $state"
+  assert_active_change_owner "$change" "$session_id"
+  jq --arg phase "$phase" --arg updated_at "$(now_utc)" \
+    '.phase = $phase | .status = "terminal" | .updated_at = $updated_at' \
     "$state" | atomic_write_state "$state"
 }
 
@@ -273,7 +304,7 @@ cleanup_change() {
   local phase="$3"
   case "$phase" in BLOCKED|FAILED) ;; *) die 'cleanup accepts only BLOCKED or FAILED' ;; esac
   assert_active_change_owner "$change" "$session_id"
-  set_phase "$change" "$phase"
+  set_terminal_phase "$change" "$session_id" "$phase"
   release_repo_locks "$change" "$session_id"
   if [ -d "$(change_dir "$change")/runtime/lock" ]; then
     unlock_change "$change" "$session_id"
@@ -291,7 +322,7 @@ bump_round() {
   [[ "$max" =~ ^[1-9][0-9]*$ ]] || die 'OPS_MAX_FIX_ROUNDS must be a positive integer'
   current="$(jq -r '.round' "$state")"
   if [ "$current" -ge "$max" ]; then
-    set_phase "$change" BLOCKED "$current"
+    set_terminal_phase "$change" "$session_id" BLOCKED
     release_repo_locks "$change" "$session_id"
     if [ -d "$(change_dir "$change")/runtime/lock" ]; then
       unlock_change "$change" "$session_id"
@@ -386,8 +417,8 @@ case "$command" in
     assert_repo_lock "$2" "$3" "$4"
     ;;
   phase)
-    [ "$#" -ge 3 ] && [ "$#" -le 4 ] || { usage; exit 2; }
-    set_phase "$2" "$3" "${4-}"
+    [ "$#" -ge 4 ] && [ "$#" -le 5 ] || { usage; exit 2; }
+    set_phase "$2" "$3" "$4" "${5-}"
     ;;
   round)
     [ "$#" -eq 3 ] || { usage; exit 2; }

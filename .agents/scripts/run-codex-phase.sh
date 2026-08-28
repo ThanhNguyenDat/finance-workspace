@@ -36,6 +36,8 @@ state_file="$RUNTIME_ROOT/.ops/changes/$change/runtime/state.json"
 [ -f "$state_file" ] || die "runtime state not found: $state_file"
 session_id="$(jq -r '.session_id // empty' "$state_file")"
 [ -n "$session_id" ] || die 'runtime state has no session id'
+current_phase="$(jq -r '.phase // empty' "$state_file")"
+[ "$current_phase" = "$phase" ] || die "runtime phase is $current_phase, requested worker phase is $phase"
 "$RUNTIME" assert-repo-lock "$change" "$session_id" "$repository_root"
 round="$(jq -r '.round' "$state_file")"
 log_dir="$RUNTIME_ROOT/.ops/changes/$change/runtime/logs"

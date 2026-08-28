@@ -24,7 +24,7 @@ IFS='|' read -r change phase round <<<"$active"
 case "$phase" in
   DONE|BLOCKED|FAILED) exit 0 ;;
   *)
-    printf 'Stop blocked: /ops:run change %s is in phase %s (round %s). Continue the workflow, record evidence, and move it to DONE, BLOCKED, or FAILED.\n' "$change" "$phase" "$round" >&2
+    printf 'Stop blocked: /ops:run change %s is in phase %s (round %s). Continue to ARCHIVE/complete or record BLOCKED/FAILED before stopping.\n' "$change" "$phase" "$round" >&2
     exit 2
     ;;
 esac

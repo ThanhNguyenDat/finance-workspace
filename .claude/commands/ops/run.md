@@ -34,7 +34,6 @@ summary as independent verification.
 
    `./.agents/scripts/ops-runtime.sh lock <change> <session-id>`
    `./.agents/scripts/ops-runtime.sh init <change> <session-id>`
-   `./.agents/scripts/ops-runtime.sh phase <change> PLAN 0`
 
    Use `CLAUDE_SESSION_ID` when available; otherwise create a unique local
    session id. The initial handoff is created by `init`; keep later updates
@@ -60,9 +59,10 @@ summary as independent verification.
 
 ## IMPLEMENT, VERIFY, FIX
 
-1. Set phase `IMPLEMENT` and invoke the bounded worker once per affected
-   runtime repository, sequentially:
+1. Set phase `IMPLEMENT` with the ownership-aware interface and invoke the
+   bounded worker once per affected runtime repository, sequentially:
 
+   `./.agents/scripts/ops-runtime.sh phase <change> <session-id> IMPLEMENT`
    `./.agents/scripts/run-codex-phase.sh <change> <repository> IMPLEMENT`
 
    The worker mechanically verifies the current change/session owns the
@@ -76,13 +76,19 @@ summary as independent verification.
    on every failure path, using the centralized cleanup helper when possible:
 
    `./.agents/scripts/ops-runtime.sh cleanup <change> <session-id> FAILED`
-2. Inspect the actual diff and local test/build/lint/typecheck evidence.
+2. Set phase `VERIFY`, then inspect the actual diff and local
+   test/build/lint/typecheck evidence:
+
+   `./.agents/scripts/ops-runtime.sh phase <change> <session-id> VERIFY`
+
    Verify ownership, scope, API/contracts, migrations, security,
    observability, and trading invariants when applicable. Record concise
    findings in the handoff. Do not mark VERIFY complete from a worker claim.
-3. For any P0/P1 finding, set `FIX` and increment the runtime round with the
-   helper before invoking the worker with `FIX`:
+3. For any P0/P1 finding, set `FIX` with the ownership-aware interface and
+   increment the runtime round with the helper before invoking the worker with
+   `FIX`:
 
+   `./.agents/scripts/ops-runtime.sh phase <change> <session-id> FIX`
    `./.agents/scripts/ops-runtime.sh round <change> <session-id>`
 
    The helper mechanically enforces `OPS_MAX_FIX_ROUNDS` (default `3`); an
@@ -90,22 +96,36 @@ summary as independent verification.
    locks. Return to `VERIFY`. P2/P3 items must not silently become release
    blockers unless the approved change requires it.
 4. When no P0/P1 findings remain, set `FINAL_VERIFY` and repeat the critical
-   evidence checks. A clean final verification is required before release.
+   evidence checks:
+
+   `./.agents/scripts/ops-runtime.sh phase <change> <session-id> FINAL_VERIFY`
+
+   A clean final verification is required before release.
 
 ## RELEASE, DEPLOY_VERIFY, ARCHIVE
 
 1. For a change explicitly scoped for delivery, set `RELEASE` and follow the
-   repository delivery rules: local checks, commit, push, GitHub Actions,
+   ownership-aware interface:
+
+   `./.agents/scripts/ops-runtime.sh phase <change> <session-id> RELEASE`
+
+   Then follow repository delivery rules: local checks, commit, push, GitHub Actions,
    deployment mechanism, and immutable revision tracking. CI or deployment
    failures return to the appropriate fix/verify loop; never paper over them.
    For a dev-only change, record that release was intentionally skipped.
-2. Set `DEPLOY_VERIFY` only when deployment applies. Verify the exact deployed
+2. Set `DEPLOY_VERIFY` only when deployment applies:
+
+   `./.agents/scripts/ops-runtime.sh phase <change> <session-id> DEPLOY_VERIFY`
+
+   Verify the exact deployed
    revision, health, and requested behavior through the authoritative path.
    Never claim production success from local checks alone.
 3. Set `ARCHIVE`, validate/sync/archive the native OpenSpec change with the
-   CLI's native integration, then use the single successful completion path:
+   ownership-aware interface:
 
-   `./.agents/scripts/ops-runtime.sh phase <change> ARCHIVE`
+   `./.agents/scripts/ops-runtime.sh phase <change> <session-id> ARCHIVE`
+
+   the CLI's native integration, then use the single successful completion path:
    `./.agents/scripts/ops-runtime.sh complete <change> <session-id>`
 
    `complete` requires `ARCHIVE`, releases only owned repository/change locks,

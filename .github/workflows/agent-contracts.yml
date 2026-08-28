@@ -1,0 +1,45 @@
+name: Agent contracts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  orchestration:
+    name: Orchestration contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate shell and JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n .agents/scripts/ops-runtime.sh
+          bash -n .agents/scripts/run-codex-phase.sh
+          bash -n .claude/hooks/ops-stop-hook.sh
+          bash -n .agents/scripts/tests/test_ops_orchestration.sh
+          jq -e . .claude/settings.json >/dev/null
+
+      - name: Run bounded orchestration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 3m \
+            ./.agents/scripts/tests/test_ops_orchestration.sh
+
+      - name: Verify managed links and diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1m \
+            ./.agents/scripts/sync-agent-links.sh --check
+          git diff --check
