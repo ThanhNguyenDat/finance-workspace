@@ -31,6 +31,10 @@ summary as independent verification.
 - Never copy full tasks, CLI output, secrets, or credentials into handoff.
 - Never push or deploy before the final verification required by the
   persisted runtime `verification_mode` has passed.
+- This workflow does not currently launch a Claude CLI worker. If an explicit
+  future worker route does invoke the `claude` CLI, it must pass
+  `--dangerously-skip-permissions`; this does not permit nested Claude in the
+  existing fallback route.
 
 ## PLAN
 
@@ -100,10 +104,20 @@ summary as independent verification.
    The worker mechanically verifies the current change/session owns the
    repository lock, then uses the installed `codex exec` interface with
    `finance-workspace` as primary cwd and the runtime repository as an
-   additional writable directory. It writes evidence to runtime logs, creates
-   local commits when required, and never pushes.
+   additional writable directory. IMPLEMENT defaults to `gpt-5.6-luna` with
+   `high` reasoning. Every attempt passes its model and effort explicitly and
+   uses `--dangerously-bypass-approvals-and-sandbox`, the installed CLI's
+   supported equivalent of `--yolo`. It writes attempt-scoped JSONL, stderr,
+   last-message, exit-code, and allowlisted metadata evidence to runtime logs,
+   creates local commits when required, and never pushes.
    A nonzero exit, missing CLI, invalid repository, or timeout is a failed
-   workflow; preserve evidence and move to `FAILED` or `BLOCKED`.
+   workflow; preserve evidence and move to `FAILED` or `BLOCKED`. If metadata
+   reports `global-quota-exhausted`, the launcher has already invoked the
+   quant state helper's `codex-off` operation for future transactions. Do not
+   try another model, switch this transaction to Claude, or mutate its
+   persisted backend. A generic HTTP 429 is `transient-rate-limit` and must
+   never trigger automatic disable. Use centralized cleanup after recording
+   the terminal class.
    Release owned repository and change locks after recording the terminal state
    on every failure path, using the centralized cleanup helper when possible:
 
@@ -121,12 +135,25 @@ summary as independent verification.
 
    `./.agents/scripts/ops-runtime.sh fix <change> <session-id>`
 
+   Read the incremented round from runtime state and write the current
+   verifier's exact P0/P1 findings before invoking any FIX worker:
+
+   `.ops/changes/<change>/runtime/verification-findings-round-<round>.md`
+
+   The file must be non-empty and contain only the current round's findings.
+   Never reuse or concatenate an earlier round's artifact.
+
    `backend="$(./.agents/scripts/ops-runtime.sh route <change> <session-id> FIX)"`
 
    Route `codex` to `run-codex-phase.sh`. Route `claude-fallback` to the
    current top-level Claude session using the same no-nested-session rule.
 
-   The helper increments the fix round and enters `FIX` atomically. It
+   The helper increments the fix round and enters `FIX` atomically. Codex FIX
+   defaults to `gpt-5.6-terra` with `high` reasoning. Only
+   `model-unavailable` or `model-specific-limit` may launch one
+   `gpt-5.6-sol` fallback attempt; it reuses the same findings file and remains
+   in the same FIX round. Global quota, generic 429, auth, network, timeout,
+   implementation, and unknown failures never use Sol. It
    mechanically enforces `OPS_MAX_FIX_ROUNDS` (default `3`); an attempted
    fourth fix marks the workflow `BLOCKED` and releases owned
    locks. Return to `VERIFY`. P2/P3 items must not silently become release

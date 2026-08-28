@@ -99,6 +99,39 @@ Backend được chốt một lần khi `/ops:run` khởi tạo transaction và 
 transaction mới; transaction fallback đang chạy vẫn giữ route Claude và dùng
 `claude-fallback-self-review` nếu cùng top-level session verify.
 
+## Codex worker policy
+
+`/ops:run` truyền model và reasoning effort tường minh cho từng worker attempt:
+
+| Phase/attempt | Model mặc định | Effort |
+| --- | --- | --- |
+| IMPLEMENT | `gpt-5.6-luna` | `high` |
+| FIX primary | `gpt-5.6-terra` | `high` |
+| FIX fallback | `gpt-5.6-sol` | `high` |
+
+Operator có thể override qua `CODEX_IMPLEMENT_MODEL`, `CODEX_FIX_MODEL`,
+`CODEX_FIX_FALLBACK_MODEL` và `CODEX_REASONING_EFFORT`. Launcher không phụ
+thuộc model mặc định trong user config và không dùng `xhigh` mặc định. Codex
+CLI hiện tại không có literal `--yolo`; launcher dùng flag chính thức tương
+đương `--dangerously-bypass-approvals-and-sandbox`. Workflow hiện không launch
+Claude CLI lồng nhau; nếu sau này có một Claude CLI worker route được thiết kế
+tường minh, invocation đó phải có `--dangerously-skip-permissions`.
+
+FIX chỉ fallback Terra sang Sol khi classifier trả `model-unavailable` hoặc
+`model-specific-limit`, và vẫn là attempt thứ hai trong cùng round. Trước mỗi
+FIX, Claude phải ghi findings hiện tại vào
+`.ops/changes/<change>/runtime/verification-findings-round-<round>.md`; launcher
+không trộn findings giữa các round.
+
+Mỗi attempt giữ stdout JSONL, stderr, last message, exit code và metadata
+allowlist tại
+`codex-<phase>-round-<round>-attempt-<n>.meta.json`. Classifier phân biệt global
+quota với model-local limit và transient HTTP 429. Chỉ
+`global-quota-exhausted` tự chạy `quant-research-state.sh codex-off`; không thử
+model khác và không đổi backend của transaction hiện tại. Generic 429 không tự
+tắt Codex. Việc bật lại luôn thủ công bằng `/quant:codex-on`, và chỉ transaction
+mới quan sát trạng thái mới.
+
 `docker/infrastructure/` và `docker/observability/` là source canonical cho
 stack dùng chung. Các repo application chỉ giữ compatibility copy trong giai
 đoạn cutover; không coi bản copy đó là ownership lâu dài.

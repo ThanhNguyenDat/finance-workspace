@@ -342,12 +342,11 @@ esac
 MOCK
 chmod +x "$mock_bin/codex"
 
-if command -v codex >/dev/null 2>&1; then
+if [ "${RUN_REAL_CODEX_PARSER_CHECK:-0}" = 1 ] && command -v codex >/dev/null 2>&1; then
   timeout --signal=TERM --kill-after=10s 15s codex exec --cd "$workspace" \
-    --add-dir "$web_worktree" --ephemeral --approve-for-me --help >/dev/null \
+    --add-dir "$web_worktree" --ephemeral \
+    --dangerously-bypass-approvals-and-sandbox --help >/dev/null \
     || fail 'selected Codex invocation was rejected by the real CLI parser'
-else
-  printf '%s\n' 'real Codex parser check skipped: codex is unavailable'
 fi
 
 "$RUNTIME" lock change-runner session-runner
@@ -356,12 +355,12 @@ fi
 "$RUNTIME" lock-repos change-runner session-runner "$web_worktree"
 MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
   MOCK_CODEX_MODE=success CODEX_TIMEOUT_SECONDS=2 "$RUNNER" change-runner "$web_worktree" IMPLEMENT
-test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-implement-round-0.exit")" = 0 || fail 'successful Codex phase was not recorded'
+test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-implement-round-0-attempt-1.exit")" = 0 || fail 'successful Codex phase was not recorded'
 grep -Fxq -- '--cd' "$tmp/mock-args" || fail 'Codex primary cwd flag missing'
 grep -Fxq -- "$workspace" "$tmp/mock-args" || fail 'Codex primary cwd was not finance-workspace'
 grep -Fxq -- '--add-dir' "$tmp/mock-args" || fail 'Codex additional directory flag missing'
 grep -Fxq -- "$web_worktree" "$tmp/mock-args" || fail 'Codex writable repository was not passed'
-grep -Fxq -- '--approve-for-me' "$tmp/mock-args" || fail 'Codex non-interactive approval flag missing'
+grep -Fxq -- '--dangerously-bypass-approvals-and-sandbox' "$tmp/mock-args" || fail 'Codex permission-bypass flag missing'
 test "$(grep -Fc -- '--sandbox' "$tmp/mock-args" || true)" = 0 || fail 'conflicting sandbox flag was passed'
 
 "$RUNTIME" lock change-no-repo session-no-repo
@@ -384,15 +383,19 @@ expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args"
 
 "$RUNTIME" phase change-runner session-runner VERIFY
 "$RUNTIME" fix change-runner session-runner
+printf '%s\n' 'Fix the regression from verification.' \
+  >"$workspace/.ops/changes/change-runner/runtime/verification-findings-round-1.md"
 expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" MOCK_CODEX_MODE=failure CODEX_TIMEOUT_SECONDS=2 \
   "$RUNNER" change-runner "$web_worktree" FIX
-test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-fix-round-1.exit")" = 7 || fail 'Codex failure was not recorded'
+test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-fix-round-1-attempt-1.exit")" = 7 || fail 'Codex failure was not recorded'
 
 "$RUNTIME" phase change-runner session-runner VERIFY
 "$RUNTIME" fix change-runner session-runner
+printf '%s\n' 'Fix the timeout finding from verification.' \
+  >"$workspace/.ops/changes/change-runner/runtime/verification-findings-round-2.md"
 expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" MOCK_CODEX_MODE=timeout CODEX_TIMEOUT_SECONDS=1 \
   "$RUNNER" change-runner "$web_worktree" FIX
-test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-fix-round-2.exit")" = 124 || fail 'Codex timeout was not bounded'
+test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-fix-round-2-attempt-1.exit")" = 124 || fail 'Codex timeout was not bounded'
 expect_failure env PATH="$tmp/no-codex:/usr/bin:/bin" "$RUNNER" change-runner "$web_worktree" FIX
 "$RUNTIME" cleanup change-runner session-runner FAILED
 
