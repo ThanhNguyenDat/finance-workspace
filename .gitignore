@@ -13,3 +13,6 @@
 *.log
 
 # Do not ignore raw/: handoff and research history are workspace artifacts.
+
+# Autonomous /ops runtime is transient; handoff remains tracked.
+.ops/**/runtime/
