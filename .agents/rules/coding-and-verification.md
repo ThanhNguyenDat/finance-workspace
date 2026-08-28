@@ -31,11 +31,25 @@ actual practice throughout every session in this ecosystem (every commit in
 explicit and searchable instead of leaving it as an unwritten, easy-to-miss
 inconsistency between this file and observed behavior.
 
-This does **not** relax anything else in this file: still run the full
-local verification pass before committing, still keep each commit small and
-reviewable, still push and track CI to a real green, still verify the
-deployed revision and behavior in production. The exception is narrowly
-about branch ceremony, not about skipping verification.
+Direct-to-main means there is no mandatory feature-branch or PR ceremony, and
+a local commit on `main` is allowed. The **push remains the release gate**:
+non-trivial implementation must receive independent Claude verification before
+it is pushed. If Claude reports a P0/P1 finding, Codex fixes it and Claude
+verifies again before push.
+
+Required order for a non-trivial change:
+
+```text
+Claude PLAN → Codex IMPLEMENT → local checks → local commit
+→ Claude VERIFY → Codex FIX (if needed) → Claude FINAL VERIFY
+→ push main → GitHub Actions → Coolify → production verification
+```
+
+This does **not** relax anything else in this file: still run the full local
+verification pass before committing, still keep each commit small and
+reviewable, still push and track CI to a real green, still verify the deployed
+revision and behavior in production. The exception is narrowly about branch
+ceremony, not about skipping verification.
 
 ## Required verification order
 

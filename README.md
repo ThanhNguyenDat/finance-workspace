@@ -17,18 +17,39 @@ artifact và handoff. Nó không chứa code runtime của các service.
 Các repo code nên được checkout cạnh thư mục workspace. Agent đọc task và
 research từ workspace, sau đó sửa đúng repository sở hữu code.
 
+## Nguồn sự thật
+
+- `.agents/rules/` và `.agents/skills/` là source of truth cho rule, skill và
+  operating procedure dùng chung của Finance.
+- `.claude/`, `.kimi-code/`, `.opencode/` giữ OpenSpec-native commands/skills,
+  adapter và metadata riêng của từng CLI. Shared sync không quản lý các mục
+  `openspec*`.
+- `openspec/specs/` và `openspec/changes/` là source of truth cho behavioral
+  specs, active changes và task status.
+- `docs/` chứa architecture, ADR, runbook, diagram và tài liệu hỗ trợ; không
+  tạo thêm một hệ spec hành vi cạnh OpenSpec.
+- `raw/` giữ research, evidence, audit history và handoff; không rewrite lịch
+  sử chỉ để làm gọn.
+
 ## Bắt đầu một vòng làm việc
 
-1. Đọc `AGENTS.md` và skill/rule liên quan trong `.agents/`.
-2. Đọc `raw/handoff_agent.md`, rồi đọc research note được dẫn link.
-3. Kiểm tra branch/status và deployed revision của repository code trước khi sửa.
-4. Implement/test/commit trong repository code; ghi SHA, CI, Coolify và verify
-   vào handoff. Không chuyển task sang `Done` nếu chưa có review độc lập.
+1. Chạy `./.agents/scripts/sync-agent-links.sh`.
+2. Đọc `AGENTS.md` hoặc `CLAUDE.md`, rồi đọc shared rule phù hợp.
+3. Xác định và sử dụng shared skill liên quan; load capability/OpenSpec-native
+   integration của CLI nếu cần.
+4. Đọc `raw/handoff_agent.md`, research note được dẫn link và OpenSpec active
+   work.
+5. Kiểm tra branch/status và deployed revision của repository code trước khi sửa.
+6. Thực hiện theo role: Claude plan/verify; Codex implement/test/fix.
+7. Upsert reusable skill/rule nếu có kiến thức mới, rồi chạy lại sync và
+   `./.agents/scripts/sync-agent-links.sh --check`.
+8. Ghi SHA, CI, Coolify và verification vào handoff; không chuyển task sang
+   `Done` nếu chưa có review độc lập.
 
 ## Cấu trúc
 
 ```text
-.agents/   rule và skill dùng chung
+.agents/   rule, skill và utility dùng chung
 docs/      spec, runbook, sơ đồ và kế hoạch
 raw/       handoff, research history, report và evidence
 docker/    source hạ tầng dùng chung và observability/POC

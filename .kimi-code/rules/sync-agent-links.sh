@@ -1,1 +1,0 @@
-../../.agents/rules/sync-agent-links.sh

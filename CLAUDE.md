@@ -73,7 +73,7 @@ Before planning or verification, read the applicable shared instructions under:
 - `.agents/rules/`
 - `.agents/skills/`
 
-Treat `.agents/` as the canonical shared source for both Claude and Codex.
+Treat `.agents/rules/` and `.agents/skills/` as the canonical shared source for both Claude and Codex; agent-native OpenSpec content remains in `.claude/`.
 
 Also read, when relevant:
 
@@ -84,6 +84,23 @@ Also read, when relevant:
 
 Do not duplicate shared rules into this file.
 
+## Shared and Agent-Native Source of Truth
+
+`.agents/rules/` and `.agents/skills/` are canonical for shared Finance
+engineering rules, reusable cross-agent skills, and shared operating
+procedures only. Claude-native OpenSpec commands, OpenSpec-specific skills,
+adapters, and provider metadata remain authoritative in `.claude/` and must
+not be replaced by synchronization from another CLI.
+
+Run the shared-link utility from the workspace root when starting or finishing
+work:
+
+```bash
+./.agents/scripts/sync-agent-links.sh
+```
+
+It synchronizes only non-OpenSpec entries and preserves CLI-native files.
+
 ---
 
 
@@ -91,13 +108,18 @@ Do not duplicate shared rules into this file.
 
 Before starting **every task**, Claude MUST:
 
-1. inspect `.agents/skills/` and identify the skills relevant to the task;
-2. read and use every relevant skill;
-3. inspect `.agents/rules/` and identify the rules applicable to the task;
-4. read and follow every applicable rule;
-5. read any repository-local rules/skills that apply to affected repositories.
+1. run `./.agents/scripts/sync-agent-links.sh`;
+2. inspect `.agents/rules/` and identify the rules applicable to the task;
+3. read and follow every applicable rule;
+4. inspect `.agents/skills/` and identify the skills relevant to the task;
+5. read and use every relevant skill;
+6. inspect Claude-native skill/command directories for agent-specific capabilities;
+7. when OpenSpec is involved, use Claude's native OpenSpec integration;
+8. inspect relevant OpenSpec specs and active change;
+9. read repository-local rules/skills for every affected repository.
 
-`.agents/rules/` and `.agents/skills/` are the **source of truth**.
+`.agents/rules/` and `.agents/skills/` are the **source of truth for shared
+Finance knowledge**, not for agent-native OpenSpec integration.
 
 Rules are mandatory constraints.
 
@@ -179,7 +201,9 @@ At the end of every task:
 3. upsert each used skill when the task revealed reusable knowledge;
 4. preserve the skill when no improvement is warranted;
 5. create a new skill only when reusable workflow knowledge does not fit an existing skill;
-6. keep skills generic and reusable—do not encode one-off task details.
+6. keep skills generic and reusable—do not encode one-off task details;
+7. run `./.agents/scripts/sync-agent-links.sh` after rule/skill updates;
+8. run `./.agents/scripts/sync-agent-links.sh --check` and verify synchronization.
 
 Upsert can include:
 
