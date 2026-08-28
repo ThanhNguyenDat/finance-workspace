@@ -65,6 +65,35 @@ CLAUDE.md  hướng dẫn riêng cho Claude
 `raw/` là audit history. Không rewrite hoặc xóa lịch sử chỉ để làm gọn repo;
 không ghi credential/token/secret vào đó.
 
+## Quant research loop
+
+Claude Code hỗ trợ một vòng research bounded qua state runtime:
+
+```text
+/quant:codex-off
+/loop 20m /quant-research
+```
+
+Khi muốn bật lại Codex, chạy:
+
+```text
+/quant:codex-on
+```
+
+Lệnh này không khởi động lại loop; vòng `/quant-research` kế tiếp tự đọc
+`codex_available` từ `.ops/runtime/quant-research/state.json`. State được tạo
+và cập nhật atomic bằng `.agents/scripts/quant-research-state.sh`, là runtime
+transient và không được commit.
+
+Ở chế độ bình thường, quant research chỉ nghiên cứu, OOS/holdout-validate và
+handoff cho Codex. Chỉ khi state tường minh tắt Codex, một candidate đã validate
+mới được đi qua lifecycle `/ops:run` với Claude fallback; không có Claude CLI
+lồng nhau và không có state machine thứ hai. Vì Claude Code `2.1.250` không
+công bố cơ chế custom command gọi đệ quy trong `claude --help`,
+`quant-research.md` tham chiếu trực tiếp command contract `/ops:run` bằng file
+reference. Không truyền trạng thái availability như argument cố định của
+`/loop`.
+
 `docker/infrastructure/` và `docker/observability/` là source canonical cho
 stack dùng chung. Các repo application chỉ giữ compatibility copy trong giai
 đoạn cutover; không coi bản copy đó là ownership lâu dài.

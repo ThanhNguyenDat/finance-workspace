@@ -16,6 +16,14 @@ summary as independent verification.
 
 - Claude owns PLAN, VERIFY, ORCHESTRATE, and the final release decision.
 - Codex owns IMPLEMENT, TEST, FIX, and change-related CI fixes.
+- `implementation_backend=codex` is the default for every normal request.
+  Only an explicit quant-research fallback context, after the current runtime
+  state reports `codex_available=false`, may use
+  `implementation_backend=claude-fallback`; never infer this from prompt text.
+- Claude fallback is performed by this top-level Claude session and must never
+  launch a nested Claude CLI/session. Record
+  `verification_mode=claude-fallback-self-review` when the same session
+  implements and verifies.
 - `/ops:*` is project orchestration. `/opsx:*` and native OpenSpec commands
   remain the CLI's native OpenSpec integration.
 - Runtime state is transient under `.ops/changes/<change>/runtime/`; the
