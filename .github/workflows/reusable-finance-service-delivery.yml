@@ -111,6 +111,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Resolve immutable build identity
+        id: build_identity
+        shell: bash
+        run: echo "build_time_utc=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >>"$GITHUB_OUTPUT"
+
       - name: Build and publish immutable image
         uses: docker/build-push-action@v6
         with:
@@ -123,7 +128,7 @@ jobs:
             ${{ inputs.image_name }}:${{ inputs.service_name }}_sha-${{ github.sha }}
           build-args: |
             GIT_COMMIT_SHA=${{ github.sha }}
-            BUILD_TIME_UTC=${{ github.run_started_at }}
+            BUILD_TIME_UTC=${{ steps.build_identity.outputs.build_time_utc }}
 
   deploy:
     name: ${{ inputs.service_name }} deploy
