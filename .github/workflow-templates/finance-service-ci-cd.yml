@@ -1,0 +1,31 @@
+name: Finance service CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  delivery:
+    # Copy this caller into a service repository, then replace the values
+    # below with that repository's bounded scripts.  Keep research/evidence,
+    # rollback and infrastructure operations in separate workflows.
+    uses: ThanhNguyenDat/finance-workspace/.github/workflows/reusable-finance-service-delivery.yml@main
+    with:
+      service_name: replace-me
+      runner_label: replace-me-ci
+      image_name: johnkelvin3107/finance-eco-system
+      stable_image_tag: replace-me_production
+      dockerfile: docker/Dockerfile
+      build_context: .
+      test_command: |
+        ./scripts/test-ci.sh
+      deploy_command: |
+        ./scripts/coolify-deploy.sh
+      production_check_command: |
+        ./scripts/verify-production.sh
+    secrets: inherit
