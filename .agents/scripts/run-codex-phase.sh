@@ -5,6 +5,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 WORKSPACE_ROOT="${OPS_WORKSPACE_ROOT:-$(cd -- "$SCRIPT_DIR/../.." && pwd -P)}"
 RUNTIME_ROOT="${OPS_ROOT:-$WORKSPACE_ROOT}"
+RUNTIME="$SCRIPT_DIR/ops-runtime.sh"
 
 usage() {
   printf 'usage: run-codex-phase.sh <change> <repository> <IMPLEMENT|FIX>\n' >&2
@@ -33,6 +34,9 @@ timeout_seconds="${CODEX_TIMEOUT_SECONDS:-3600}"
 [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || die 'CODEX_TIMEOUT_SECONDS must be a positive integer'
 state_file="$RUNTIME_ROOT/.ops/changes/$change/runtime/state.json"
 [ -f "$state_file" ] || die "runtime state not found: $state_file"
+session_id="$(jq -r '.session_id // empty' "$state_file")"
+[ -n "$session_id" ] || die 'runtime state has no session id'
+"$RUNTIME" assert-repo-lock "$change" "$session_id" "$repository_root"
 round="$(jq -r '.round' "$state_file")"
 log_dir="$RUNTIME_ROOT/.ops/changes/$change/runtime/logs"
 mkdir -p -- "$log_dir"
@@ -57,7 +61,7 @@ EOF
 set +e
 timeout --signal=TERM --kill-after=30s "${timeout_seconds}s" \
   codex exec --cd "$workspace_root" --add-dir "$repository_root" --ephemeral \
-  --approve-for-me --sandbox workspace-write --json --output-last-message "$last_message" \
+  --approve-for-me --json --output-last-message "$last_message" \
   - <<<"$prompt" >"$stdout_log" 2>"$stderr_log"
 status=$?
 set -e

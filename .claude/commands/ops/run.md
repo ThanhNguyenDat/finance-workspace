@@ -25,41 +25,38 @@ summary as independent verification.
 
 ## PLAN
 
-1. Reject an empty request. Derive one stable lowercase kebab-case change
-   name. If that change already has an active runtime or lock, stop with
-   BLOCKED rather than mixing sessions.
-2. Run `./.agents/scripts/sync-agent-links.sh` first. Read `AGENTS.md`,
-   `CLAUDE.md`, applicable `.agents/rules/`, relevant shared skills, the
-   current specs, and the affected repository's local rules and skills.
-   Treat `.agents/skills/openspec*` as Codex-native and do not sync or
-   substitute them for Claude's native OpenSpec integration.
-3. Inspect the affected repositories and identify ownership before planning.
-   Do not put runtime application code in `finance-workspace`.
-4. Use the native OpenSpec flow (normally `/opsx:propose`) to create or
-   revise `openspec/changes/<change>/proposal.md`, `design.md`, `tasks.md`,
-   and `specs/`. Keep the approved acceptance criteria in OpenSpec. Validate
-   with the installed CLI, for example:
-
-   `openspec validate <change> --strict --no-interactive`
-
-5. Acquire the per-change lock before initialization so a second session
-   cannot race the first session while it creates state. Then initialize the
-   runtime and perform only read-only discovery until the affected runtime
-   repositories are known:
+1. Reject an empty request and derive one stable lowercase kebab-case change
+   name. Do not inspect, sync, or write any change-specific file before the
+   change lock is acquired. If that change already has an active runtime or
+   lock, stop with `BLOCKED` rather than mixing sessions.
+2. Acquire the per-change lock and initialize runtime state as `PLAN` before
+   any change-specific planning write:
 
    `./.agents/scripts/ops-runtime.sh lock <change> <session-id>`
    `./.agents/scripts/ops-runtime.sh init <change> <session-id>`
    `./.agents/scripts/ops-runtime.sh phase <change> PLAN 0`
 
    Use `CLAUDE_SESSION_ID` when available; otherwise create a unique local
-   session id. Update the handoff with only current phase, affected repos,
-   blocker/findings, next action, and verification evidence.
-6. Acquire all affected runtime repository locks before any implementation
-   repository or OpenSpec planning write. Pass every repository to one call;
-   the helper canonicalizes and sorts paths, and releases partial ownership
-   if any lock conflicts:
+   session id. The initial handoff is created by `init`; keep later updates
+   concise.
+3. Run `./.agents/scripts/sync-agent-links.sh`, then read `AGENTS.md`,
+   `CLAUDE.md`, applicable `.agents/rules/`, relevant shared skills, current
+   specs, and affected repository instructions. This discovery must remain
+   read-only. Treat `.agents/skills/openspec*` as Codex-native and use only
+   Claude's native OpenSpec integration for OpenSpec operations.
+4. Identify every affected runtime repository without modifying it. Do not
+   put runtime application code in `finance-workspace`. Acquire all affected
+   repository locks before any OpenSpec or implementation-repository write;
+   the helper canonicalizes and sorts paths and releases partial ownership if
+   any lock conflicts:
 
    `./.agents/scripts/ops-runtime.sh lock-repos <change> <session-id> <repo>...`
+5. Use the native OpenSpec flow (normally `/opsx:propose`) to create or revise
+   `openspec/changes/<change>/proposal.md`, `design.md`, `tasks.md`, and
+   `specs/`. Keep acceptance criteria in OpenSpec. Validate with the installed
+   CLI, for example:
+
+   `openspec validate <change> --strict --no-interactive`
 
 ## IMPLEMENT, VERIFY, FIX
 
@@ -68,7 +65,8 @@ summary as independent verification.
 
    `./.agents/scripts/run-codex-phase.sh <change> <repository> IMPLEMENT`
 
-   The worker uses the installed `codex exec` interface with
+   The worker mechanically verifies the current change/session owns the
+   repository lock, then uses the installed `codex exec` interface with
    `finance-workspace` as primary cwd and the runtime repository as an
    additional writable directory. It writes evidence to runtime logs, creates
    local commits when required, and never pushes.
@@ -105,10 +103,14 @@ summary as independent verification.
    revision, health, and requested behavior through the authoritative path.
    Never claim production success from local checks alone.
 3. Set `ARCHIVE`, validate/sync/archive the native OpenSpec change with the
-   CLI's native integration, release the lock, and archive
-   `.ops/changes/<change>` to the date-prefixed archive using the runtime
-   helper. The helper finalizes the archived state as `DONE`. Preserve the
-   handoff.
+   CLI's native integration, then use the single successful completion path:
+
+   `./.agents/scripts/ops-runtime.sh phase <change> ARCHIVE`
+   `./.agents/scripts/ops-runtime.sh complete <change> <session-id>`
+
+   `complete` requires `ARCHIVE`, releases only owned repository/change locks,
+   archives `.ops/changes/<change>`, and finalizes the archived state as
+   `DONE`. Preserve the handoff.
 4. On design conflicts, missing contracts, duplicate-lock ownership, or any
    condition that cannot be verified safely, stop at `BLOCKED` and explain
    the evidence and required planning decision, then run cleanup to release

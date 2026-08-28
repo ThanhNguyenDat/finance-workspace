@@ -18,11 +18,12 @@ usage:
   ops-runtime.sh lock-repos <change> <session-id> <repository>...
   ops-runtime.sh unlock-repos <change> <session-id>
   ops-runtime.sh cleanup <change> <session-id> <FAILED|BLOCKED>
+  ops-runtime.sh assert-repo-lock <change> <session-id> <repository>
   ops-runtime.sh phase <change> <phase> [round]
   ops-runtime.sh round <change> <session-id>
   ops-runtime.sh state <change>
   ops-runtime.sh active <workspace-root> [session-id]
-  ops-runtime.sh archive <change>
+  ops-runtime.sh complete <change> <session-id>
 EOF
 }
 
@@ -47,7 +48,7 @@ state_file() {
 
 valid_phase() {
   case "$1" in
-    PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY|RELEASE|DEPLOY_VERIFY|ARCHIVE|DONE|BLOCKED|FAILED)
+    PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY|RELEASE|DEPLOY_VERIFY|ARCHIVE|BLOCKED|FAILED)
       return 0 ;;
     *) return 1 ;;
   esac
@@ -168,6 +169,43 @@ unlock_change() {
   rmdir -- "$lock"
 }
 
+assert_active_change_owner() {
+  local change="$1"
+  local session_id="$2"
+  local dir state owner owner_session phase status
+  dir="$(change_dir "$change")"
+  state="$dir/runtime/state.json"
+  owner="$dir/runtime/lock/owner.json"
+  [ -f "$state" ] || die "runtime state not found: $state"
+  [ -f "$owner" ] || die "change lock owner metadata missing: $owner"
+  owner_session="$(jq -r '.session_id // empty' "$owner")"
+  [ "$owner_session" = "$session_id" ] || die 'change lock is owned by another session'
+  phase="$(jq -r '.phase // empty' "$state")"
+  status="$(jq -r '.status // empty' "$state")"
+  [ "$status" = running ] || die "change is not active: $change"
+  case "$phase" in BLOCKED|FAILED) die "change is terminal: $change" ;; esac
+  [ "$(jq -r '.session_id // empty' "$state")" = "$session_id" ] \
+    || die 'runtime state is owned by another session'
+}
+
+assert_repo_lock() {
+  local change="$1"
+  local session_id="$2"
+  local repository="$3"
+  local canonical owner
+  assert_active_change_owner "$change" "$session_id"
+  canonical="$(canonical_repo "$repository")"
+  owner="$(repo_lock_dir "$canonical")/owner.json"
+  [ -f "$owner" ] || die "repository lock not found: $canonical"
+  jq -e \
+    --arg change "$change" \
+    --arg session_id "$session_id" \
+    --arg repository "$canonical" \
+    '(.change == $change) and (.session_id == $session_id) and (.repository == $repository)' \
+    "$owner" >/dev/null \
+    || die "repository lock is not owned by this change/session: $canonical"
+}
+
 lock_repositories() {
   local change="$1"
   local session_id="$2"
@@ -176,6 +214,7 @@ lock_repositories() {
   local -a repositories=()
   [ "$#" -gt 0 ] || die 'at least one repository is required'
   [ -n "$session_id" ] || die 'session id is required'
+  assert_active_change_owner "$change" "$session_id"
   for repository in "$@"; do
     canonical="$(canonical_repo "$repository")"
     repositories+=("$canonical")
@@ -232,10 +271,9 @@ cleanup_change() {
   local change="$1"
   local session_id="$2"
   local phase="$3"
-  valid_phase "$phase" || die "invalid cleanup phase: $phase"
-  if [ -f "$(state_file "$change")" ]; then
-    set_phase "$change" "$phase"
-  fi
+  case "$phase" in BLOCKED|FAILED) ;; *) die 'cleanup accepts only BLOCKED or FAILED' ;; esac
+  assert_active_change_owner "$change" "$session_id"
+  set_phase "$change" "$phase"
   release_repo_locks "$change" "$session_id"
   if [ -d "$(change_dir "$change")/runtime/lock" ]; then
     unlock_change "$change" "$session_id"
@@ -248,6 +286,7 @@ bump_round() {
   local state current max
   state="$(state_file "$change")"
   [ -f "$state" ] || die "runtime state not found: $state"
+  assert_active_change_owner "$change" "$session_id"
   max="$OPS_MAX_FIX_ROUNDS"
   [[ "$max" =~ ^[1-9][0-9]*$ ]] || die 'OPS_MAX_FIX_ROUNDS must be a positive integer'
   current="$(jq -r '.round' "$state")"
@@ -285,23 +324,34 @@ active_changes() {
   done < <(find "$root/.ops/changes" -mindepth 3 -maxdepth 3 -type f -name state.json -print0)
 }
 
-archive_change() {
+complete_change() {
   local change="$1"
-  local dir archive_root destination date archived_state
+  local session_id="$2"
+  local dir archive_root destination date archived_state lock owner
   dir="$(change_dir "$change")"
   [ -d "$dir" ] || die "change directory not found: $dir"
   [ -f "$dir/runtime/state.json" ] || die "runtime state not found: $dir/runtime/state.json"
-  [ ! -d "$dir/runtime/lock" ] || die 'cannot archive a locked change'
+  assert_active_change_owner "$change" "$session_id"
+  [ "$(jq -r '.phase' "$dir/runtime/state.json")" = ARCHIVE ] \
+    || die 'completion requires ARCHIVE phase'
   archive_root="$OPS_DIR/archive"
   date="$(date -u +%F)"
   destination="$archive_root/${date}-${change}"
   [ ! -e "$destination" ] || die "archive destination already exists: $destination"
   mkdir -p -- "$archive_root"
+  release_repo_locks "$change" "$session_id"
   mv -- "$dir" "$destination"
   archived_state="$destination/runtime/state.json"
   jq --arg updated_at "$(now_utc)" \
     '.phase = "DONE" | .status = "terminal" | .updated_at = $updated_at' \
     "$archived_state" | atomic_write_state "$archived_state"
+  lock="$destination/runtime/lock"
+  owner="$lock/owner.json"
+  [ -f "$owner" ] || die 'completion lock owner metadata missing after archive'
+  [ "$(jq -r '.session_id // empty' "$owner")" = "$session_id" ] \
+    || die 'completion lock ownership changed during archive'
+  unlink -- "$owner"
+  rmdir -- "$lock"
   printf '%s\n' "$destination"
 }
 
@@ -331,6 +381,10 @@ case "$command" in
     [ "$#" -eq 4 ] || { usage; exit 2; }
     cleanup_change "$2" "$3" "$4"
     ;;
+  assert-repo-lock)
+    [ "$#" -eq 4 ] || { usage; exit 2; }
+    assert_repo_lock "$2" "$3" "$4"
+    ;;
   phase)
     [ "$#" -ge 3 ] && [ "$#" -le 4 ] || { usage; exit 2; }
     set_phase "$2" "$3" "${4-}"
@@ -347,9 +401,9 @@ case "$command" in
     [ "$#" -ge 2 ] && [ "$#" -le 3 ] || { usage; exit 2; }
     active_changes "$2" "${3-}"
     ;;
-  archive)
-    [ "$#" -eq 2 ] || { usage; exit 2; }
-    archive_change "$2"
+  complete|archive)
+    [ "$#" -eq 3 ] || { usage; exit 2; }
+    complete_change "$2" "$3"
     ;;
   *)
     usage

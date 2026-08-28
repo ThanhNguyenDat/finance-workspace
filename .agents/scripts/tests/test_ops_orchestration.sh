@@ -29,6 +29,10 @@ jq -e . "$ROOT_DIR/.claude/settings.json" >/dev/null || fail 'invalid Claude set
 grep -Fq '/ops:run' "$ROOT_DIR/.claude/commands/ops/run.md" || fail 'run command missing namespace'
 grep -Fq 'Claude = PLAN + VERIFY + ORCHESTRATE' "$ROOT_DIR/AGENTS.md" || fail 'AGENTS role contract missing'
 grep -Fq '.ops/**/runtime/' "$ROOT_DIR/.gitignore" || fail 'runtime ignore rule missing'
+lock_line="$(awk '/lock-repos <change>/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/run.md")"
+write_line="$(awk '/create or revise/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/run.md")"
+test -n "$lock_line" && test -n "$write_line" && test "$lock_line" -lt "$write_line" \
+  || fail 'planning writes appear before repository lock acquisition'
 
 fixture="$tmp/fixture"
 workspace="$fixture/finance-workspace"
@@ -61,19 +65,21 @@ expect_hook_blocked "$payload_a"
 "$RUNTIME" cleanup change-a session-a BLOCKED
 printf '%s' "$payload_a" | "$HOOK" >/dev/null
 
-"$RUNTIME" lock change-a session-a
-expect_failure "$RUNTIME" lock change-a session-other
-"$RUNTIME" cleanup change-a session-a BLOCKED
-
 "$RUNTIME" lock change-owner session-owner
 "$RUNTIME" init change-owner session-owner
 "$RUNTIME" lock-repos change-owner session-owner "$web_worktree"
+"$RUNTIME" lock change-conflict session-conflict
+"$RUNTIME" init change-conflict session-conflict
 expect_failure "$RUNTIME" lock-repos change-conflict session-conflict "$web_worktree"
+expect_failure "$RUNTIME" lock-repos random-change random-session "$mw"
+"$RUNTIME" cleanup change-conflict session-conflict BLOCKED
+"$RUNTIME" lock change-independent session-independent
+"$RUNTIME" init change-independent session-independent
 "$RUNTIME" lock-repos change-independent session-independent "$mw"
 "$RUNTIME" unlock-repos change-independent session-independent
+"$RUNTIME" cleanup change-independent session-independent BLOCKED
 "$RUNTIME" unlock-repos change-owner session-owner
 "$RUNTIME" cleanup change-owner session-owner BLOCKED
-"$RUNTIME" cleanup change-a session-a FAILED
 
 "$RUNTIME" lock change-holder session-holder
 "$RUNTIME" init change-holder session-holder
@@ -102,9 +108,14 @@ esac
 MOCK
 chmod +x "$mock_bin/codex"
 
+timeout --signal=TERM --kill-after=10s 15s codex exec --cd "$workspace" \
+  --add-dir "$web_worktree" --ephemeral --approve-for-me --help >/dev/null \
+  || fail 'selected Codex invocation was rejected by the real CLI parser'
+
 "$RUNTIME" lock change-runner session-runner
 "$RUNTIME" init change-runner session-runner
 "$RUNTIME" phase change-runner IMPLEMENT 0
+"$RUNTIME" lock-repos change-runner session-runner "$web_worktree"
 MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
   MOCK_CODEX_MODE=success CODEX_TIMEOUT_SECONDS=2 "$RUNNER" change-runner "$web_worktree" IMPLEMENT
 test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-implement-round-0.exit")" = 0 || fail 'successful Codex phase was not recorded'
@@ -113,6 +124,25 @@ grep -Fxq -- "$workspace" "$tmp/mock-args" || fail 'Codex primary cwd was not fi
 grep -Fxq -- '--add-dir' "$tmp/mock-args" || fail 'Codex additional directory flag missing'
 grep -Fxq -- "$web_worktree" "$tmp/mock-args" || fail 'Codex writable repository was not passed'
 grep -Fxq -- '--approve-for-me' "$tmp/mock-args" || fail 'Codex non-interactive approval flag missing'
+test "$(grep -Fc -- '--sandbox' "$tmp/mock-args" || true)" = 0 || fail 'conflicting sandbox flag was passed'
+
+"$RUNTIME" lock change-no-repo session-no-repo
+"$RUNTIME" init change-no-repo session-no-repo
+"$RUNTIME" phase change-no-repo IMPLEMENT 0
+expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
+  "$RUNNER" change-no-repo "$web_worktree" IMPLEMENT
+"$RUNTIME" cleanup change-no-repo session-no-repo BLOCKED
+
+"$RUNTIME" lock change-repo-owner session-repo-owner
+"$RUNTIME" init change-repo-owner session-repo-owner
+"$RUNTIME" lock-repos change-repo-owner session-repo-owner "$mw"
+"$RUNTIME" lock change-repo-denied session-repo-denied
+"$RUNTIME" init change-repo-denied session-repo-denied
+"$RUNTIME" phase change-repo-denied IMPLEMENT 0
+expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
+  "$RUNNER" change-repo-denied "$mw" IMPLEMENT
+"$RUNTIME" cleanup change-repo-denied session-repo-denied BLOCKED
+"$RUNTIME" cleanup change-repo-owner session-repo-owner BLOCKED
 
 "$RUNTIME" round change-runner session-runner >/dev/null
 "$RUNTIME" phase change-runner FIX 1
@@ -147,17 +177,43 @@ test -z "$active_after_limit" || fail "max-round cleanup left active workflow: $
 "$RUNTIME" lock hook-b session-hook-b
 "$RUNTIME" init hook-b session-hook-b
 "$RUNTIME" phase hook-b IMPLEMENT 0
-payload_empty_session="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd}')"
-expect_hook_blocked "$payload_empty_session"
+payload_a="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd, session_id: "session-hook-a"}')"
+payload_b="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd, session_id: "session-hook-b"}')"
+payload_unowned="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd, session_id: "session-unowned"}')"
+expect_hook_blocked "$payload_a"
+expect_hook_blocked "$payload_b"
 "$RUNTIME" cleanup hook-a session-hook-a BLOCKED
-"$RUNTIME" cleanup hook-b session-hook-b DONE
-printf '%s' "$payload_empty_session" | "$HOOK" >/dev/null
+expect_hook_blocked "$payload_b"
+"$RUNTIME" cleanup hook-b session-hook-b BLOCKED
+printf '%s' "$payload_unowned" | "$HOOK" >/dev/null
+
+"$RUNTIME" lock change-cleanup-done session-cleanup-done
+"$RUNTIME" init change-cleanup-done session-cleanup-done
+expect_failure "$RUNTIME" cleanup change-cleanup-done session-cleanup-done DONE
+expect_failure "$RUNTIME" phase change-cleanup-done DONE 0
+"$RUNTIME" cleanup change-cleanup-done session-cleanup-done BLOCKED
+
+"$RUNTIME" lock change-plan session-plan
+"$RUNTIME" init change-plan session-plan
+expect_failure "$RUNTIME" archive change-plan session-plan
+"$RUNTIME" cleanup change-plan session-plan BLOCKED
+
+"$RUNTIME" lock change-verify session-verify
+"$RUNTIME" init change-verify session-verify
+"$RUNTIME" phase change-verify VERIFY 0
+expect_failure "$RUNTIME" archive change-verify session-verify
+"$RUNTIME" cleanup change-verify session-verify BLOCKED
 
 "$RUNTIME" lock change-archive session-archive
 "$RUNTIME" init change-archive session-archive
+"$RUNTIME" lock-repos change-archive session-archive "$web_worktree"
 "$RUNTIME" phase change-archive ARCHIVE 0
-"$RUNTIME" unlock change-archive session-archive
-archive_path="$("$RUNTIME" archive change-archive)"
+archive_path="$("$RUNTIME" complete change-archive session-archive)"
 test "$(jq -r '.phase' "$archive_path/runtime/state.json")" = DONE || fail 'archive did not finalize state'
+test ! -d "$workspace/.ops/changes/change-archive/runtime/lock" || fail 'change lock survived completion'
+"$RUNTIME" lock change-reuse session-reuse
+"$RUNTIME" init change-reuse session-reuse
+"$RUNTIME" lock-repos change-reuse session-reuse "$web_worktree"
+"$RUNTIME" cleanup change-reuse session-reuse BLOCKED
 
 printf '%s\n' 'test_ops_orchestration: all checks passed'

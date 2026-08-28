@@ -7,14 +7,11 @@ RUNTIME="$SCRIPT_DIR/../../.agents/scripts/ops-runtime.sh"
 payload="$(cat || true)"
 cwd="$(jq -r '.cwd // empty' <<<"$payload" 2>/dev/null || true)"
 session_id="$(jq -r '.session_id // empty' <<<"$payload" 2>/dev/null || true)"
+session_id="${session_id:-${CLAUDE_SESSION_ID:-}}"
 [ -n "$cwd" ] || cwd="$PWD"
+[ -n "$session_id" ] || exit 0
 
 active="$("$RUNTIME" active "$cwd" "$session_id" 2>/dev/null || true)"
-if [ -z "$active" ] && [ -n "$session_id" ]; then
-  # A shell fallback session id may differ from the hook's id. Fail closed if
-  # any active workflow remains rather than allowing an unsafe stop.
-  active="$("$RUNTIME" active "$cwd" 2>/dev/null || true)"
-fi
 [ -n "$active" ] || exit 0
 
 line_count="$(printf '%s\n' "$active" | awk 'END { print NR }')"
