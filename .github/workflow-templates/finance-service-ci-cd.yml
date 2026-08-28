@@ -14,7 +14,10 @@ jobs:
     # Copy this caller into a service repository, then replace the values
     # below with that repository's bounded scripts.  Keep research/evidence,
     # rollback and infrastructure operations in separate workflows.
-    uses: ThanhNguyenDat/finance-workspace/.github/workflows/reusable-finance-service-delivery.yml@main
+    # Pin this to the reviewed reusable-workflow commit before enabling it in
+    # a production service. Update the SHA deliberately when the template is
+    # upgraded.
+    uses: ThanhNguyenDat/finance-workspace/.github/workflows/reusable-finance-service-delivery.yml@4076d5b0af9e40b92dfab6da8e9fd87d5186f02d
     with:
       service_name: replace-me
       runner_label: replace-me-ci
