@@ -54,9 +54,13 @@ Implementation repository: $repository_root
 
 Read AGENTS.md, applicable .agents/rules/, relevant skills, the active
 OpenSpec change, and repository-local instructions. Use the Codex-native
-OpenSpec apply workflow. Modify runtime production code only in the declared
-implementation repository. Run local verification and create local commits
-when required. Do not push before Claude final verification.
+OpenSpec apply workflow. For this documentation-only smoke test, modify only
+the declared developer documentation file in the implementation repository;
+do not edit finance-workspace, OpenSpec, or .ops files because the
+orchestrator owns that state. Never read, print, or redact environment values
+or credentials; inspect configuration provenance and variable names only, with
+values suppressed. Run local verification and create local commits when
+required. Do not push before Claude final verification.
 EOF
 )"
 
