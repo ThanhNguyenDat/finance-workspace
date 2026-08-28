@@ -84,14 +84,14 @@ summary as independent verification.
    Verify ownership, scope, API/contracts, migrations, security,
    observability, and trading invariants when applicable. Record concise
    findings in the handoff. Do not mark VERIFY complete from a worker claim.
-3. For any P0/P1 finding, increment the runtime round first, then set `FIX`
-   with the ownership-aware interface before invoking the worker with `FIX`:
+3. For any P0/P1 finding, enter `FIX` through the atomic ownership-aware
+   operation before invoking the worker with `FIX`:
 
-   `./.agents/scripts/ops-runtime.sh round <change> <session-id>`
-   `./.agents/scripts/ops-runtime.sh phase <change> <session-id> FIX`
+   `./.agents/scripts/ops-runtime.sh fix <change> <session-id>`
 
-   The helper mechanically enforces `OPS_MAX_FIX_ROUNDS` (default `3`); an
-   attempted fourth round marks the workflow `BLOCKED` and releases owned
+   The helper increments the fix round and enters `FIX` atomically. It
+   mechanically enforces `OPS_MAX_FIX_ROUNDS` (default `3`); an attempted
+   fourth fix marks the workflow `BLOCKED` and releases owned
    locks. Return to `VERIFY`. P2/P3 items must not silently become release
    blockers unless the approved change requires it.
 4. When no P0/P1 findings remain, set `FINAL_VERIFY` and repeat the critical
@@ -111,10 +111,9 @@ summary as independent verification.
    Then follow repository delivery rules: local checks, commit, push, GitHub Actions,
    deployment mechanism, and immutable revision tracking. CI or deployment
    failures caused by an implementation change return through the fix/verify
-   loop: classify the failure, run `round`, set `FIX`, invoke Codex, then set
-   `VERIFY`, `FINAL_VERIFY`, and `RELEASE` again. The transition from `RELEASE`
-   to `FIX` is the only release recovery path; do not jump directly to
-   `VERIFY` or `IMPLEMENT`.
+   loop: classify the failure, run `fix`, invoke Codex, then set `VERIFY`,
+   `FINAL_VERIFY`, and `RELEASE` again. The transition from `RELEASE` to
+   `FIX` is owned by `fix`; do not jump directly to `VERIFY` or `IMPLEMENT`.
    For a dev-only change, record that release was intentionally skipped.
 2. Set `DEPLOY_VERIFY` only when deployment applies:
 
@@ -122,12 +121,12 @@ summary as independent verification.
 
    Verify the exact deployed revision, health, and requested behavior through
    the authoritative path. If deployment verification exposes an
-   implementation defect, classify it, run `round`, set `FIX`, invoke Codex,
-   then return through `VERIFY`, `FINAL_VERIFY`, `RELEASE`, and
-   `DEPLOY_VERIFY`. Do not jump directly to `VERIFY` or `RELEASE`. External
-   or infrastructure blockers such as outages, unavailable platforms,
-   expired credentials, or required manual approval become `BLOCKED` with
-   evidence via cleanup; do not force a code fix.
+   implementation defect, classify it, run `fix`, invoke Codex, then return
+   through `VERIFY`, `FINAL_VERIFY`, `RELEASE`, and `DEPLOY_VERIFY`. Do not
+   jump directly to `VERIFY` or `RELEASE`. External or infrastructure
+   blockers such as outages, unavailable platforms, expired credentials, or
+   required manual approval become `BLOCKED` with evidence via cleanup; do
+   not force a code fix.
 3. Set `ARCHIVE`, validate/sync/archive the native OpenSpec change with the
    ownership-aware interface:
 

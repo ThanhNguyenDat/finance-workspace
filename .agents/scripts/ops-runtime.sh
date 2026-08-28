@@ -20,7 +20,7 @@ usage:
   ops-runtime.sh cleanup <change> <session-id> <FAILED|BLOCKED>
   ops-runtime.sh assert-repo-lock <change> <session-id> <repository>
   ops-runtime.sh phase <change> <session-id> <next-phase>
-  ops-runtime.sh round <change> <session-id>
+  ops-runtime.sh fix <change> <session-id>
   ops-runtime.sh state <change>
   ops-runtime.sh active <workspace-root> [session-id]
   ops-runtime.sh complete <change> <session-id>
@@ -56,10 +56,9 @@ valid_phase() {
 
 valid_transition() {
   case "$1:$2" in
-    PLAN:IMPLEMENT|IMPLEMENT:VERIFY|VERIFY:FIX|VERIFY:FINAL_VERIFY|FIX:VERIFY|\
-    FINAL_VERIFY:RELEASE|FINAL_VERIFY:ARCHIVE|RELEASE:FIX|\
-    RELEASE:DEPLOY_VERIFY|RELEASE:ARCHIVE|DEPLOY_VERIFY:FIX|\
-    DEPLOY_VERIFY:ARCHIVE)
+    PLAN:IMPLEMENT|IMPLEMENT:VERIFY|VERIFY:FINAL_VERIFY|FIX:VERIFY|\
+    FINAL_VERIFY:RELEASE|FINAL_VERIFY:ARCHIVE|RELEASE:DEPLOY_VERIFY|\
+    RELEASE:ARCHIVE|DEPLOY_VERIFY:ARCHIVE)
       return 0 ;;
     *) return 1 ;;
   esac
@@ -306,17 +305,23 @@ cleanup_change() {
   fi
 }
 
-bump_round() {
+enter_fix() {
   local change="$1"
   local session_id="$2"
-  local state current max
+  local state current_phase current_round max next_round
   state="$(state_file "$change")"
   [ -f "$state" ] || die "runtime state not found: $state"
   assert_active_change_owner "$change" "$session_id"
+  current_phase="$(jq -r '.phase' "$state")"
+  case "$current_phase" in
+    VERIFY|RELEASE|DEPLOY_VERIFY) ;;
+    *) die "FIX cannot start from phase: $current_phase" ;;
+  esac
   max="$OPS_MAX_FIX_ROUNDS"
   [[ "$max" =~ ^[1-9][0-9]*$ ]] || die 'OPS_MAX_FIX_ROUNDS must be a positive integer'
-  current="$(jq -r '.round' "$state")"
-  if [ "$current" -ge "$max" ]; then
+  current_round="$(jq -r '.round // empty' "$state")"
+  [[ "$current_round" =~ ^[0-9]+$ ]] || die 'runtime fix round is invalid'
+  if [ "$current_round" -ge "$max" ]; then
     set_terminal_phase "$change" "$session_id" BLOCKED
     release_repo_locks "$change" "$session_id"
     if [ -d "$(change_dir "$change")/runtime/lock" ]; then
@@ -325,10 +330,12 @@ bump_round() {
     printf 'ops-runtime: maximum fix rounds (%s) reached; workflow blocked\n' "$max" >&2
     return 1
   fi
-  current=$((current + 1))
-  jq --arg updated_at "$(now_utc)" --argjson round "$current" \
-    '.round = $round | .updated_at = $updated_at' "$state" | atomic_write_state "$state"
-  printf '%s\n' "$current"
+  next_round=$((current_round + 1))
+  jq --arg updated_at "$(now_utc)" --argjson round "$next_round" \
+    '.phase = "FIX"
+    | .round = $round
+    | .status = "running"
+    | .updated_at = $updated_at' "$state" | atomic_write_state "$state"
 }
 
 active_changes() {
@@ -415,9 +422,9 @@ case "$command" in
     [ "$#" -eq 4 ] || { usage; exit 2; }
     set_phase "$2" "$3" "$4"
     ;;
-  round)
+  fix)
     [ "$#" -eq 3 ] || { usage; exit 2; }
-    bump_round "$2" "$3"
+    enter_fix "$2" "$3"
     ;;
   state)
     [ "$#" -eq 2 ] || { usage; exit 2; }

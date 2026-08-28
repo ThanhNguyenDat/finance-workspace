@@ -66,8 +66,7 @@ new_change change-full session-full
 "$RUNTIME" lock-repos change-full session-full "$web_worktree"
 "$RUNTIME" phase change-full session-full IMPLEMENT
 "$RUNTIME" phase change-full session-full VERIFY
-"$RUNTIME" round change-full session-full >/dev/null
-"$RUNTIME" phase change-full session-full FIX
+"$RUNTIME" fix change-full session-full
 "$RUNTIME" phase change-full session-full VERIFY
 "$RUNTIME" phase change-full session-full FINAL_VERIFY
 "$RUNTIME" phase change-full session-full RELEASE
@@ -90,7 +89,11 @@ new_change change-release-recovery session-release-recovery
 "$RUNTIME" phase change-release-recovery session-release-recovery VERIFY
 "$RUNTIME" phase change-release-recovery session-release-recovery FINAL_VERIFY
 "$RUNTIME" phase change-release-recovery session-release-recovery RELEASE
-"$RUNTIME" phase change-release-recovery session-release-recovery FIX
+"$RUNTIME" fix change-release-recovery session-release-recovery
+test "$(jq -r '.phase' "$workspace/.ops/changes/change-release-recovery/runtime/state.json")" = FIX \
+  || fail 'release recovery did not enter FIX'
+test "$(jq -r '.round' "$workspace/.ops/changes/change-release-recovery/runtime/state.json")" = 1 \
+  || fail 'release recovery did not consume exactly one fix round'
 "$RUNTIME" phase change-release-recovery session-release-recovery VERIFY
 "$RUNTIME" phase change-release-recovery session-release-recovery FINAL_VERIFY
 "$RUNTIME" phase change-release-recovery session-release-recovery RELEASE
@@ -105,7 +108,11 @@ new_change change-deploy-recovery session-deploy-recovery
 "$RUNTIME" phase change-deploy-recovery session-deploy-recovery FINAL_VERIFY
 "$RUNTIME" phase change-deploy-recovery session-deploy-recovery RELEASE
 "$RUNTIME" phase change-deploy-recovery session-deploy-recovery DEPLOY_VERIFY
-"$RUNTIME" phase change-deploy-recovery session-deploy-recovery FIX
+"$RUNTIME" fix change-deploy-recovery session-deploy-recovery
+test "$(jq -r '.phase' "$workspace/.ops/changes/change-deploy-recovery/runtime/state.json")" = FIX \
+  || fail 'deployment recovery did not enter FIX'
+test "$(jq -r '.round' "$workspace/.ops/changes/change-deploy-recovery/runtime/state.json")" = 1 \
+  || fail 'deployment recovery did not consume exactly one fix round'
 "$RUNTIME" phase change-deploy-recovery session-deploy-recovery VERIFY
 "$RUNTIME" phase change-deploy-recovery session-deploy-recovery FINAL_VERIFY
 "$RUNTIME" phase change-deploy-recovery session-deploy-recovery RELEASE
@@ -120,6 +127,7 @@ new_change bad-release session-bad-release
 "$RUNTIME" phase bad-release session-bad-release VERIFY
 "$RUNTIME" phase bad-release session-bad-release FINAL_VERIFY
 "$RUNTIME" phase bad-release session-bad-release RELEASE
+expect_failure "$RUNTIME" phase bad-release session-bad-release FIX
 expect_failure "$RUNTIME" phase bad-release session-bad-release IMPLEMENT
 expect_failure "$RUNTIME" phase bad-release session-bad-release VERIFY
 expect_failure "$RUNTIME" phase bad-release session-bad-release FINAL_VERIFY
@@ -132,6 +140,7 @@ new_change bad-deploy-transition session-bad-deploy-transition
 "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition FINAL_VERIFY
 "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition RELEASE
 "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition DEPLOY_VERIFY
+expect_failure "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition FIX
 expect_failure "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition IMPLEMENT
 expect_failure "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition VERIFY
 expect_failure "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition FINAL_VERIFY
@@ -141,23 +150,78 @@ expect_failure "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transit
 new_change round-integrity session-round-integrity
 "$RUNTIME" phase round-integrity session-round-integrity IMPLEMENT
 "$RUNTIME" phase round-integrity session-round-integrity VERIFY
-"$RUNTIME" round round-integrity session-round-integrity >/dev/null
-"$RUNTIME" round round-integrity session-round-integrity >/dev/null
-"$RUNTIME" phase round-integrity session-round-integrity FIX
+"$RUNTIME" fix round-integrity session-round-integrity
+test "$(jq -r '.phase' "$workspace/.ops/changes/round-integrity/runtime/state.json")" = FIX \
+  || fail 'fix did not enter FIX'
+test "$(jq -r '.round' "$workspace/.ops/changes/round-integrity/runtime/state.json")" = 1 \
+  || fail 'first fix did not increment the round exactly once'
 "$RUNTIME" phase round-integrity session-round-integrity VERIFY
-"$RUNTIME" phase round-integrity session-round-integrity FINAL_VERIFY
-"$RUNTIME" phase round-integrity session-round-integrity RELEASE
-"$RUNTIME" phase round-integrity session-round-integrity FIX
+"$RUNTIME" fix round-integrity session-round-integrity
 test "$(jq -r '.round' "$workspace/.ops/changes/round-integrity/runtime/state.json")" = 2 \
-  || fail 'phase transition changed the fix round'
-"$RUNTIME" round round-integrity session-round-integrity >/dev/null
+  || fail 'second fix did not increment the round exactly once'
+"$RUNTIME" phase round-integrity session-round-integrity VERIFY
+"$RUNTIME" fix round-integrity session-round-integrity
 test "$(jq -r '.round' "$workspace/.ops/changes/round-integrity/runtime/state.json")" = 3 \
-  || fail 'round helper did not own the fix counter'
-"$RUNTIME" cleanup round-integrity session-round-integrity BLOCKED
+  || fail 'third fix did not increment the round exactly once'
+"$RUNTIME" phase round-integrity session-round-integrity VERIFY
+expect_failure "$RUNTIME" fix round-integrity session-round-integrity
+test "$(jq -r '.round' "$workspace/.ops/changes/round-integrity/runtime/state.json")" = 3 \
+  || fail 'rejected fourth fix changed the round'
+test "$(jq -r '.phase' "$workspace/.ops/changes/round-integrity/runtime/state.json")" = BLOCKED \
+  || fail 'fourth fix did not block the workflow'
+test ! -d "$workspace/.ops/changes/round-integrity/runtime/lock" \
+  || fail 'fourth fix did not release the change lock'
 
 new_change old-phase-syntax session-old-phase-syntax
 expect_failure "$RUNTIME" phase old-phase-syntax session-old-phase-syntax VERIFY 0
+expect_failure "$RUNTIME" round old-phase-syntax session-old-phase-syntax
 "$RUNTIME" cleanup old-phase-syntax session-old-phase-syntax BLOCKED
+
+new_change invalid-fix-plan session-invalid-fix-plan
+expect_failure "$RUNTIME" fix invalid-fix-plan session-invalid-fix-plan
+"$RUNTIME" cleanup invalid-fix-plan session-invalid-fix-plan BLOCKED
+
+new_change invalid-fix-implement session-invalid-fix-implement
+"$RUNTIME" phase invalid-fix-implement session-invalid-fix-implement IMPLEMENT
+expect_failure "$RUNTIME" fix invalid-fix-implement session-invalid-fix-implement
+"$RUNTIME" cleanup invalid-fix-implement session-invalid-fix-implement BLOCKED
+
+new_change invalid-fix-final session-invalid-fix-final
+"$RUNTIME" phase invalid-fix-final session-invalid-fix-final IMPLEMENT
+"$RUNTIME" phase invalid-fix-final session-invalid-fix-final VERIFY
+"$RUNTIME" phase invalid-fix-final session-invalid-fix-final FINAL_VERIFY
+expect_failure "$RUNTIME" fix invalid-fix-final session-invalid-fix-final
+"$RUNTIME" cleanup invalid-fix-final session-invalid-fix-final BLOCKED
+
+new_change invalid-fix-archive session-invalid-fix-archive
+"$RUNTIME" phase invalid-fix-archive session-invalid-fix-archive IMPLEMENT
+"$RUNTIME" phase invalid-fix-archive session-invalid-fix-archive VERIFY
+"$RUNTIME" phase invalid-fix-archive session-invalid-fix-archive FINAL_VERIFY
+"$RUNTIME" phase invalid-fix-archive session-invalid-fix-archive ARCHIVE
+expect_failure "$RUNTIME" fix invalid-fix-archive session-invalid-fix-archive
+"$RUNTIME" cleanup invalid-fix-archive session-invalid-fix-archive BLOCKED
+
+new_change invalid-fix-source session-invalid-fix-source
+"$RUNTIME" phase invalid-fix-source session-invalid-fix-source IMPLEMENT
+"$RUNTIME" phase invalid-fix-source session-invalid-fix-source VERIFY
+"$RUNTIME" fix invalid-fix-source session-invalid-fix-source
+expect_failure "$RUNTIME" fix invalid-fix-source session-invalid-fix-source
+"$RUNTIME" cleanup invalid-fix-source session-invalid-fix-source BLOCKED
+
+new_change fix-owner session-fix-owner
+"$RUNTIME" phase fix-owner session-fix-owner IMPLEMENT
+"$RUNTIME" phase fix-owner session-fix-owner VERIFY
+expect_failure "$RUNTIME" fix fix-owner session-other
+"$RUNTIME" unlock fix-owner session-fix-owner
+expect_failure "$RUNTIME" fix fix-owner session-fix-owner
+"$RUNTIME" lock fix-owner session-fix-owner
+state_fix_owner="$workspace/.ops/changes/fix-owner/runtime/state.json"
+jq '.session_id = "session-other"' "$state_fix_owner" >"$state_fix_owner.tmp"
+mv -- "$state_fix_owner.tmp" "$state_fix_owner"
+expect_failure "$RUNTIME" fix fix-owner session-fix-owner
+jq '.session_id = "session-fix-owner"' "$state_fix_owner" >"$state_fix_owner.tmp"
+mv -- "$state_fix_owner.tmp" "$state_fix_owner"
+"$RUNTIME" cleanup fix-owner session-fix-owner BLOCKED
 
 new_change bad-plan session-bad-plan
 expect_failure "$RUNTIME" phase bad-plan session-bad-plan VERIFY
@@ -173,13 +237,14 @@ expect_failure "$RUNTIME" phase bad-impl session-bad-impl ARCHIVE
 new_change bad-verify session-bad-verify
 "$RUNTIME" phase bad-verify session-bad-verify IMPLEMENT
 "$RUNTIME" phase bad-verify session-bad-verify VERIFY
+expect_failure "$RUNTIME" phase bad-verify session-bad-verify FIX
 expect_failure "$RUNTIME" phase bad-verify session-bad-verify RELEASE
 "$RUNTIME" cleanup bad-verify session-bad-verify BLOCKED
 
 new_change bad-fix session-bad-fix
 "$RUNTIME" phase bad-fix session-bad-fix IMPLEMENT
 "$RUNTIME" phase bad-fix session-bad-fix VERIFY
-"$RUNTIME" phase bad-fix session-bad-fix FIX
+"$RUNTIME" fix bad-fix session-bad-fix
 expect_failure "$RUNTIME" phase bad-fix session-bad-fix ARCHIVE
 "$RUNTIME" cleanup bad-fix session-bad-fix BLOCKED
 
@@ -317,16 +382,14 @@ expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args"
 "$RUNTIME" cleanup change-repo-denied session-repo-denied BLOCKED
 "$RUNTIME" cleanup change-repo-owner session-repo-owner BLOCKED
 
-"$RUNTIME" round change-runner session-runner >/dev/null
 "$RUNTIME" phase change-runner session-runner VERIFY
-"$RUNTIME" phase change-runner session-runner FIX
+"$RUNTIME" fix change-runner session-runner
 expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" MOCK_CODEX_MODE=failure CODEX_TIMEOUT_SECONDS=2 \
   "$RUNNER" change-runner "$web_worktree" FIX
 test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-fix-round-1.exit")" = 7 || fail 'Codex failure was not recorded'
 
-"$RUNTIME" round change-runner session-runner >/dev/null
 "$RUNTIME" phase change-runner session-runner VERIFY
-"$RUNTIME" phase change-runner session-runner FIX
+"$RUNTIME" fix change-runner session-runner
 expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" MOCK_CODEX_MODE=timeout CODEX_TIMEOUT_SECONDS=1 \
   "$RUNNER" change-runner "$web_worktree" FIX
 test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-fix-round-2.exit")" = 124 || fail 'Codex timeout was not bounded'
@@ -338,17 +401,19 @@ expect_failure env PATH="$tmp/no-codex:/usr/bin:/bin" "$RUNNER" change-runner "$
 "$RUNTIME" phase change-fix-limit session-limit IMPLEMENT
 "$RUNTIME" phase change-fix-limit session-limit VERIFY
 "$RUNTIME" lock-repos change-fix-limit session-limit "$web_worktree"
-"$RUNTIME" round change-fix-limit session-limit >/dev/null
-"$RUNTIME" phase change-fix-limit session-limit FIX
+"$RUNTIME" fix change-fix-limit session-limit
 "$RUNTIME" phase change-fix-limit session-limit VERIFY
-"$RUNTIME" round change-fix-limit session-limit >/dev/null
-"$RUNTIME" phase change-fix-limit session-limit FIX
+"$RUNTIME" fix change-fix-limit session-limit
 "$RUNTIME" phase change-fix-limit session-limit VERIFY
-"$RUNTIME" round change-fix-limit session-limit >/dev/null
-"$RUNTIME" phase change-fix-limit session-limit FIX
-expect_failure "$RUNTIME" round change-fix-limit session-limit
+"$RUNTIME" fix change-fix-limit session-limit
+"$RUNTIME" phase change-fix-limit session-limit VERIFY
+expect_failure "$RUNTIME" fix change-fix-limit session-limit
 test "$(jq -r '.phase' "$workspace/.ops/changes/change-fix-limit/runtime/state.json")" = BLOCKED || fail 'fourth fix round did not block'
 test ! -d "$workspace/.ops/changes/change-fix-limit/runtime/lock" || fail 'change lock survived max-round cleanup'
+repo_owner_count="$(find "$workspace/.ops/runtime/repo-locks" -mindepth 2 -maxdepth 2 -type f -name owner.json -print0 \
+  | xargs -0 -r jq -r --arg change change-fix-limit 'select(.change == $change) | .change' \
+  | wc -l)"
+test "$repo_owner_count" = 0 || fail 'fourth fix did not release repository locks'
 active_after_limit="$("$RUNTIME" active "$workspace" || true)"
 test -z "$active_after_limit" || fail "max-round cleanup left active workflow: $active_after_limit"
 
