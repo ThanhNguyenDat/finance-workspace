@@ -50,7 +50,7 @@ research từ workspace, sau đó sửa đúng repository sở hữu code.
 
 ```text
 .agents/   rule, skill và utility dùng chung
-docs/      spec, runbook, sơ đồ và kế hoạch
+docs/      architecture, ADR, runbook, diagram, migration và supporting docs
 raw/       handoff, research history, report và evidence
 docker/    source hạ tầng dùng chung và observability/POC
 AGENTS.md  contract cho Codex và agent tương thích

@@ -72,7 +72,7 @@ sync_entries() {
             "$target" "$raw" "$expected" >&2
           return 1
         fi
-      elif "$CHECK_ONLY"; then
+      else
         printf 'real local entry blocks shared link: %s\n' "$target" >&2
         return 1
       fi

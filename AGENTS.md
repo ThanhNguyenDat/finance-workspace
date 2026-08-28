@@ -101,6 +101,11 @@ It links shared non-OpenSpec entries into supported agent directories without
 overwriting agent-native files. `openspec*` entries must remain local to their
 own CLI.
 
+Entries matching `.agents/skills/openspec*` are Codex-native OpenSpec skills,
+as declared by `.agents/skills/.openspec-target`; they are not shared
+cross-agent skills. Codex may use them when OpenSpec work is relevant, while
+other CLIs must use their own native OpenSpec integrations.
+
 Do not start implementation from the task description alone when an active OpenSpec change exists.
 
 ---

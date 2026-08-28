@@ -101,6 +101,12 @@ work:
 
 It synchronizes only non-OpenSpec entries and preserves CLI-native files.
 
+When discovering shared skills under `.agents/skills/`, Claude MUST ignore
+entries matching `openspec*`. Those entries are Codex-native OpenSpec skills as
+declared by `.agents/skills/.openspec-target`. For OpenSpec operations, Claude
+MUST use only its native integration under `.claude/` and must not assume the
+Codex skill format applies.
+
 ---
 
 
