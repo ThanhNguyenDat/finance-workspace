@@ -17,4 +17,4 @@
 ## 4. Verification and delivery
 
 - [x] 4.1 Run all shell/OpenSpec/link/diff checks and review every acceptance criterion; verify no quant strategy policy changes were introduced.
-- [ ] 4.2 Archive OpenSpec, commit scoped workspace files, push fast-forward to `main`, verify exact remote SHA, and track Agent Contracts success.
+- [x] 4.2 Archive OpenSpec, commit scoped workspace files, push fast-forward to `main`, verify exact remote SHA, and track Agent Contracts success.

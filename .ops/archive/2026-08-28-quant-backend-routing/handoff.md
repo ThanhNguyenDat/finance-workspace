@@ -15,5 +15,9 @@
 - Smoke residue: superseded failed OpenSpec change archived as
   `openspec/changes/archive/2026-08-28-finance-mw-dev-docs-smoke`; its `.ops`
   record remains terminal `FAILED` evidence. No production deployment.
-- Next: final verification, native OpenSpec archive, commit, push, and CI
-  tracking.
+- Delivery: commits `824c68a` and `ebb60ec` are on `main`; exact remote SHA
+  verified as `ebb60ec1534310c55ca5e9bd5de1a3e427e2e1fd`.
+- CI: Agent Contracts run `33183686571` passed all steps, including bounded
+  backend routing and managed-link checks.
+- Final: OpenSpec archived and runtime state finalized as `DONE`; no runtime
+  repository or production deployment was involved.
