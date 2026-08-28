@@ -17,7 +17,7 @@ jobs:
     # Pin this to the reviewed reusable-workflow commit before enabling it in
     # a production service. Update the SHA deliberately when the template is
     # upgraded.
-    uses: ThanhNguyenDat/finance-workspace/.github/workflows/reusable-finance-service-delivery.yml@4076d5b9eeb135d3529451a9cba065a5d1e4f7c3
+    uses: ThanhNguyenDat/finance-workspace/.github/workflows/reusable-finance-service-delivery.yml@e74b8741a046ff05c3a6627b77a3e0e7f55788af
     with:
       service_name: replace-me
       runner_label: replace-me-ci
