@@ -10,4 +10,4 @@
 ## 3. Verification and delivery
 
 - [x] 3.1 Run all required bounded shell suites, syntax, JSON, managed-link, strict OpenSpec, and diff checks; verify accepted backend/FIX/quant/generic-worker behavior remains unchanged.
-- [ ] 3.2 Complete skill upsert review, archive OpenSpec/runtime state, commit scoped files, push fast-forward to `main`, verify exact remote SHA, and track Agent Contracts success.
+- [x] 3.2 Complete skill upsert review, archive OpenSpec/runtime state, commit scoped files, push fast-forward to `main`, verify exact remote SHA, and track Agent Contracts success.
