@@ -66,6 +66,7 @@ new_change change-full session-full
 "$RUNTIME" lock-repos change-full session-full "$web_worktree"
 "$RUNTIME" phase change-full session-full IMPLEMENT
 "$RUNTIME" phase change-full session-full VERIFY
+"$RUNTIME" round change-full session-full >/dev/null
 "$RUNTIME" phase change-full session-full FIX
 "$RUNTIME" phase change-full session-full VERIFY
 "$RUNTIME" phase change-full session-full FINAL_VERIFY
@@ -83,6 +84,80 @@ new_change change-dev session-dev
 "$RUNTIME" phase change-dev session-dev FINAL_VERIFY
 "$RUNTIME" phase change-dev session-dev ARCHIVE
 "$RUNTIME" complete change-dev session-dev >/dev/null
+
+new_change change-release-recovery session-release-recovery
+"$RUNTIME" phase change-release-recovery session-release-recovery IMPLEMENT
+"$RUNTIME" phase change-release-recovery session-release-recovery VERIFY
+"$RUNTIME" phase change-release-recovery session-release-recovery FINAL_VERIFY
+"$RUNTIME" phase change-release-recovery session-release-recovery RELEASE
+"$RUNTIME" phase change-release-recovery session-release-recovery FIX
+"$RUNTIME" phase change-release-recovery session-release-recovery VERIFY
+"$RUNTIME" phase change-release-recovery session-release-recovery FINAL_VERIFY
+"$RUNTIME" phase change-release-recovery session-release-recovery RELEASE
+"$RUNTIME" phase change-release-recovery session-release-recovery ARCHIVE
+release_recovery_archive="$("$RUNTIME" complete change-release-recovery session-release-recovery)"
+test "$(jq -r '.phase' "$release_recovery_archive/runtime/state.json")" = DONE \
+  || fail 'release recovery flow did not complete'
+
+new_change change-deploy-recovery session-deploy-recovery
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery IMPLEMENT
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery VERIFY
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery FINAL_VERIFY
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery RELEASE
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery DEPLOY_VERIFY
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery FIX
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery VERIFY
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery FINAL_VERIFY
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery RELEASE
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery DEPLOY_VERIFY
+"$RUNTIME" phase change-deploy-recovery session-deploy-recovery ARCHIVE
+deploy_recovery_archive="$("$RUNTIME" complete change-deploy-recovery session-deploy-recovery)"
+test "$(jq -r '.phase' "$deploy_recovery_archive/runtime/state.json")" = DONE \
+  || fail 'deployment recovery flow did not complete'
+
+new_change bad-release session-bad-release
+"$RUNTIME" phase bad-release session-bad-release IMPLEMENT
+"$RUNTIME" phase bad-release session-bad-release VERIFY
+"$RUNTIME" phase bad-release session-bad-release FINAL_VERIFY
+"$RUNTIME" phase bad-release session-bad-release RELEASE
+expect_failure "$RUNTIME" phase bad-release session-bad-release IMPLEMENT
+expect_failure "$RUNTIME" phase bad-release session-bad-release VERIFY
+expect_failure "$RUNTIME" phase bad-release session-bad-release FINAL_VERIFY
+expect_failure "$RUNTIME" phase bad-release session-bad-release PLAN
+"$RUNTIME" cleanup bad-release session-bad-release BLOCKED
+
+new_change bad-deploy-transition session-bad-deploy-transition
+"$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition IMPLEMENT
+"$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition VERIFY
+"$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition FINAL_VERIFY
+"$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition RELEASE
+"$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition DEPLOY_VERIFY
+expect_failure "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition IMPLEMENT
+expect_failure "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition VERIFY
+expect_failure "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition FINAL_VERIFY
+expect_failure "$RUNTIME" phase bad-deploy-transition session-bad-deploy-transition RELEASE
+"$RUNTIME" cleanup bad-deploy-transition session-bad-deploy-transition BLOCKED
+
+new_change round-integrity session-round-integrity
+"$RUNTIME" phase round-integrity session-round-integrity IMPLEMENT
+"$RUNTIME" phase round-integrity session-round-integrity VERIFY
+"$RUNTIME" round round-integrity session-round-integrity >/dev/null
+"$RUNTIME" round round-integrity session-round-integrity >/dev/null
+"$RUNTIME" phase round-integrity session-round-integrity FIX
+"$RUNTIME" phase round-integrity session-round-integrity VERIFY
+"$RUNTIME" phase round-integrity session-round-integrity FINAL_VERIFY
+"$RUNTIME" phase round-integrity session-round-integrity RELEASE
+"$RUNTIME" phase round-integrity session-round-integrity FIX
+test "$(jq -r '.round' "$workspace/.ops/changes/round-integrity/runtime/state.json")" = 2 \
+  || fail 'phase transition changed the fix round'
+"$RUNTIME" round round-integrity session-round-integrity >/dev/null
+test "$(jq -r '.round' "$workspace/.ops/changes/round-integrity/runtime/state.json")" = 3 \
+  || fail 'round helper did not own the fix counter'
+"$RUNTIME" cleanup round-integrity session-round-integrity BLOCKED
+
+new_change old-phase-syntax session-old-phase-syntax
+expect_failure "$RUNTIME" phase old-phase-syntax session-old-phase-syntax VERIFY 0
+"$RUNTIME" cleanup old-phase-syntax session-old-phase-syntax BLOCKED
 
 new_change bad-plan session-bad-plan
 expect_failure "$RUNTIME" phase bad-plan session-bad-plan VERIFY
@@ -262,11 +337,15 @@ expect_failure env PATH="$tmp/no-codex:/usr/bin:/bin" "$RUNNER" change-runner "$
 "$RUNTIME" init change-fix-limit session-limit
 "$RUNTIME" phase change-fix-limit session-limit IMPLEMENT
 "$RUNTIME" phase change-fix-limit session-limit VERIFY
-"$RUNTIME" phase change-fix-limit session-limit FIX
 "$RUNTIME" lock-repos change-fix-limit session-limit "$web_worktree"
 "$RUNTIME" round change-fix-limit session-limit >/dev/null
+"$RUNTIME" phase change-fix-limit session-limit FIX
+"$RUNTIME" phase change-fix-limit session-limit VERIFY
 "$RUNTIME" round change-fix-limit session-limit >/dev/null
+"$RUNTIME" phase change-fix-limit session-limit FIX
+"$RUNTIME" phase change-fix-limit session-limit VERIFY
 "$RUNTIME" round change-fix-limit session-limit >/dev/null
+"$RUNTIME" phase change-fix-limit session-limit FIX
 expect_failure "$RUNTIME" round change-fix-limit session-limit
 test "$(jq -r '.phase' "$workspace/.ops/changes/change-fix-limit/runtime/state.json")" = BLOCKED || fail 'fourth fix round did not block'
 test ! -d "$workspace/.ops/changes/change-fix-limit/runtime/lock" || fail 'change lock survived max-round cleanup'

@@ -19,7 +19,7 @@ usage:
   ops-runtime.sh unlock-repos <change> <session-id>
   ops-runtime.sh cleanup <change> <session-id> <FAILED|BLOCKED>
   ops-runtime.sh assert-repo-lock <change> <session-id> <repository>
-  ops-runtime.sh phase <change> <session-id> <next-phase> [round]
+  ops-runtime.sh phase <change> <session-id> <next-phase>
   ops-runtime.sh round <change> <session-id>
   ops-runtime.sh state <change>
   ops-runtime.sh active <workspace-root> [session-id]
@@ -57,8 +57,9 @@ valid_phase() {
 valid_transition() {
   case "$1:$2" in
     PLAN:IMPLEMENT|IMPLEMENT:VERIFY|VERIFY:FIX|VERIFY:FINAL_VERIFY|FIX:VERIFY|\
-    FINAL_VERIFY:RELEASE|FINAL_VERIFY:ARCHIVE|RELEASE:DEPLOY_VERIFY|\
-    RELEASE:ARCHIVE|DEPLOY_VERIFY:ARCHIVE)
+    FINAL_VERIFY:RELEASE|FINAL_VERIFY:ARCHIVE|RELEASE:FIX|\
+    RELEASE:DEPLOY_VERIFY|RELEASE:ARCHIVE|DEPLOY_VERIFY:FIX|\
+    DEPLOY_VERIFY:ARCHIVE)
       return 0 ;;
     *) return 1 ;;
   esac
@@ -262,23 +263,17 @@ set_phase() {
   local change="$1"
   local session_id="$2"
   local phase="$3"
-  local requested_round="${4-}"
-  local state current_round next_round
+  local state current
   state="$(state_file "$change")"
   valid_phase "$phase" || die "invalid phase: $phase"
   [ -f "$state" ] || die "runtime state not found: $state"
   assert_active_change_owner "$change" "$session_id"
-  current_round="$(jq -r '.round' "$state")"
-  next_round="${requested_round:-$current_round}"
-  [[ "$next_round" =~ ^[0-9]+$ ]] || die 'phase round must be a non-negative integer'
   current="$(jq -r '.phase' "$state")"
   valid_transition "$current" "$phase" || die "invalid phase transition: $current -> $phase"
   jq \
     --arg phase "$phase" \
     --arg updated_at "$(now_utc)" \
-    --argjson round "$next_round" \
     '.phase = $phase
-    | .round = $round
     | .status = "running"
     | .updated_at = $updated_at' \
     "$state" | atomic_write_state "$state"
@@ -417,8 +412,8 @@ case "$command" in
     assert_repo_lock "$2" "$3" "$4"
     ;;
   phase)
-    [ "$#" -ge 4 ] && [ "$#" -le 5 ] || { usage; exit 2; }
-    set_phase "$2" "$3" "$4" "${5-}"
+    [ "$#" -eq 4 ] || { usage; exit 2; }
+    set_phase "$2" "$3" "$4"
     ;;
   round)
     [ "$#" -eq 3 ] || { usage; exit 2; }
