@@ -38,6 +38,8 @@ session_id="$(jq -r '.session_id // empty' "$state_file")"
 [ -n "$session_id" ] || die 'runtime state has no session id'
 current_phase="$(jq -r '.phase // empty' "$state_file")"
 [ "$current_phase" = "$phase" ] || die "runtime phase is $current_phase, requested worker phase is $phase"
+implementation_backend="$(jq -r '.implementation_backend // "codex"' "$state_file")"
+[ "$implementation_backend" = codex ] || die "Codex worker is not selected for backend: $implementation_backend"
 "$RUNTIME" assert-repo-lock "$change" "$session_id" "$repository_root"
 round="$(jq -r '.round' "$state_file")"
 log_dir="$RUNTIME_ROOT/.ops/changes/$change/runtime/logs"
@@ -54,13 +56,11 @@ Implementation repository: $repository_root
 
 Read AGENTS.md, applicable .agents/rules/, relevant skills, the active
 OpenSpec change, and repository-local instructions. Use the Codex-native
-OpenSpec apply workflow. For this documentation-only smoke test, modify only
-the declared developer documentation file in the implementation repository;
-do not edit finance-workspace, OpenSpec, or .ops files because the
-orchestrator owns that state. Never read, print, or redact environment values
-or credentials; inspect configuration provenance and variable names only, with
-values suppressed. Run local verification and create local commits when
-required. Do not push before Claude final verification.
+OpenSpec apply workflow. Modify only files required by the approved OpenSpec
+change and within the declared implementation repository. Respect scope,
+trading invariants, secret handling, and repository ownership. Run relevant
+local verification and create local commits when required. Do not push before
+Claude final verification.
 EOF
 )"
 

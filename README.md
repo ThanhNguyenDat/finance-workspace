@@ -94,6 +94,11 @@ công bố cơ chế custom command gọi đệ quy trong `claude --help`,
 reference. Không truyền trạng thái availability như argument cố định của
 `/loop`.
 
+Backend được chốt một lần khi `/ops:run` khởi tạo transaction và lưu cùng
+`verification_mode` trong runtime state. Việc bật lại Codex chỉ ảnh hưởng
+transaction mới; transaction fallback đang chạy vẫn giữ route Claude và dùng
+`claude-fallback-self-review` nếu cùng top-level session verify.
+
 `docker/infrastructure/` và `docker/observability/` là source canonical cho
 stack dùng chung. Các repo application chỉ giữ compatibility copy trong giai
 đoạn cutover; không coi bản copy đó là ownership lâu dài.

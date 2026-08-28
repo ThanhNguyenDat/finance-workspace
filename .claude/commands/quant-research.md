@@ -65,7 +65,7 @@ Khi state có `codex_available=false`, chỉ với candidate đã validate, scop
 acceptance criteria đủ và risk hiểu được, mới được yêu cầu implement fallback.
 Fallback phải dùng lifecycle hiện hữu trong
 `@.claude/commands/ops/run.md` với context tường minh
-`implementation_backend=claude-fallback`; không copy state machine và không
+`implementation_backend=claude-fallback` với context `quant-fallback`; không copy state machine và không
 thực hiện chỉnh sửa runtime trực tiếp bên ngoài lifecycle. Fallback phải giữ
 change/repository locks, OpenSpec, VERIFY/FIX/FINAL_VERIFY, RELEASE,
 DEPLOY_VERIFY, ARCHIVE và DONE theo mức áp dụng. Nếu cùng top-level Claude

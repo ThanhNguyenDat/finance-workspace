@@ -37,11 +37,22 @@ summary as independent verification.
    name. Do not inspect, sync, or write any change-specific file before the
    change lock is acquired. If that change already has an active runtime or
    lock, stop with `BLOCKED` rather than mixing sessions.
-2. Acquire the per-change lock and initialize runtime state as `PLAN` before
-   any change-specific planning write:
+2. Acquire the per-change lock and select the implementation backend once at
+   transaction start. Normal requests use Codex. Only an explicit quant
+   research fallback request may use Claude fallback, and only when the
+   current quant state reports `codex_available=false`. Initialize runtime
+   state as `PLAN` before any change-specific planning write:
 
    `./.agents/scripts/ops-runtime.sh lock <change> <session-id>`
    `./.agents/scripts/ops-runtime.sh init <change> <session-id>`
+
+   For the explicitly gated quant fallback only, use:
+
+   `./.agents/scripts/ops-runtime.sh init <change> <session-id> claude-fallback quant-fallback`
+
+   The initializer persists `implementation_backend` and
+   `verification_mode`; never use a later setter or re-read quant state to
+   switch an active transaction.
 
    Use `CLAUDE_SESSION_ID` when available; otherwise create a unique local
    session id. The initial handoff is created by `init`; keep later updates
@@ -67,11 +78,23 @@ summary as independent verification.
 
 ## IMPLEMENT, VERIFY, FIX
 
-1. Set phase `IMPLEMENT` with the ownership-aware interface and invoke the
-   bounded worker once per affected runtime repository, sequentially:
+1. Set phase `IMPLEMENT` with the ownership-aware interface, then route from
+   the persisted backend once per affected runtime repository, sequentially:
 
    `./.agents/scripts/ops-runtime.sh phase <change> <session-id> IMPLEMENT`
+   `backend="$(./.agents/scripts/ops-runtime.sh route <change> <session-id> IMPLEMENT)"`
+
+   If `backend=codex`, invoke:
+
    `./.agents/scripts/run-codex-phase.sh <change> <repository> IMPLEMENT`
+
+   If `backend=claude-fallback`, the current top-level Claude session performs
+   the implementation directly under the same repository lock and OpenSpec,
+   scope, test, and commit gates. Do not invoke `claude`, `claude -p`,
+   `claude --print`, or any nested Claude session, and do not invoke the
+   Codex worker. Record the persisted
+   `verification_mode=claude-fallback-self-review`; do not claim independent
+   maker/checker verification for this route.
 
    The worker mechanically verifies the current change/session owns the
    repository lock, then uses the installed `codex exec` interface with
@@ -93,9 +116,14 @@ summary as independent verification.
    observability, and trading invariants when applicable. Record concise
    findings in the handoff. Do not mark VERIFY complete from a worker claim.
 3. For any P0/P1 finding, enter `FIX` through the atomic ownership-aware
-   operation before invoking the worker with `FIX`:
+   operation before routing the selected backend with `FIX`:
 
    `./.agents/scripts/ops-runtime.sh fix <change> <session-id>`
+
+   `backend="$(./.agents/scripts/ops-runtime.sh route <change> <session-id> FIX)"`
+
+   Route `codex` to `run-codex-phase.sh`. Route `claude-fallback` to the
+   current top-level Claude session using the same no-nested-session rule.
 
    The helper increments the fix round and enters `FIX` atomically. It
    mechanically enforces `OPS_MAX_FIX_ROUNDS` (default `3`); an attempted
@@ -119,7 +147,8 @@ summary as independent verification.
    Then follow repository delivery rules: local checks, commit, push, GitHub Actions,
    deployment mechanism, and immutable revision tracking. CI or deployment
    failures caused by an implementation change return through the fix/verify
-   loop: classify the failure, run `fix`, invoke Codex, then set `VERIFY`,
+   loop: classify the failure, run `fix`, invoke the persisted implementation
+   backend, then set `VERIFY`,
    `FINAL_VERIFY`, and `RELEASE` again. The transition from `RELEASE` to
    `FIX` is owned by `fix`; do not jump directly to `VERIFY` or `IMPLEMENT`.
    For a dev-only change, record that release was intentionally skipped.
@@ -129,7 +158,8 @@ summary as independent verification.
 
    Verify the exact deployed revision, health, and requested behavior through
    the authoritative path. If deployment verification exposes an
-   implementation defect, classify it, run `fix`, invoke Codex, then return
+   implementation defect, classify it, run `fix`, invoke the persisted
+   implementation backend, then return
    through `VERIFY`, `FINAL_VERIFY`, `RELEASE`, and `DEPLOY_VERIFY`. Do not
    jump directly to `VERIFY` or `RELEASE`. External or infrastructure
    blockers such as outages, unavailable platforms, expired credentials, or

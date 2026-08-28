@@ -13,7 +13,7 @@ usage() {
   cat >&2 <<'EOF'
 usage:
   ops-runtime.sh lock <change> <session-id>
-  ops-runtime.sh init <change> <session-id>
+  ops-runtime.sh init <change> <session-id> [backend] [origin]
   ops-runtime.sh unlock <change> <session-id>
   ops-runtime.sh lock-repos <change> <session-id> <repository>...
   ops-runtime.sh unlock-repos <change> <session-id>
@@ -21,6 +21,7 @@ usage:
   ops-runtime.sh assert-repo-lock <change> <session-id> <repository>
   ops-runtime.sh phase <change> <session-id> <next-phase>
   ops-runtime.sh fix <change> <session-id>
+  ops-runtime.sh route <change> <session-id> <IMPLEMENT|FIX>
   ops-runtime.sh state <change>
   ops-runtime.sh active <workspace-root> [session-id]
   ops-runtime.sh complete <change> <session-id>
@@ -66,6 +67,25 @@ valid_transition() {
 
 now_utc() {
   date -u +'%Y-%m-%dT%H:%M:%SZ'
+}
+
+valid_backend() {
+  case "$1" in
+    codex|claude-fallback) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+quant_state_file() {
+  printf '%s/.ops/runtime/quant-research/state.json' "$ROOT_DIR"
+}
+
+fallback_is_allowed() {
+  local quant_state
+  quant_state="$(quant_state_file)"
+  [ -f "$quant_state" ] || die "quant state not found: $quant_state"
+  jq -e '.codex_available == false' "$quant_state" >/dev/null \
+    || die 'Claude fallback requires current quant state codex_available=false'
 }
 
 atomic_write_state() {
@@ -138,11 +158,29 @@ lock_change() {
 init_change() {
   local change="$1"
   local session_id="$2"
-  local dir state handoff
+  local backend="${3:-codex}"
+  local origin="${4:-}"
+  local dir state handoff verification_mode
   dir="$(change_dir "$change")"
   state="$dir/runtime/state.json"
   handoff="$dir/handoff.md"
   [ -n "$session_id" ] || die 'session id is required'
+  valid_backend "$backend" || die "invalid implementation backend: $backend"
+  case "$backend:$origin" in
+    codex:)
+      verification_mode='independent'
+      ;;
+    claude-fallback:quant-fallback)
+      fallback_is_allowed
+      verification_mode='claude-fallback-self-review'
+      ;;
+    claude-fallback:*)
+      die 'Claude fallback requires explicit quant-fallback origin'
+      ;;
+    *)
+      die 'backend origin is invalid'
+      ;;
+  esac
   [ -f "$dir/runtime/lock/owner.json" ] || die 'change must be locked before initialization'
   [ "$(jq -r '.session_id // empty' "$dir/runtime/lock/owner.json")" = "$session_id" ] \
     || die 'initialization lock is owned by another session'
@@ -151,8 +189,10 @@ init_change() {
   jq -n \
     --arg change "$change" \
     --arg session_id "$session_id" \
+    --arg implementation_backend "$backend" \
+    --arg verification_mode "$verification_mode" \
     --arg updated_at "$(now_utc)" \
-    '{change: $change, phase: "PLAN", round: 0, status: "running", session_id: $session_id, updated_at: $updated_at}' \
+    '{change: $change, phase: "PLAN", round: 0, status: "running", session_id: $session_id, implementation_backend: $implementation_backend, verification_mode: $verification_mode, updated_at: $updated_at}' \
     | atomic_write_state "$state"
   if [ ! -e "$handoff" ]; then
     cat >"$handoff" <<EOF
@@ -182,7 +222,7 @@ unlock_change() {
 assert_active_change_owner() {
   local change="$1"
   local session_id="$2"
-  local dir state owner owner_session phase status
+  local dir state owner owner_session phase status backend verification_mode
   dir="$(change_dir "$change")"
   state="$dir/runtime/state.json"
   owner="$dir/runtime/lock/owner.json"
@@ -196,6 +236,13 @@ assert_active_change_owner() {
   case "$phase" in BLOCKED|FAILED) die "change is terminal: $change" ;; esac
   [ "$(jq -r '.session_id // empty' "$state")" = "$session_id" ] \
     || die 'runtime state is owned by another session'
+  backend="$(jq -r '.implementation_backend // "codex"' "$state")"
+  verification_mode="$(jq -r '.verification_mode // "independent"' "$state")"
+  valid_backend "$backend" || die 'runtime state has an invalid implementation backend'
+  case "$backend:$verification_mode" in
+    codex:independent|claude-fallback:claude-fallback-self-review) ;;
+    *) die 'runtime state has an invalid verification mode for its backend' ;;
+  esac
 }
 
 assert_repo_lock() {
@@ -338,6 +385,22 @@ enter_fix() {
     | .updated_at = $updated_at' "$state" | atomic_write_state "$state"
 }
 
+route_phase() {
+  local change="$1"
+  local session_id="$2"
+  local phase="$3"
+  local state current_phase backend
+  case "$phase" in IMPLEMENT|FIX) ;; *) die "invalid route phase: $phase" ;; esac
+  state="$(state_file "$change")"
+  [ -f "$state" ] || die "runtime state not found: $state"
+  assert_active_change_owner "$change" "$session_id"
+  current_phase="$(jq -r '.phase' "$state")"
+  [ "$current_phase" = "$phase" ] || die "runtime phase is $current_phase, requested route phase is $phase"
+  backend="$(jq -r '.implementation_backend // "codex"' "$state")"
+  valid_backend "$backend" || die 'runtime state has an invalid implementation backend'
+  printf '%s\n' "$backend"
+}
+
 active_changes() {
   local root="$1"
   local session_id="${2-}"
@@ -395,8 +458,8 @@ case "$command" in
     lock_change "$2" "$3"
     ;;
   init)
-    [ "$#" -eq 3 ] || { usage; exit 2; }
-    init_change "$2" "$3"
+    [ "$#" -ge 3 ] && [ "$#" -le 5 ] || { usage; exit 2; }
+    init_change "$2" "$3" "${4:-codex}" "${5:-}"
     ;;
   unlock)
     [ "$#" -eq 3 ] || { usage; exit 2; }
@@ -425,6 +488,10 @@ case "$command" in
   fix)
     [ "$#" -eq 3 ] || { usage; exit 2; }
     enter_fix "$2" "$3"
+    ;;
+  route)
+    [ "$#" -eq 4 ] || { usage; exit 2; }
+    route_phase "$2" "$3" "$4"
     ;;
   state)
     [ "$#" -eq 2 ] || { usage; exit 2; }

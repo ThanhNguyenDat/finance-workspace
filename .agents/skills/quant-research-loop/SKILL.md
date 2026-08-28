@@ -190,9 +190,14 @@ current memory for the standing instruction and its scope/end condition
 before assuming it still applies — it toggles back the moment the user says
 Codex has resumed). While active:
 
-1. Implement the fix directly in the relevant repo, following its existing
-   patterns (read a sibling implementation first — e.g. an existing
-   `Strategy` impl or `StrategyKind` variant — before writing a new one).
+1. Route an actionable implementation through the existing `/ops:run`
+   lifecycle in the current top-level Claude session; do not modify runtime
+   code outside that lifecycle. The transaction must be initialized with the
+   explicit `claude-fallback quant-fallback` backend only while the current
+   quant state reports `codex_available=false`. The runtime persists that
+   backend and `claude-fallback-self-review`; a later `codex-on` affects only
+   new transactions. Read a sibling implementation first — e.g. an existing
+   `Strategy` impl or `StrategyKind` variant — before writing a new one.
 2. Test locally inside Docker with a CPU cap, same as the backtest tooling
    rule above: `docker run --rm --cpus=3 -v "$PWD":/app -w /app
    rust:1.88-slim-bookworm bash -c "apt-get update -qq && apt-get install -y -qq
