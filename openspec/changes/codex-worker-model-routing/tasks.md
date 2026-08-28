@@ -19,4 +19,4 @@
 
 - [x] 4.1 Run shell syntax checks, all bounded agent contract suites, strict OpenSpec validation, and the synchronization check; record only passing evidence.
 - [x] 4.2 Perform the mandatory skill upsert review, updating only reusable guidance that changed, then re-run synchronization if needed.
-- [ ] 4.3 Commit and push the scoped `finance-workspace` changes to `main`, verify exact local/remote SHA equality and green required GitHub Actions, and do not deploy production.
+- [x] 4.3 Commit and push the scoped `finance-workspace` changes to `main`, verify exact local/remote SHA equality and green required GitHub Actions, and do not deploy production.
