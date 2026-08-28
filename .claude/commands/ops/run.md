@@ -29,7 +29,8 @@ summary as independent verification.
 - Runtime state is transient under `.ops/changes/<change>/runtime/`; the
   concise handoff is `.ops/changes/<change>/handoff.md`.
 - Never copy full tasks, CLI output, secrets, or credentials into handoff.
-- Never push or deploy before independent final verification.
+- Never push or deploy before the final verification required by the
+  persisted runtime `verification_mode` has passed.
 
 ## PLAN
 
@@ -130,12 +131,34 @@ summary as independent verification.
    fourth fix marks the workflow `BLOCKED` and releases owned
    locks. Return to `VERIFY`. P2/P3 items must not silently become release
    blockers unless the approved change requires it.
-4. When no P0/P1 findings remain, set `FINAL_VERIFY` and repeat the critical
-   evidence checks:
+4. When no P0/P1 findings remain, set `FINAL_VERIFY`, read the persisted
+   `verification_mode`, and apply exactly its evidence gate. Do not re-read
+   quant availability or switch backend:
 
    `./.agents/scripts/ops-runtime.sh phase <change> <session-id> FINAL_VERIFY`
 
-   A clean final verification is required before release.
+   For `verification_mode=independent`, preserve maker/checker separation:
+   Claude independently re-reads the actual diff and evidence after Codex
+   IMPLEMENT/FIX. Release is allowed only after this independent final
+   verification passes.
+
+   For `verification_mode=claude-fallback-self-review`, the current top-level
+   Claude session performs enhanced final self-review. Freshly re-read the
+   actual and committed diff, check every OpenSpec acceptance criterion, and
+   verify every applicable repo-local test, lint, typecheck, static-analysis,
+   build, migration/schema, trading-invariant, scope, secret/security, CI,
+   exact pushed/deployed revision, and production-behavior requirement. Do not
+   require inapplicable checks and never invent evidence. Record explicitly:
+
+   `verification mode: claude-fallback-self-review`
+   `independent maker/checker verification: NOT AVAILABLE`
+
+   Fallback may release when enhanced final self-review passes and all
+   applicable objective evidence passes; never present it as independent
+   review. If either mode lacks required evidence, move to `BLOCKED`. If
+   FINAL_VERIFY exposes a
+   P0/P1 implementation defect, use the existing atomic `fix` operation and
+   the same persisted backend, then return through VERIFY and FINAL_VERIFY.
 
 ## RELEASE, DEPLOY_VERIFY, ARCHIVE
 
@@ -144,7 +167,10 @@ summary as independent verification.
 
    `./.agents/scripts/ops-runtime.sh phase <change> <session-id> RELEASE`
 
-   Then follow repository delivery rules: local checks, commit, push, GitHub Actions,
+   Enter RELEASE only after the final verification gate selected by the
+   persisted `verification_mode` has passed. Both valid modes may continue
+   when their own required evidence is satisfied. Then follow repository
+   delivery rules: local checks, commit, push, GitHub Actions,
    deployment mechanism, and immutable revision tracking. CI or deployment
    failures caused by an implementation change return through the fix/verify
    loop: classify the failure, run `fix`, invoke the persisted implementation
@@ -181,6 +207,7 @@ summary as independent verification.
    the evidence and required planning decision, then run cleanup to release
    only this workflow's locks. Do not silently redesign.
 
-Do not claim completion unless the runtime state, OpenSpec validation, local
-checks, independent verification, and (when requested) CI/deployment evidence
-all support the claim.
+Do not claim completion unless the persisted verification mode, runtime state,
+OpenSpec validation, local checks, and all applicable CI/deployment evidence
+support the claim. For fallback, always disclose that independent
+maker/checker verification was not available.
