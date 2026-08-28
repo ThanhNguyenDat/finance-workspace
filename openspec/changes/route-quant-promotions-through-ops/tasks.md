@@ -19,4 +19,4 @@
 
 - [x] 4.1 Run shell syntax, all bounded orchestration/quant/backend/model/promotion suites, JSON validation, strict OpenSpec validation, sync check, and diff check.
 - [x] 4.2 Complete the mandatory skill upsert review and verify the updated skills no longer recreate the legacy engineering queue.
-- [ ] 4.3 Commit only scoped changes, push `main`, verify local/remote SHA equality and successful exact-SHA Agent Contracts, and do not deploy production.
+- [x] 4.3 Commit only scoped changes, push `main`, verify local/remote SHA equality and successful exact-SHA Agent Contracts, and do not deploy production.
