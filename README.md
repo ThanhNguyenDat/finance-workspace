@@ -4,6 +4,11 @@ Workspace trung tâm để Claude và Codex phối hợp trên hệ sinh thái F
 Repository này giữ contract agent, rule/skill, spec, runbook, sơ đồ, research
 artifact và handoff. Nó không chứa code runtime của các service.
 
+`/ops:run` là lifecycle orchestration cấp project: Claude plan/verify/orchestrate,
+Codex implement/test/fix. `/opsx:*` là các primitive OpenSpec-native. OpenSpec
+giữ requirements/design/tasks; `.ops/changes/<change>/handoff.md` giữ handoff
+ngắn gọn; `.ops` runtime là transient và được gitignore.
+
 ## Các repository chuyên trách
 
 | Repository | Phạm vi |

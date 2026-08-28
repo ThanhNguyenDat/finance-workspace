@@ -3,7 +3,8 @@ set -Eeuo pipefail
 
 # Bounded, non-interactive Codex worker used by /ops:run.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-ROOT_DIR="${OPS_ROOT:-$(cd -- "$SCRIPT_DIR/../.." && pwd -P)}"
+WORKSPACE_ROOT="${OPS_WORKSPACE_ROOT:-$(cd -- "$SCRIPT_DIR/../.." && pwd -P)}"
+RUNTIME_ROOT="${OPS_ROOT:-$WORKSPACE_ROOT}"
 
 usage() {
   printf 'usage: run-codex-phase.sh <change> <repository> <IMPLEMENT|FIX>\n' >&2
@@ -19,36 +20,44 @@ repository="$2"
 phase="$3"
 [[ "$change" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "invalid change name: $change"
 case "$phase" in IMPLEMENT|FIX) ;; *) die "invalid worker phase: $phase" ;; esac
-[ -d "$repository/.git" ] || die "repository is not a git worktree: $repository"
+workspace_root="$(git -C "$WORKSPACE_ROOT" rev-parse --show-toplevel 2>/dev/null)" \
+  || die "workspace is not a Git worktree: $WORKSPACE_ROOT"
+repository_root="$(git -C "$repository" rev-parse --show-toplevel 2>/dev/null)" \
+  || die "repository is not a Git worktree: $repository"
+workspace_root="$(cd -- "$workspace_root" && pwd -P)"
+repository_root="$(cd -- "$repository_root" && pwd -P)"
+[ "$workspace_root" != "$repository_root" ] || die 'runtime repository must differ from finance-workspace'
 command -v codex >/dev/null 2>&1 || die 'codex CLI is not installed or not on PATH'
 
 timeout_seconds="${CODEX_TIMEOUT_SECONDS:-3600}"
 [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || die 'CODEX_TIMEOUT_SECONDS must be a positive integer'
-state_file="$ROOT_DIR/.ops/changes/$change/runtime/state.json"
+state_file="$RUNTIME_ROOT/.ops/changes/$change/runtime/state.json"
 [ -f "$state_file" ] || die "runtime state not found: $state_file"
 round="$(jq -r '.round' "$state_file")"
-log_dir="$ROOT_DIR/.ops/changes/$change/runtime/logs"
+log_dir="$RUNTIME_ROOT/.ops/changes/$change/runtime/logs"
 mkdir -p -- "$log_dir"
 stdout_log="$log_dir/codex-${phase,,}-round-${round}.stdout.jsonl"
 stderr_log="$log_dir/codex-${phase,,}-round-${round}.stderr.log"
 last_message="$log_dir/codex-${phase,,}-round-${round}.last-message.md"
 exit_code_file="$log_dir/codex-${phase,,}-round-${round}.exit"
 prompt="$(cat <<EOF
-Apply OpenSpec change $change in the current repository.
+Apply OpenSpec change $change.
 
-Follow AGENTS.md and all applicable repository rules and skills. Use the
-Codex-native OpenSpec workflow. Implement or fix all approved tasks and
-verification criteria for phase $phase. Run bounded local checks and create
-local commits as required. Read .ops/changes/$change/handoff.md when present.
-Do not push; release remains blocked until Claude completes independent
-verification.
+The current working directory is the Finance orchestration workspace.
+Implementation repository: $repository_root
+
+Read AGENTS.md, applicable .agents/rules/, relevant skills, the active
+OpenSpec change, and repository-local instructions. Use the Codex-native
+OpenSpec apply workflow. Modify runtime production code only in the declared
+implementation repository. Run local verification and create local commits
+when required. Do not push before Claude final verification.
 EOF
 )"
 
 set +e
 timeout --signal=TERM --kill-after=30s "${timeout_seconds}s" \
-  codex exec --cd "$repository" --ephemeral --ask-for-approval never \
-  --sandbox workspace-write --json --output-last-message "$last_message" \
+  codex exec --cd "$workspace_root" --add-dir "$repository_root" --ephemeral \
+  --approve-for-me --sandbox workspace-write --json --output-last-message "$last_message" \
   - <<<"$prompt" >"$stdout_log" 2>"$stderr_log"
 status=$?
 set -e

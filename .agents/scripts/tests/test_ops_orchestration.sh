@@ -8,8 +8,6 @@ RUNNER="$ROOT_DIR/.agents/scripts/run-codex-phase.sh"
 HOOK="$ROOT_DIR/.claude/hooks/ops-stop-hook.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
-export OPS_ROOT="$tmp"
-repo="$ROOT_DIR"
 
 fail() {
   printf 'test_ops_orchestration: %s\n' "$1" >&2
@@ -29,25 +27,72 @@ expect_hook_blocked() {
 
 jq -e . "$ROOT_DIR/.claude/settings.json" >/dev/null || fail 'invalid Claude settings JSON'
 grep -Fq '/ops:run' "$ROOT_DIR/.claude/commands/ops/run.md" || fail 'run command missing namespace'
+grep -Fq 'Claude = PLAN + VERIFY + ORCHESTRATE' "$ROOT_DIR/AGENTS.md" || fail 'AGENTS role contract missing'
 grep -Fq '.ops/**/runtime/' "$ROOT_DIR/.gitignore" || fail 'runtime ignore rule missing'
+
+fixture="$tmp/fixture"
+workspace="$fixture/finance-workspace"
+web_source="$fixture/finance-web-source"
+web_worktree="$fixture/finance-web"
+mw="$fixture/finance-mw"
+mkdir -p -- "$workspace/openspec/changes" "$web_source" "$mw"
+for repository in "$workspace" "$web_source" "$mw"; do
+  git -C "$repository" init -q
+  git -C "$repository" config user.email test@example.invalid
+  git -C "$repository" config user.name orchestration-test
+  printf '%s\n' 'fixture' >"$repository/README.md"
+  git -C "$repository" add README.md
+  git -C "$repository" commit -qm fixture
+done
+git -C "$web_source" worktree add -q -b linked-fixture "$web_worktree" HEAD
+test -f "$web_worktree/.git" || fail 'linked worktree fixture was not created'
+test "$(git -C "$web_worktree" rev-parse --is-inside-work-tree)" = true || fail 'linked worktree was not recognized'
+
+export OPS_ROOT="$workspace"
+export OPS_WORKSPACE_ROOT="$workspace"
 
 "$RUNTIME" lock change-a session-a
 expect_failure "$RUNTIME" lock change-a session-other
 expect_failure "$RUNTIME" unlock change-a session-other
 "$RUNTIME" init change-a session-a
 "$RUNTIME" phase change-a IMPLEMENT 0
-payload_a="$(jq -nc --arg cwd "$tmp" --arg sid session-a '{cwd: $cwd, session_id: $sid}')"
+payload_a="$(jq -nc --arg cwd "$workspace" --arg sid session-a '{cwd: $cwd, session_id: $sid}')"
 expect_hook_blocked "$payload_a"
-
-"$RUNTIME" phase change-a DONE 0
+"$RUNTIME" cleanup change-a session-a BLOCKED
 printf '%s' "$payload_a" | "$HOOK" >/dev/null
-"$RUNTIME" unlock change-a session-a
+
+"$RUNTIME" lock change-a session-a
+expect_failure "$RUNTIME" lock change-a session-other
+"$RUNTIME" cleanup change-a session-a BLOCKED
+
+"$RUNTIME" lock change-owner session-owner
+"$RUNTIME" init change-owner session-owner
+"$RUNTIME" lock-repos change-owner session-owner "$web_worktree"
+expect_failure "$RUNTIME" lock-repos change-conflict session-conflict "$web_worktree"
+"$RUNTIME" lock-repos change-independent session-independent "$mw"
+"$RUNTIME" unlock-repos change-independent session-independent
+"$RUNTIME" unlock-repos change-owner session-owner
+"$RUNTIME" cleanup change-owner session-owner BLOCKED
+"$RUNTIME" cleanup change-a session-a FAILED
+
+"$RUNTIME" lock change-holder session-holder
+"$RUNTIME" init change-holder session-holder
+"$RUNTIME" lock-repos change-holder session-holder "$web_worktree"
+"$RUNTIME" lock change-partial session-partial
+"$RUNTIME" init change-partial session-partial
+expect_failure "$RUNTIME" lock-repos change-partial session-partial "$mw" "$web_worktree"
+"$RUNTIME" lock-repos change-partial session-partial "$mw"
+"$RUNTIME" unlock-repos change-partial session-partial
+"$RUNTIME" cleanup change-partial session-partial BLOCKED
+"$RUNTIME" cleanup change-holder session-holder BLOCKED
 
 mock_bin="$tmp/mock-bin"
 mkdir -p -- "$mock_bin"
 cat >"$mock_bin/codex" <<'MOCK'
 #!/usr/bin/env bash
 set -Eeuo pipefail
+printf '%s\n' "$PWD" >"$MOCK_PWD_FILE"
+printf '%s\n' "$@" >"$MOCK_ARGS_FILE"
 case "${MOCK_CODEX_MODE:-success}" in
   success) printf '%s\n' '{"type":"result","status":"completed"}' ;;
   failure) printf '%s\n' '{"type":"result","status":"failed"}' >&2; exit 7 ;;
@@ -60,45 +105,59 @@ chmod +x "$mock_bin/codex"
 "$RUNTIME" lock change-runner session-runner
 "$RUNTIME" init change-runner session-runner
 "$RUNTIME" phase change-runner IMPLEMENT 0
-PATH="$mock_bin:$PATH" MOCK_CODEX_MODE=success CODEX_TIMEOUT_SECONDS=2 \
-  "$RUNNER" change-runner "$repo" IMPLEMENT
-test "$(cat "$tmp/.ops/changes/change-runner/runtime/logs/codex-implement-round-0.exit")" = 0 || fail 'successful Codex phase was not recorded'
+MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
+  MOCK_CODEX_MODE=success CODEX_TIMEOUT_SECONDS=2 "$RUNNER" change-runner "$web_worktree" IMPLEMENT
+test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-implement-round-0.exit")" = 0 || fail 'successful Codex phase was not recorded'
+grep -Fxq -- '--cd' "$tmp/mock-args" || fail 'Codex primary cwd flag missing'
+grep -Fxq -- "$workspace" "$tmp/mock-args" || fail 'Codex primary cwd was not finance-workspace'
+grep -Fxq -- '--add-dir' "$tmp/mock-args" || fail 'Codex additional directory flag missing'
+grep -Fxq -- "$web_worktree" "$tmp/mock-args" || fail 'Codex writable repository was not passed'
+grep -Fxq -- '--approve-for-me' "$tmp/mock-args" || fail 'Codex non-interactive approval flag missing'
 
-"$RUNTIME" round change-runner >/dev/null
+"$RUNTIME" round change-runner session-runner >/dev/null
 "$RUNTIME" phase change-runner FIX 1
-expect_failure env PATH="$mock_bin:$PATH" MOCK_CODEX_MODE=failure CODEX_TIMEOUT_SECONDS=2 \
-  "$RUNNER" change-runner "$repo" FIX
-test "$(cat "$tmp/.ops/changes/change-runner/runtime/logs/codex-fix-round-1.exit")" = 7 || fail 'Codex failure was not recorded'
+expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" MOCK_CODEX_MODE=failure CODEX_TIMEOUT_SECONDS=2 \
+  "$RUNNER" change-runner "$web_worktree" FIX
+test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-fix-round-1.exit")" = 7 || fail 'Codex failure was not recorded'
 
-"$RUNTIME" round change-runner >/dev/null
+"$RUNTIME" round change-runner session-runner >/dev/null
 "$RUNTIME" phase change-runner FIX 2
-expect_failure env PATH="$mock_bin:$PATH" MOCK_CODEX_MODE=timeout CODEX_TIMEOUT_SECONDS=1 \
-  "$RUNNER" change-runner "$repo" FIX
-test "$(cat "$tmp/.ops/changes/change-runner/runtime/logs/codex-fix-round-2.exit")" = 124 || fail 'Codex timeout was not bounded'
+expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" MOCK_CODEX_MODE=timeout CODEX_TIMEOUT_SECONDS=1 \
+  "$RUNNER" change-runner "$web_worktree" FIX
+test "$(cat "$workspace/.ops/changes/change-runner/runtime/logs/codex-fix-round-2.exit")" = 124 || fail 'Codex timeout was not bounded'
+expect_failure env PATH="$tmp/no-codex:/usr/bin:/bin" "$RUNNER" change-runner "$web_worktree" FIX
+"$RUNTIME" cleanup change-runner session-runner FAILED
 
-expect_failure env PATH="$tmp/no-codex:/usr/bin:/bin" "$RUNNER" change-runner "$repo" FIX
-"$RUNTIME" phase change-runner BLOCKED 2
-"$RUNTIME" unlock change-runner session-runner
+"$RUNTIME" lock change-fix-limit session-limit
+"$RUNTIME" init change-fix-limit session-limit
+"$RUNTIME" phase change-fix-limit FIX 0
+"$RUNTIME" lock-repos change-fix-limit session-limit "$web_worktree"
+"$RUNTIME" round change-fix-limit session-limit >/dev/null
+"$RUNTIME" round change-fix-limit session-limit >/dev/null
+"$RUNTIME" round change-fix-limit session-limit >/dev/null
+expect_failure "$RUNTIME" round change-fix-limit session-limit
+test "$(jq -r '.phase' "$workspace/.ops/changes/change-fix-limit/runtime/state.json")" = BLOCKED || fail 'fourth fix round did not block'
+test ! -d "$workspace/.ops/changes/change-fix-limit/runtime/lock" || fail 'change lock survived max-round cleanup'
+active_after_limit="$("$RUNTIME" active "$workspace" || true)"
+test -z "$active_after_limit" || fail "max-round cleanup left active workflow: $active_after_limit"
 
-"$RUNTIME" lock change-b session-b
-"$RUNTIME" init change-b session-b
-"$RUNTIME" phase change-b IMPLEMENT 0
-"$RUNTIME" lock change-c session-c
-"$RUNTIME" init change-c session-c
-"$RUNTIME" phase change-c IMPLEMENT 0
-payload_empty_session="$(jq -nc --arg cwd "$tmp" '{cwd: $cwd}')"
+"$RUNTIME" lock hook-a session-hook-a
+"$RUNTIME" init hook-a session-hook-a
+"$RUNTIME" phase hook-a IMPLEMENT 0
+"$RUNTIME" lock hook-b session-hook-b
+"$RUNTIME" init hook-b session-hook-b
+"$RUNTIME" phase hook-b IMPLEMENT 0
+payload_empty_session="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd}')"
 expect_hook_blocked "$payload_empty_session"
-payload_other_session="$(jq -nc --arg cwd "$tmp" '{cwd: $cwd, session_id: "session-other"}')"
-expect_hook_blocked "$payload_other_session"
-"$RUNTIME" phase change-c BLOCKED 0
-expect_hook_blocked "$payload_empty_session"
-"$RUNTIME" phase change-b DONE 0
-"$RUNTIME" unlock change-b session-b
-"$RUNTIME" unlock change-c session-c
+"$RUNTIME" cleanup hook-a session-hook-a BLOCKED
+"$RUNTIME" cleanup hook-b session-hook-b DONE
 printf '%s' "$payload_empty_session" | "$HOOK" >/dev/null
-archive_path="$("$RUNTIME" archive change-b)"
-test -d "$archive_path" || fail 'archive destination was not created'
-test ! -d "$tmp/.ops/changes/change-b" || fail 'change directory was not moved'
-test "$(jq -r '.phase' "$archive_path/runtime/state.json")" = DONE || fail 'archived state was not finalized'
+
+"$RUNTIME" lock change-archive session-archive
+"$RUNTIME" init change-archive session-archive
+"$RUNTIME" phase change-archive ARCHIVE 0
+"$RUNTIME" unlock change-archive session-archive
+archive_path="$("$RUNTIME" archive change-archive)"
+test "$(jq -r '.phase' "$archive_path/runtime/state.json")" = DONE || fail 'archive did not finalize state'
 
 printf '%s\n' 'test_ops_orchestration: all checks passed'

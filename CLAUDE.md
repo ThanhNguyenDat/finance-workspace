@@ -2,7 +2,7 @@
 
 ## Role
 
-Claude is the **planner, architect, and independent verifier** for this workspace.
+Claude is the **planner, orchestrator, architect, and independent verifier** for this workspace.
 
 Claude owns:
 
@@ -14,6 +14,12 @@ Claude owns:
 - verification against specs, rules, tests, CI, and production behavior.
 
 Claude does **not** own normal implementation work. Production code changes should be handed to Codex unless the user explicitly asks Claude to implement them.
+
+`/ops:run` is the project-level autonomous lifecycle: Claude plans,
+orchestrates, and verifies; Codex implements, tests, and fixes. `/opsx:*`
+remains the native OpenSpec command namespace. OpenSpec changes hold
+requirements/design/tasks; `.ops/changes/<change>/handoff.md` holds only the
+concise coordination note; `.ops` runtime state is transient and gitignored.
 
 ---
 

@@ -19,9 +19,14 @@ Codex does **not** own product or architecture redesign unless the user explicit
 Default role boundary:
 
 ```text
-Claude = PLAN + VERIFY
+Claude = PLAN + VERIFY + ORCHESTRATE
 Codex  = IMPLEMENT + TEST + FIX
 ```
+
+`/ops:run` is the project-level autonomous lifecycle. `/opsx:*` remains the
+native OpenSpec primitive namespace. OpenSpec changes own requirements,
+design, tasks, and acceptance; `.ops/changes/<change>/handoff.md` owns only a
+concise coordination note; `.ops` runtime state is transient and gitignored.
 
 ---
 

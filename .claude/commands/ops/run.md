@@ -43,7 +43,9 @@ summary as independent verification.
    `openspec validate <change> --strict --no-interactive`
 
 5. Acquire the per-change lock before initialization so a second session
-   cannot race the first session while it creates state:
+   cannot race the first session while it creates state. Then initialize the
+   runtime and perform only read-only discovery until the affected runtime
+   repositories are known:
 
    `./.agents/scripts/ops-runtime.sh lock <change> <session-id>`
    `./.agents/scripts/ops-runtime.sh init <change> <session-id>`
@@ -52,6 +54,12 @@ summary as independent verification.
    Use `CLAUDE_SESSION_ID` when available; otherwise create a unique local
    session id. Update the handoff with only current phase, affected repos,
    blocker/findings, next action, and verification evidence.
+6. Acquire all affected runtime repository locks before any implementation
+   repository or OpenSpec planning write. Pass every repository to one call;
+   the helper canonicalizes and sorts paths, and releases partial ownership
+   if any lock conflicts:
+
+   `./.agents/scripts/ops-runtime.sh lock-repos <change> <session-id> <repo>...`
 
 ## IMPLEMENT, VERIFY, FIX
 
@@ -60,19 +68,29 @@ summary as independent verification.
 
    `./.agents/scripts/run-codex-phase.sh <change> <repository> IMPLEMENT`
 
-   The worker uses the installed `codex exec` interface, writes evidence to
-   runtime logs, creates local commits when required, and never pushes.
+   The worker uses the installed `codex exec` interface with
+   `finance-workspace` as primary cwd and the runtime repository as an
+   additional writable directory. It writes evidence to runtime logs, creates
+   local commits when required, and never pushes.
    A nonzero exit, missing CLI, invalid repository, or timeout is a failed
    workflow; preserve evidence and move to `FAILED` or `BLOCKED`.
-   Release the lock after recording the terminal state on every failure path.
+   Release owned repository and change locks after recording the terminal state
+   on every failure path, using the centralized cleanup helper when possible:
+
+   `./.agents/scripts/ops-runtime.sh cleanup <change> <session-id> FAILED`
 2. Inspect the actual diff and local test/build/lint/typecheck evidence.
    Verify ownership, scope, API/contracts, migrations, security,
    observability, and trading invariants when applicable. Record concise
    findings in the handoff. Do not mark VERIFY complete from a worker claim.
-3. For any P0/P1 finding, set `FIX`, increment the runtime round, and invoke
-   the worker with `FIX`. Return to `VERIFY`. Allow at most three fix rounds;
-   unresolved findings then become `BLOCKED`. P2/P3 items must not silently
-   become release blockers unless the approved change requires it.
+3. For any P0/P1 finding, set `FIX` and increment the runtime round with the
+   helper before invoking the worker with `FIX`:
+
+   `./.agents/scripts/ops-runtime.sh round <change> <session-id>`
+
+   The helper mechanically enforces `OPS_MAX_FIX_ROUNDS` (default `3`); an
+   attempted fourth round marks the workflow `BLOCKED` and releases owned
+   locks. Return to `VERIFY`. P2/P3 items must not silently become release
+   blockers unless the approved change requires it.
 4. When no P0/P1 findings remain, set `FINAL_VERIFY` and repeat the critical
    evidence checks. A clean final verification is required before release.
 
@@ -93,8 +111,8 @@ summary as independent verification.
    handoff.
 4. On design conflicts, missing contracts, duplicate-lock ownership, or any
    condition that cannot be verified safely, stop at `BLOCKED` and explain
-   the evidence and required planning decision, then release the lock. Do not
-   silently redesign.
+   the evidence and required planning decision, then run cleanup to release
+   only this workflow's locks. Do not silently redesign.
 
 Do not claim completion unless the runtime state, OpenSpec validation, local
 checks, independent verification, and (when requested) CI/deployment evidence
