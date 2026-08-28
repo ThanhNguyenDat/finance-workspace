@@ -226,4 +226,6 @@ changes through GitHub CI/CD and Coolify as usual; the tools themselves still
 run by hand over guarded SSH per `docs/runbooks/kline-maintenance-tools.md`.
 Finish with the production continuity audit plus current Kafka/Redis/DB/API,
 Grafana `/metrics`, and ECS error-log checks. Record immutable evidence in
-`raw/handoff_agent.md`; leave Codex-completed production work in `Verify`.
+the active OPS handoff and OpenSpec change. Let OPS state and OpenSpec tasks
+represent verification progress; never move legacy `raw/handoff_agent.md`
+entries as authoritative lifecycle state.

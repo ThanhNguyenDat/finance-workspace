@@ -80,6 +80,16 @@ summary as independent verification.
    CLI, for example:
 
    `openspec validate <change> --strict --no-interactive`
+6. For a candidate explicitly promoted by `/quant-research`, attach concise
+   origin metadata after OpenSpec is complete and before leaving PLAN:
+
+   `./.agents/scripts/ops-runtime.sh trace-origin <change> <session-id> <research-iteration> <instrument> <research-artifact>...`
+
+   Use the exact same `<change>` under OpenSpec and OPS. Pass only existing
+   repository-relative references under `raw/researcher/`, `raw/explain/`, or
+   `raw/reports/`; never duplicate report content. Non-promoted research must
+   not initialize OPS or call `trace-origin`. This metadata is reference-only
+   and must not alter backend, verification mode, phase, or locks.
 
 ## IMPLEMENT, VERIFY, FIX
 

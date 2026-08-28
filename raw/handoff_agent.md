@@ -1,3 +1,10 @@
+# LEGACY / NON-AUTHORITATIVE INDEX
+
+Engineering truth lives in `openspec/changes/<change>/` and execution truth
+lives in `.ops/changes/<change>/` or `.ops/archive/`. Preserve this file for
+human-readable history and links only; do not use its Todo/Processing/
+Dev-done/Verify/Done headings as an engineering queue or lifecycle state.
+
 # Agent handoff (Claude ↔ Codex) — cleaned up 2026-08-22
 
 Consolidated from `raw/handoff_codex.md` (renamed) + `raw/handoff_claude.md`

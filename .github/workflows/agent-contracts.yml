@@ -33,6 +33,7 @@ jobs:
           bash -n .agents/scripts/tests/test_quant_research_contract.sh
           bash -n .agents/scripts/tests/test_quant_backend_routing.sh
           bash -n .agents/scripts/tests/test_codex_worker_policy.sh
+          bash -n .agents/scripts/tests/test_quant_promotion_trace.sh
           jq -e . .claude/settings.json >/dev/null
 
       - name: Run bounded orchestration tests
@@ -49,6 +50,8 @@ jobs:
             ./.agents/scripts/tests/test_quant_backend_routing.sh
           timeout --signal=TERM --kill-after=10s 1m \
             ./.agents/scripts/tests/test_codex_worker_policy.sh
+          timeout --signal=TERM --kill-after=10s 1m \
+            ./.agents/scripts/tests/test_quant_promotion_trace.sh
 
       - name: Verify managed links and diff
         shell: bash

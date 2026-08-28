@@ -1,6 +1,6 @@
 ---
 name: quant-research-loop
-description: Run one round of the recurring "/loop" Quant Researcher session for finance-live-action's trading strategies (BTC/XAU across Binance/Exness) — check Codex delivery status, research or extend Alpha/Portfolio strategies with honest holdout backtests via the Dockerized finance-research CLI, verify production state over SSH, and log/implement findings through the raw/handoff_agent.md + raw/researcher/*.md + raw/reports/optimize_loop_update_v2.csv triad. Use whenever the user runs a recurring quant-optimization /loop targeting Portfolio-layer profitability and Make Decision rate for finance-live-action.
+description: Run one round of the recurring "/loop" Quant Researcher session for finance-live-action's trading strategies (BTC/XAU across Binance/Exness) — research with honest holdout backtests, preserve raw evidence, and promote only actionable candidates through one stable OpenSpec + OPS change. Use whenever the user runs a recurring quant-optimization /loop targeting Portfolio-layer profitability and Make Decision rate for finance-live-action.
 ---
 
 # Quant Research Loop
@@ -16,10 +16,9 @@ shipped fix — never a no-op round.
   anything else each round. Lists closed directions (don't re-test), open
   leads, and infra gaps. Update it, don't recreate it, when a direction opens
   or closes.
-- `raw/handoff_agent.md` — the shared Todo/Processing/Verify/Done backlog.
-  Insert new findings at the top of `## Todo`; append addenda to existing
-  items when following up rather than duplicating; move `## Verify` → `## Done`
-  only after independent verification, never on Codex's word alone.
+- `openspec/changes/` and `.ops/changes/` — inspect active promoted engineering
+  work and its execution evidence. `raw/handoff_agent.md` is legacy history/
+  index only and never owns task or lifecycle status.
 - Load `repository-delivery` and `quant-pipeline-development` (finance-live-action)
   for the underlying commit/CI/Coolify mechanics this skill's dev-mode step 5
   drives — this skill adds the research/backtest/production-verification layer
@@ -44,11 +43,13 @@ shipped fix — never a no-op round.
 4. **Verify production state** when the question is about live behavior
    (decision frequency, current weights, checkpoint health) rather than
    backtest performance — see "Production verification" below.
-5. **Implement, if Codex-down and the finding is actionable** — see
-   "Codex-down mode" below. Otherwise log the finding as a Todo item with
-   enough detail for Codex to act.
-6. **Document** every round in the three places (see "Documentation triad").
-7. **Clean up**: remove temp files under `/tmp`, close the SSH tunnel, confirm
+5. **Classify** the result as REJECTED, NO-CHANGE, DATA-ISSUE,
+   NEEDS-MORE-RESEARCH, or PROMOTE. Only PROMOTE may enter OpenSpec + OPS.
+6. **Promote, if actionable** — require defensible evidence, clear scope,
+   acceptance criteria, risk/trading safety, and rollback; see "Promotion and
+   Codex-down mode" below.
+7. **Document** research evidence (see "Research evidence and promotion").
+8. **Clean up**: remove temp files under `/tmp`, close the SSH tunnel, confirm
    `git status --short` is clean in both repos before ending the round.
 
 ## Backtest tooling
@@ -183,9 +184,17 @@ formula; `paper-*-scope-*` entries are the real Portfolio-level ledgers —
 counters), `pending_history_backfill` (should be rotating near-present
 timestamps; a stale, non-advancing cluster is a real bug, not normal).
 
-## Codex-down mode
+## Promotion and Codex-down mode
 
-Triggered by an explicit user statement that Codex is out of quota (check
+Only a result classified PROMOTE enters engineering. Derive one stable,
+meaningful kebab-case change name, create/reuse complete native OpenSpec
+artifacts that reference the research evidence, then enter the existing
+`/ops:run` lifecycle with the same change name. Attach immutable origin
+references with `ops-runtime.sh trace-origin` during PLAN. Never implement
+runtime code directly from a research-only result and never copy the OPS state
+machine into the research command.
+
+Codex-down mode is triggered by an explicit user statement that Codex is out of quota (check
 current memory for the standing instruction and its scope/end condition
 before assuming it still applies — it toggles back the moment the user says
 Codex has resumed). While active:
@@ -240,9 +249,9 @@ Codex has resumed). While active:
    oversight); simulate the change's effect against real production data
    before deploying it, not just against synthetic test cases.
 
-## Documentation triad
+## Research evidence and promotion
 
-Every round updates all three, even a purely-negative round:
+Every round updates the research evidence set, even a purely-negative round:
 
 1. **`raw/reports/optimize_loop_update_v2.csv`** — one row per
    instrument/broker/strategy combination touched this round. Columns:
@@ -261,15 +270,14 @@ Every round updates all three, even a purely-negative round:
    one — never silently edit history. When a round only extends an existing
    thread with a small addendum, append a `## Cập nhật Round <N>` section to
    the existing file instead of creating a near-duplicate new one.
-3. **`raw/handoff_agent.md`**: new findings go at the top of `## Todo` with a
-   priority tag; follow-ups append an addendum to the existing item (find it
-   with `grep -n`, read the surrounding lines with `Read`, then `Edit` —
-   large block moves between sections need precise line-indexed surgery, a
-   Python script operating on the file's lines is more reliable than `Edit`
-   for that specific operation). Also refresh
-   `raw/researcher/SUMMARY-priority-backlog.md`'s relevant section so the
-   next round doesn't have to re-read every dated entry to find current
-   status.
+3. **`raw/researcher/SUMMARY-priority-backlog.md`**: refresh the relevant
+   direction so the next round can navigate open/closed research without
+   treating it as engineering task state.
+
+For REJECTED, NO-CHANGE, DATA-ISSUE, or NEEDS-MORE-RESEARCH, stop after raw
+evidence. For PROMOTE, reference these paths from OpenSpec and OPS origin
+metadata; do not copy report contents and do not write an implementation task
+to `raw/handoff_agent.md`.
 
 ## Communication
 

@@ -1,6 +1,6 @@
 ---
 name: repository-delivery
-description: Deliver finance ecosystem repository changes through bounded validation, GitHub Actions, immutable images, Coolify, and one final production verification. Use the guarded live-first lane for infrastructure state, keep Coolify as the durable owner, maintain the handoff queue, and monitor each long workflow with one detached file-backed watcher.
+description: Deliver finance ecosystem repository changes through bounded validation, GitHub Actions, immutable images, Coolify, and one final production verification. Use the guarded live-first lane for infrastructure state, keep Coolify as the durable owner, maintain OpenSpec/OPS traceability, and monitor each long workflow with one detached file-backed watcher.
 ---
 
 # Repository Delivery
@@ -83,8 +83,8 @@ as a hard delivery gate for the scoped work:
   or from the broader authorization to deliver the task.
 - If code changes after the owner reviews the local result, rerun every affected
   local check before requesting or acting on push approval.
-- Record the held gate and local evidence in `raw/handoff_agent.md` when that
-  handoff is active, without advancing the task to a deployed status.
+- Record the held gate and local evidence in the active OPS handoff without
+  advancing OpenSpec tasks or OPS state to a delivered status.
 
 1. Make the smallest scoped change and add a regression before fixing a
    reproducible bug.
@@ -177,30 +177,19 @@ Default BuildKit to 4 CPUs, 6 GiB memory/swap, and 1024 PIDs; keep the
 containers by broad name pattern. After remediation, rerun once and verify
 both workflow completion and production headroom.
 
-## Task Handoff
+## Execution Handoff
 
-When `raw/handoff_agent.md` exists or the owner requests it:
-
-- Maintain exactly `Todo`, `Processing`, `Dev-done`, `Verify`, and `Done`.
-- Record/reconcile each new task immediately. Use `Processing` for active work
-  and `Todo` only when queued.
-- Local tested code moves to `Dev-done`; deployment remains `Processing`;
-  production-verified work moves to `Verify`.
-- Codex never moves its own task to `Done`; that state is reserved for Claude
-  review.
-- Record concise SHA, workflow, watcher, and verification evidence, never
-  credential payloads.
-- Treat the file as operator state and leave it untracked unless the owner asks
-  to version it.
-- During CI/deployment waits, re-read and progress independent actionable
-  backlog work. A detached watcher is not a reason to stop.
-
-When continuous handoff watching is requested, start one detached watcher:
-
-```bash
-setsid -f .agents/skills/repository-delivery/scripts/watch_handoff.sh \
-  <absolute-handoff-file> /tmp/handoff-codex-watch.output.log 2
-```
+- OpenSpec tasks are the engineering work truth. OPS runtime state is the
+  execution truth; `.ops/changes/<change>/handoff.md` carries only concise
+  evidence and next action before moving with the transaction to archive.
+- Record SHA, workflow, watcher, deployment, and verification evidence in the
+  active OPS handoff, never credential payloads or full logs.
+- `raw/handoff_agent.md` is legacy/non-authoritative. Do not create or move
+  `Todo`, `Processing`, `Dev-done`, `Verify`, or `Done` entries to represent
+  engineering state. If a human-readable index is explicitly requested, add
+  links to the stable OpenSpec/OPS change and say status must be read there.
+- During CI/deployment waits, re-read active OpenSpec/OPS work and progress
+  independent actionable tasks. A detached watcher is not a reason to stop.
 
 ## Infrastructure and Grafana
 
@@ -268,4 +257,5 @@ lane.
 
 Report the commit SHA, workflow URL/conclusion, Coolify result, production
 identity/behavior/observability evidence, preserved unrelated changes, and any
-explicit gap. Move the handoff entry to `Verify`, never `Done`.
+explicit gap. Update only evidence-backed OpenSpec tasks and OPS state; do not
+represent completion by moving a legacy handoff entry.

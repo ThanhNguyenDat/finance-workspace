@@ -42,8 +42,9 @@ research từ workspace, sau đó sửa đúng repository sở hữu code.
 2. Đọc `AGENTS.md` hoặc `CLAUDE.md`, rồi đọc shared rule phù hợp.
 3. Xác định và sử dụng shared skill liên quan; load capability/OpenSpec-native
    integration của CLI nếu cần.
-4. Đọc `raw/handoff_agent.md`, research note được dẫn link và OpenSpec active
-   work.
+4. Đọc research note được dẫn link, `raw/researcher/SUMMARY-priority-backlog.md`
+   và OpenSpec active work. `raw/handoff_agent.md` chỉ đọc khi cần tra cứu
+   lịch sử/index, không dùng làm engineering queue.
 5. Kiểm tra branch/status và deployed revision của repository code trước khi sửa.
 6. Thực hiện theo role: Claude plan/verify; Codex implement/test/fix.
 7. Upsert reusable skill/rule nếu có kiến thức mới, rồi chạy lại sync và
@@ -131,6 +132,33 @@ quota với model-local limit và transient HTTP 429. Chỉ
 model khác và không đổi backend của transaction hiện tại. Generic 429 không tự
 tắt Codex. Việc bật lại luôn thủ công bằng `/quant:codex-on`, và chỉ transaction
 mới quan sát trạng thái mới.
+
+## Source of truth cho quant promotion
+
+```text
+RAW      = research evidence
+OpenSpec = engineering truth
+OPS      = execution/tracing truth
+Git/CI   = delivery truth
+```
+
+Mỗi `/quant-research` chỉ là một iteration bounded. Kết quả có thể là
+`REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, `NEEDS-MORE-RESEARCH`, hoặc `PROMOTE`.
+Chỉ `PROMOTE` sau gate OOS/holdout/walk-forward defensible, improvement/defect
+đáng implement, scope/repository/behavior/acceptance rõ, risk/trading safety
+đã hiểu và rollback đã rõ khi áp dụng mới được tạo OpenSpec rồi enter
+canonical `/ops:run`. Một iteration research-only không tạo OPS transaction.
+
+Promoted change dùng cùng tên stable `<change>` tại
+`openspec/changes/<change>/` và `.ops/changes/<change>/`; origin metadata chỉ
+reference tới research iteration/instrument và các file dưới `raw/`, không copy
+nội dung. Completed flow giữ trace từ research artifact → OpenSpec → OPS →
+commit/CI/deploy → archive.
+
+`raw/handoff_agent.md` chỉ là legacy human-readable history/index,
+non-authoritative. Nó không còn sở hữu implementation queue hay trạng thái
+`Todo`/`Processing`/`Dev-done`/`Verify`/`Done`; hãy đọc OpenSpec tasks và OPS
+runtime/archive để biết trạng thái thật.
 
 `docker/infrastructure/` và `docker/observability/` là source canonical cho
 stack dùng chung. Các repo application chỉ giữ compatibility copy trong giai

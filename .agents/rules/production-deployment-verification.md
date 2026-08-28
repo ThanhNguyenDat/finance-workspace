@@ -81,10 +81,12 @@
 
 - Record the commit SHA, workflow run, immutable image or deployed source SHA,
   Coolify result, verification timestamp, and concise command/query results in
-  `raw/handoff_agent.md`. Never record credentials, tokens, cookies, or secret
-  payloads.
-- Move a Codex task from `Processing` to `Verify` only after every applicable
-  check passes. Reserve `Done` for Claude review.
+  the active `.ops/changes/<change>/handoff.md`; completion archives it under
+  `.ops/archive/`. Keep implementation task completion in OpenSpec. Never
+  record credentials, tokens, cookies, or secret payloads.
+- Advance only the authoritative OpenSpec tasks and OPS phase/status supported
+  by evidence. `raw/handoff_agent.md` is a legacy human index and must not own
+  `Processing`, `Verify`, or `Done` lifecycle truth.
 - If any check fails, keep the task in `Processing`, identify the exact failed
   instance or invariant, fix forward or run the reviewed rollback, then repeat
   the mandatory baseline and affected surface checks. Never report deployment

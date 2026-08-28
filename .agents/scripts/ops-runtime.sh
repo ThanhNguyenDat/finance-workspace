@@ -22,6 +22,7 @@ usage:
   ops-runtime.sh phase <change> <session-id> <next-phase>
   ops-runtime.sh fix <change> <session-id>
   ops-runtime.sh route <change> <session-id> <IMPLEMENT|FIX>
+  ops-runtime.sh trace-origin <change> <session-id> <research-iteration> <instrument> <research-artifact>...
   ops-runtime.sh state <change>
   ops-runtime.sh active <workspace-root> [session-id]
   ops-runtime.sh complete <change> <session-id>
@@ -401,6 +402,69 @@ route_phase() {
   printf '%s\n' "$backend"
 }
 
+trace_quant_origin() {
+  local change="$1"
+  local session_id="$2"
+  local research_iteration="$3"
+  local instrument="$4"
+  shift 4
+  local dir state origin_file artifact resolved root_canonical artifacts_json
+  local -a artifacts=("$@")
+  [ "${#artifacts[@]}" -gt 0 ] || die 'at least one research artifact is required'
+  [[ "$research_iteration" =~ ^[1-9][0-9]*$ ]] \
+    || die 'research iteration must be a positive integer'
+  [[ "$instrument" =~ ^[A-Z][A-Z0-9_-]{0,15}$ ]] \
+    || die 'instrument must be a safe uppercase identifier'
+
+  assert_active_change_owner "$change" "$session_id"
+  dir="$(change_dir "$change")"
+  state="$dir/runtime/state.json"
+  [ "$(jq -r '.phase // empty' "$state")" = PLAN ] \
+    || die 'quant origin metadata may be attached only during PLAN'
+  origin_file="$dir/runtime/origin.json"
+  [ ! -e "$origin_file" ] || die "quant origin metadata already exists: $origin_file"
+
+  [ -s "$ROOT_DIR/openspec/changes/$change/proposal.md" ] \
+    || die 'promoted change proposal is missing'
+  [ -s "$ROOT_DIR/openspec/changes/$change/design.md" ] \
+    || die 'promoted change design is missing'
+  [ -s "$ROOT_DIR/openspec/changes/$change/tasks.md" ] \
+    || die 'promoted change tasks are missing'
+  find "$ROOT_DIR/openspec/changes/$change/specs" -type f -name '*.md' -print -quit 2>/dev/null \
+    | grep -q . || die 'promoted change specs are missing'
+
+  root_canonical="$(cd -- "$ROOT_DIR" && pwd -P)"
+  for artifact in "${artifacts[@]}"; do
+    [[ "$artifact" =~ ^[A-Za-z0-9._/-]+$ ]] \
+      || die "research artifact path contains unsafe characters: $artifact"
+    case "/$artifact/" in
+      *'/../'*|*'/./'*) die "research artifact path contains traversal: $artifact" ;;
+    esac
+    case "$artifact" in
+      raw/researcher/*|raw/explain/*|raw/reports/*) ;;
+      *) die "research artifact is outside approved evidence roots: $artifact" ;;
+    esac
+    [ -f "$ROOT_DIR/$artifact" ] || die "research artifact not found: $artifact"
+    resolved="$(realpath -e -- "$ROOT_DIR/$artifact")" \
+      || die "cannot resolve research artifact: $artifact"
+    case "$resolved" in
+      "$root_canonical"/raw/researcher/*|"$root_canonical"/raw/explain/*|"$root_canonical"/raw/reports/*) ;;
+      *) die "research artifact resolves outside approved evidence roots: $artifact" ;;
+    esac
+  done
+
+  artifacts_json="$(printf '%s\n' "${artifacts[@]}" | jq -Rsc 'split("\n")[:-1]')"
+  jq -n \
+    --arg change "$change" \
+    --arg origin quant-research \
+    --argjson research_iteration "$research_iteration" \
+    --arg instrument "$instrument" \
+    --argjson research_artifacts "$artifacts_json" \
+    '{change: $change, origin: $origin, research_iteration: $research_iteration,
+      instrument: $instrument, research_artifacts: $research_artifacts}' \
+    | atomic_write_state "$origin_file"
+}
+
 active_changes() {
   local root="$1"
   local session_id="${2-}"
@@ -492,6 +556,10 @@ case "$command" in
   route)
     [ "$#" -eq 4 ] || { usage; exit 2; }
     route_phase "$2" "$3" "$4"
+    ;;
+  trace-origin)
+    [ "$#" -ge 6 ] || { usage; exit 2; }
+    trace_quant_origin "$2" "$3" "$4" "$5" "${@:6}"
     ;;
   state)
     [ "$#" -eq 2 ] || { usage; exit 2; }
