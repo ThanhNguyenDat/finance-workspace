@@ -29,6 +29,31 @@ jq -e . "$ROOT_DIR/.claude/settings.json" >/dev/null || fail 'invalid Claude set
 grep -Fq '/ops:run' "$ROOT_DIR/.claude/commands/ops/run.md" || fail 'run command missing namespace'
 grep -Fq 'Claude = PLAN + VERIFY + ORCHESTRATE' "$ROOT_DIR/AGENTS.md" || fail 'AGENTS role contract missing'
 grep -Fq '.ops/**/runtime/' "$ROOT_DIR/.gitignore" || fail 'runtime ignore rule missing'
+
+while IFS= read -r tasks_file; do
+  grep -q '^- \[ \]' "$tasks_file" \
+    || fail "completed OpenSpec change remains active: $tasks_file"
+done < <(find "$ROOT_DIR/openspec/changes" -mindepth 2 -maxdepth 2 \
+  -type f -name tasks.md -not -path '*/archive/*' | sort)
+
+while IFS= read -r state_file; do
+  test "$(jq -r '.status' "$state_file")" != terminal \
+    || fail "terminal OPS change remains active: $state_file"
+done < <(find "$ROOT_DIR/.ops/changes" -mindepth 3 -maxdepth 3 \
+  -type f -name state.json | sort)
+
+test ! -e "$ROOT_DIR/openspec/changes/route-quant-promotions-through-ops" \
+  || fail 'completed quant promotion OpenSpec remains active'
+test ! -e "$ROOT_DIR/openspec/changes/codex-worker-model-routing" \
+  || fail 'completed worker-routing OpenSpec remains active'
+test -f "$ROOT_DIR/openspec/changes/archive/2026-08-29-route-quant-promotions-through-ops/tasks.md" \
+  || fail 'quant promotion OpenSpec archive is missing'
+test -f "$ROOT_DIR/openspec/changes/archive/2026-08-29-codex-worker-model-routing/tasks.md" \
+  || fail 'worker-routing OpenSpec archive is missing'
+test -f "$ROOT_DIR/.ops/archive/2026-08-29-route-quant-promotions-through-ops/handoff.md" \
+  || fail 'quant promotion OPS archive is missing'
+grep -Fq 'Status: DONE.' "$ROOT_DIR/.ops/archive/2026-08-29-route-quant-promotions-through-ops/handoff.md" \
+  || fail 'quant promotion OPS archive lacks durable DONE evidence'
 lock_line="$(awk '/lock-repos <change>/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/run.md")"
 write_line="$(awk '/create or revise/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/run.md")"
 test -n "$lock_line" && test -n "$write_line" && test "$lock_line" -lt "$write_line" \
