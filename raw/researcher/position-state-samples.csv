@@ -1,0 +1,12 @@
+observed_at_utc,round,route,position,side,trade_count,gate_passed,gate_reason
+2026-08-29T16:33Z,271,binance.perpetual_future.btc.usdt.5m,open,long,479,false,entry_score_below_threshold
+2026-08-29T16:33Z,271,binance.perpetual_future.xau.usdt.5m,open,short,8,true,multi_timeframe_gate_passed
+2026-08-29T16:33Z,271,bybit.spot.xaut.usdt.5m,flat,,3,false,entry_trend_conflict
+2026-08-29T16:33Z,271,exness.cfd.btc.usd.5m,open,short,485,true,multi_timeframe_gate_passed
+2026-08-29T16:33Z,271,exness.cfd.xau.usd.5m,open,short,395,false,stale_timeframe_evidence:15m
+2026-08-30T04:32Z,307,binance.perpetual_future.btc.usdt.5m,open,long,,false,trend_score_below_threshold
+2026-08-30T04:32Z,307,exness.cfd.btc.usd.5m,open,short,,true,multi_timeframe_gate_passed
+2026-08-30T04:32Z,307,bybit.perpetual_future.btc.usdt.5m,open,short,,false,entry_trend_conflict
+2026-08-30T04:32Z,307,binance.perpetual_future.xau.usdt.5m,open,short,,false,entry_trend_conflict
+2026-08-30T04:32Z,307,exness.cfd.xau.usd.5m,open,short,,false,stale_timeframe_evidence:15m
+2026-08-30T04:32Z,307,bybit.spot.xaut.usdt.5m,open,short,,false,entry_score_below_threshold
