@@ -5,10 +5,9 @@ description: "Bật lại Codex cho các vòng quant research kế tiếp"
 Chạy lệnh state helper sau đúng một lần:
 
 ```bash
-./.agents/scripts/quant-research-state.sh codex-on
+./.agents/scripts/phase-agent-state.sh provider-on codex
 ```
 
-Không bắt đầu research và không khởi động lại `/loop`. Khi lệnh thành công,
-chỉ xác nhận bằng tiếng Việt rằng vòng `/quant-research` kế tiếp sẽ đọc
-`codex_mode=manual`, `codex_available=true` và trở về chế độ Codex bình thường.
+Không bắt đầu research. Khi lệnh thành công, chỉ xác nhận bằng tiếng Việt rằng
+Codex ở manual available và các attempt kế tiếp có thể chọn Codex.
 Không in raw JSON runtime trừ khi người dùng yêu cầu debug.

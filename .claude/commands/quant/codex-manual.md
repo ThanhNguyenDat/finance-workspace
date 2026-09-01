@@ -5,11 +5,11 @@ description: "Chuyển Codex availability về chế độ điều khiển thủ
 Chạy state helper sau đúng một lần:
 
 ```bash
-./.agents/scripts/quant-research-state.sh codex-manual
+./.agents/scripts/phase-agent-state.sh provider-manual codex
 ```
 
-Không thay đổi `codex_available`, không chạy probe, không bắt đầu research và
-không dừng hoặc khởi động lại `/loop`. Khi thành công, xác nhận ngắn gọn bằng
+Không thay đổi resolved availability, không chạy probe và không bắt đầu research.
+Khi thành công, xác nhận ngắn gọn bằng
 tiếng Việt rằng các vòng sau sẽ giữ resolved availability hiện tại cho tới khi
 chạy `/quant:codex-on`, `/quant:codex-off` hoặc `/quant:codex-auto`. Không in raw
 runtime JSON.

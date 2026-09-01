@@ -67,83 +67,50 @@ Không tạo lại top-level `raw/`. Engineering request đi qua native `/opsx:*
 OPS; quant evidence đi vào `research/quant/`; legacy-only content nằm dưới
 `docs/archive/`. Không ghi credential/token/secret vào các artifact này.
 
-## Quant research loop
+## Quant research và phase agents
 
-Claude Code hỗ trợ auto-detection trước mỗi vòng research bounded:
-
-```text
-/quant:codex-auto
-/loop 20m /quant-research
-```
-
-Có thể chuyển về manual override mà không restart loop:
+Operator chủ động chạy đúng một iteration, không có loop/daemon tự động:
 
 ```text
-/quant:codex-on
-/quant:codex-off
-/quant:codex-manual
+./.agents/scripts/run-phase-agent-command.sh quant-research
 ```
 
-Các lệnh này không khởi động lại loop. Trong auto mode, vòng
-`/quant-research` kế tiếp chạy một probe bounded rồi đọc resolved
-`codex_available`; kết quả ambiguous giữ nguyên giá trị gần nhất. State schema
-v2 lưu cả `codex_mode` và các model profile tại
-`.ops/runtime/quant-research/state.json`, được cập nhật atomic bằng
-`.agents/scripts/quant-research-state.sh`, là runtime transient và không commit.
+Launcher increment iteration một lần, đọc canonical
+`.claude/commands/quant-research.md`, rồi resolve logical agent
+`quant_research`. Nếu provider hết quota giữa vòng, candidate kế tiếp tiếp tục
+cùng iteration và artifacts hiện tại.
 
-Xem hoặc chỉnh model/effort độc lập theo role bằng
-`/quant:codex-config`: `probe`, `implement`, `fix`, và `fix-fallback`. Không có
-Codex review profile; VERIFY và FINAL_VERIFY vẫn do Claude độc lập.
+PLAN, IMPLEMENT, VERIFY, FIX và FINAL_VERIFY cũng là logical phase agents. Mỗi
+phase có ordered Codex/Claude candidates riêng tại ignored atomic state
+`.ops/runtime/phase-agents/state.json`. Xem và điều chỉnh an toàn:
 
-Ở chế độ bình thường, quant research chỉ nghiên cứu, OOS/holdout-validate và
-handoff cho Codex. Chỉ khi state tường minh tắt Codex, một candidate đã validate
-mới được đi qua lifecycle `/ops:run` với Claude fallback; không có Claude CLI
-lồng nhau và không có state machine thứ hai. Vì Claude Code `2.1.250` không
-công bố cơ chế custom command gọi đệ quy trong `claude --help`,
-`quant-research.md` tham chiếu trực tiếp command contract `/ops:run` bằng file
-reference. Không truyền trạng thái availability như argument cố định của
-`/loop`.
+```text
+./.agents/scripts/configure-phase-agents.sh show
+./.agents/scripts/configure-phase-agents.sh set implement codex gpt-5.6-luna high
+./.agents/scripts/configure-phase-agents.sh pin verify claude
+./.agents/scripts/configure-phase-agents.sh auto verify
+./.agents/scripts/configure-phase-agents.sh provider-off codex
+./.agents/scripts/configure-phase-agents.sh provider-auto codex
+```
 
-Backend được chốt một lần khi `/ops:run` khởi tạo transaction và lưu cùng
-`verification_mode` trong runtime state. Việc bật lại Codex chỉ ảnh hưởng
-transaction mới; transaction fallback đang chạy vẫn giữ route Claude và dùng
-`claude-fallback-self-review` nếu cùng top-level session verify.
+Mặc định ưu tiên Claude Opus `medium` cho PLAN/VERIFY, Codex cho
+IMPLEMENT/FIX, và Opus `high` chỉ cho fallback FIX/FINAL_VERIFY khó. Workspace
+chỉ chấp nhận Opus `medium|high`.
 
-## Codex worker policy
+Mỗi attempt dùng model/effort tường minh và hard timeout. Claude luôn có
+`--dangerously-skip-permissions`; Codex dùng
+`--dangerously-bypass-approvals-and-sandbox`. Confirmed global quota/auth mở
+provider circuit; model-local limit chuyển candidate; generic 429, timeout,
+network và implementation failure không bị gắn nhãn global quota.
 
-`/ops:run` truyền model và reasoning effort tường minh cho từng worker attempt:
+Khi quota hết trong PLAN/IMPLEMENT/FIX, process cũ phải thoát hoàn toàn trước
+attempt mới. Diff/commit được giữ nguyên và candidate mới chạy continuation
+trong cùng phase/FIX round. Attempt history không bị overwrite. VERIFY và
+FINAL_VERIFY read-only; kết quả ghi `provider-independent` nếu provider khác,
+hoặc `same-provider-process-separated` nếu cùng provider.
 
-| Phase/attempt | Model mặc định | Effort |
-| --- | --- | --- |
-| IMPLEMENT | `gpt-5.6-luna` | `high` |
-| FIX primary | `gpt-5.6-terra` | `high` |
-| FIX fallback | `gpt-5.6-sol` | `high` |
-
-Persisted profile có thể chỉnh bằng `/quant:codex-config`. Explicit environment
-override vẫn có ưu tiên qua `CODEX_IMPLEMENT_MODEL`, `CODEX_FIX_MODEL`,
-`CODEX_FIX_FALLBACK_MODEL`, `CODEX_IMPLEMENT_REASONING_EFFORT`,
-`CODEX_FIX_REASONING_EFFORT`, `CODEX_FIX_FALLBACK_REASONING_EFFORT`, hoặc shared
-`CODEX_REASONING_EFFORT`. Launcher không phụ thuộc model mặc định trong user
-config và không dùng `xhigh` mặc định. Codex
-CLI hiện tại không có literal `--yolo`; launcher dùng flag chính thức tương
-đương `--dangerously-bypass-approvals-and-sandbox`. Workflow hiện không launch
-Claude CLI lồng nhau; nếu sau này có một Claude CLI worker route được thiết kế
-tường minh, invocation đó phải có `--dangerously-skip-permissions`.
-
-FIX chỉ fallback Terra sang Sol khi classifier trả `model-unavailable` hoặc
-`model-specific-limit`, và vẫn là attempt thứ hai trong cùng round. Trước mỗi
-FIX, Claude phải ghi findings hiện tại vào
-`.ops/changes/<change>/runtime/verification-findings-round-<round>.md`; launcher
-không trộn findings giữa các round.
-
-Mỗi attempt giữ stdout JSONL, stderr, last message, exit code và metadata
-allowlist tại
-`codex-<phase>-round-<round>-attempt-<n>.meta.json`. Classifier phân biệt global
-quota với model-local limit và transient HTTP 429. Chỉ
-`global-quota-exhausted` tự cập nhật resolved availability; không thử model
-khác, không đổi auto/manual mode và không đổi backend của transaction hiện tại.
-Generic 429 không tự tắt Codex. Auto mode có thể phát hiện quota hồi phục ở
-iteration kế tiếp; chỉ transaction mới quan sát trạng thái mới.
+Các alias `/quant:codex-*` cũ vẫn tồn tại trong giai đoạn migration, nhưng
+phase-agent controls là interface authoritative cho routing mới.
 
 ## Source of truth cho quant promotion
 

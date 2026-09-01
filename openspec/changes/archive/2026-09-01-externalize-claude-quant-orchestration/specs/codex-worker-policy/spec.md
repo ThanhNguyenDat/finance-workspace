@@ -1,10 +1,4 @@
-# codex-worker-policy Specification
-
-## Purpose
-
-Defines Codex as a bounded provider adapter within provider-neutral Finance phase routing, with deterministic classification, safe evidence, and no hidden fallback policy.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Worker phases select explicit role-specific profiles
 

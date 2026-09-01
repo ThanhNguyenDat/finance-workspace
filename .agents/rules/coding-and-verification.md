@@ -33,15 +33,16 @@ inconsistency between this file and observed behavior.
 
 Direct-to-main means there is no mandatory feature-branch or PR ceremony, and
 a local commit on `main` is allowed. The **push remains the release gate**:
-non-trivial implementation must receive independent Claude verification before
-it is pushed. If Claude reports a P0/P1 finding, Codex fixes it and Claude
-verifies again before push.
+non-trivial implementation must receive a fresh configured FINAL_VERIFY process
+before it is pushed. Provider-independent verification is preferred. When quota
+or an explicit phase pin yields the same provider, process-separated review plus
+all applicable objective evidence is required and must not be called independent.
 
 Required order for a non-trivial change:
 
 ```text
-Claude PLAN → Codex IMPLEMENT → local checks → local commit
-→ Claude VERIFY → Codex FIX (if needed) → Claude FINAL VERIFY
+phase-agent PLAN → phase-agent IMPLEMENT → local checks → local commit
+→ fresh phase-agent VERIFY → phase-agent FIX (if needed) → fresh FINAL_VERIFY
 → push main → GitHub Actions → Coolify → production verification
 ```
 

@@ -2,7 +2,8 @@
 
 ## Role
 
-Codex is the **implementation owner** for this workspace.
+Codex is the **default implementation owner** and Codex-native implementation
+agent for this workspace.
 
 Codex owns:
 
@@ -12,16 +13,22 @@ Codex owns:
 - build / lint / typecheck;
 - migration execution checks;
 - CI failure diagnosis and fixes;
-- implementation fixes from Claude verification.
+- implementation fixes from verifier findings.
 
 Codex does **not** own product or architecture redesign unless the user explicitly asks for it.
 
-Default role boundary:
+Default phase-agent candidate order:
 
 ```text
-Claude = PLAN + VERIFY + ORCHESTRATE
-Codex  = IMPLEMENT + TEST + FIX
+PLAN / VERIFY / FINAL_VERIFY = Claude first, Codex fallback
+IMPLEMENT / FIX              = Codex first, Claude fallback
+ORCHESTRATE                   = deterministic OPS shell state
 ```
+
+`phase-agent-state.sh` is authoritative for current candidate order and
+provider health. A fallback provider inherits the phase's complete scope,
+tests, safety and evidence obligations. Same-provider process separation must
+not be described as provider-independent verification.
 
 `/ops:run` is the project-level autonomous lifecycle. `/opsx:*` remains the
 native OpenSpec primitive namespace. OpenSpec changes own requirements,
@@ -466,9 +473,9 @@ Do not paper over CI failures by disabling tests, weakening validation, or suppr
 
 ---
 
-## Claude Verification Findings
+## Verification Findings
 
-When Claude returns findings:
+When a configured verifier returns findings:
 
 For each P0/P1 finding:
 
@@ -478,7 +485,7 @@ For each P0/P1 finding:
 4. add/update regression coverage;
 5. run relevant local checks;
 6. update task/finding status;
-7. hand back for Claude verification.
+7. hand back to a fresh configured verification phase.
 
 Do not dismiss findings solely because tests already pass.
 
@@ -543,9 +550,10 @@ Implementation is complete only when:
 - no known design blocker remains;
 - no unrelated changes were introduced;
 - task status is accurate;
-- implementation is ready for Claude verification.
+- implementation is ready for fresh configured verification.
 
-Codex does not self-declare final architectural approval. Final spec/architecture verification belongs to Claude.
+The implementation process does not self-declare final architectural approval;
+FINAL_VERIFY must be a fresh process and report its actual provider separation.
 
 ---
 

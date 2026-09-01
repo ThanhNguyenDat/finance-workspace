@@ -1,6 +1,6 @@
 ---
 name: quant-research-loop
-description: Run one bounded quant-research iteration for Finance Live Action BTC/XAU strategies, using honest unseen-data evidence and promoting only actionable results through one stable OpenSpec + OPS change. Use for recurring `/loop` quant optimization work.
+description: Run one bounded quant-research iteration for Finance Live Action BTC/XAU strategies, using honest unseen-data evidence and promoting only actionable results through one stable OpenSpec + OPS change. Use for manual terminal quant optimization work.
 ---
 
 # Quant Research Loop
@@ -29,11 +29,10 @@ result (`REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, `NEEDS-MORE-RESEARCH`, or
    canonical OPS lifecycle with research-origin references.
 7. Clean up temporary containers/tunnels and report limitations precisely.
 
-At iteration start, honor the quant runtime state's `codex_mode`: auto mode
-runs one bounded availability probe and re-reads resolved availability; manual
-mode never probes. Model/effort selection is role-specific for probe,
-IMPLEMENT, primary FIX, and eligible FIX fallback. VERIFY and FINAL_VERIFY
-remain independent Claude responsibilities.
+The terminal launcher records the iteration exactly once before invoking the
+`quant_research` phase agent. Provider selection comes from atomic phase-agent
+state; a confirmed quota interruption may continue through another candidate
+without incrementing the iteration or discarding existing artifacts.
 
 ## Non-negotiable invariants
 
@@ -48,6 +47,6 @@ remain independent Claude responsibilities.
 
 Use [references/playbook.md](references/playbook.md) as a searchable field
 guide. Always read `Round structure`, `Backtest tooling`, `Promotion and
-Codex-down mode`, and `Research evidence and promotion`. Then read only the
+provider failover`, and `Research evidence and promotion`. Then read only the
 topic-specific lessons relevant to the current hypothesis (for example cost
 gates, live trade logs, continuity, strategy coverage, or holdout design).

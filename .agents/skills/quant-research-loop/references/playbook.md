@@ -24,10 +24,10 @@ shipped fix — never a no-op round.
 
 ## Round structure
 
-1. **Resolve Codex status.** Read quant runtime state first. In `auto` mode run
-   the bounded detector exactly once and re-read resolved availability; in
-   `manual` mode trust the explicit on/off value and do not probe. This routing
-   applies only to future transactions; an active OPS backend is immutable.
+1. **Confirm the recorded iteration and routing.** The terminal launcher has
+   already incremented the quant iteration exactly once. Read quant and
+   phase-agent state; do not increment again or invoke provider probes from the
+   research prompt. A quota continuation keeps the same iteration.
 2. **Research.** Read the backlog doc, decide the round's focus: extend an
    open lead, close a stale one with fresh data, or search for a genuinely
    new mechanism (Rule 2/3 of the standing `/loop` prompt: web search,
@@ -1229,7 +1229,7 @@ formula; `paper-*-scope-*` entries are the real Portfolio-level ledgers —
 counters), `pending_history_backfill` (should be rotating near-present
 timestamps; a stale, non-advancing cluster is a real bug, not normal).
 
-## Promotion and Codex-down mode
+## Promotion and provider failover
 
 Only a result classified PROMOTE enters engineering. Derive one stable,
 meaningful kebab-case change name, create/reuse complete native OpenSpec
@@ -1239,20 +1239,18 @@ references with `ops-runtime.sh trace-origin` during PLAN. Never implement
 runtime code directly from a research-only result and never copy the OPS state
 machine into the research command.
 
-Codex-down mode is active whenever the current resolved state reports
-`codex_available=false`, either from an explicit manual override or conclusive
-global-quota detection. Auto mode retries one bounded probe at each iteration
-boundary and can recover without restarting `/loop`; ambiguous probe outcomes
-retain the last resolved value. While Codex-down mode is active:
+OPS resolves each model-owned phase from ordered phase-agent candidates.
+Confirmed account/global quota opens only that provider's circuit; generic 429,
+timeout, network and implementation failures do not. A candidate selected for
+an active attempt remains immutable until its process exits. If quota interrupts
+partial PLAN/IMPLEMENT/FIX work, the next eligible candidate continues the
+actual diff/commits under the same phase, round and repository lock.
 
-1. Route an actionable implementation through the existing `/ops:run`
-   lifecycle in the current top-level Claude session; do not modify runtime
-   code outside that lifecycle. The transaction must be initialized with the
-   explicit `claude-fallback quant-fallback` backend only while the current
-   quant state reports `codex_available=false`. The runtime persists that
-   backend and `claude-fallback-self-review`; a later `codex-on` affects only
-   new transactions. Read a sibling implementation first — e.g. an existing
-   `Strategy` impl or `StrategyKind` variant — before writing a new one.
+1. Route actionable implementation only through `/ops:run` and
+   `run-phase-agent.sh`; do not modify runtime code outside that lifecycle or
+   invoke Codex/Claude directly. Read a sibling implementation first — e.g. an
+   existing `Strategy` impl or `StrategyKind` variant — before writing a new
+   one. Verification labels come from actual mutator/verifier providers.
 2. Test locally inside Docker with a CPU cap, same as the backtest tooling
    rule above: `docker run --rm --cpus=3 -v "$PWD":/app -w /app
    rust:1.88-slim-bookworm bash -c "apt-get update -qq && apt-get install -y -qq
@@ -1264,7 +1262,7 @@ retain the last resolved value. While Codex-down mode is active:
    must be clean; run `cargo fmt` and re-verify if not.
 3. Commit directly to `main` (solo-maintainer exception already in effect
    for this ecosystem — no branch/PR ceremony) with a conventional commit
-   message and `Co-Authored-By: Claude <noreply@anthropic.com>`.
+   message after the configured verification gates pass.
 4. Push, then track CI: `gh run list --branch main --limit 2 --repo
    ThanhNguyenDat/finance-live-action`. A transient `curl: Resolving timed
    out` / DNS failure in the deploy step is infrastructure flakiness, not a

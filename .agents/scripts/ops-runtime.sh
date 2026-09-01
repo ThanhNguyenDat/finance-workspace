@@ -13,7 +13,7 @@ usage() {
   cat >&2 <<'EOF'
 usage:
   ops-runtime.sh lock <change> <session-id>
-  ops-runtime.sh init <change> <session-id> [backend] [origin]
+  ops-runtime.sh init <change> <session-id> [legacy-backend] [origin]
   ops-runtime.sh unlock <change> <session-id>
   ops-runtime.sh lock-repos <change> <session-id> <repository>...
   ops-runtime.sh unlock-repos <change> <session-id>
@@ -22,6 +22,7 @@ usage:
   ops-runtime.sh phase <change> <session-id> <next-phase>
   ops-runtime.sh fix <change> <session-id>
   ops-runtime.sh route <change> <session-id> <IMPLEMENT|FIX>
+  ops-runtime.sh record-attempt <change> <session-id> <attempt-json-file>
   ops-runtime.sh trace-origin <change> <session-id> <research-iteration> <instrument> <research-artifact>...
   ops-runtime.sh state <change>
   ops-runtime.sh active <workspace-root> [session-id]
@@ -159,21 +160,27 @@ lock_change() {
 init_change() {
   local change="$1"
   local session_id="$2"
-  local backend="${3:-codex}"
+  local backend="${3:-}"
   local origin="${4:-}"
   local dir state handoff verification_mode
   dir="$(change_dir "$change")"
   state="$dir/runtime/state.json"
   handoff="$dir/handoff.md"
   [ -n "$session_id" ] || die 'session id is required'
-  valid_backend "$backend" || die "invalid implementation backend: $backend"
+  if [ -z "$backend" ]; then
+    verification_mode=''
+  else
+    valid_backend "$backend" || die "invalid implementation backend: $backend"
+  fi
   case "$backend:$origin" in
+    :)
+      ;;
     codex:)
       verification_mode='independent'
       ;;
     claude-fallback:quant-fallback)
       fallback_is_allowed
-      verification_mode='claude-fallback-self-review'
+      verification_mode='claude-process-separated-review'
       ;;
     claude-fallback:*)
       die 'Claude fallback requires explicit quant-fallback origin'
@@ -187,14 +194,19 @@ init_change() {
     || die 'initialization lock is owned by another session'
   [ ! -e "$state" ] || die "runtime state already exists: $state"
   mkdir -p -- "$dir/runtime/logs"
-  jq -n \
-    --arg change "$change" \
-    --arg session_id "$session_id" \
-    --arg implementation_backend "$backend" \
-    --arg verification_mode "$verification_mode" \
-    --arg updated_at "$(now_utc)" \
-    '{change: $change, phase: "PLAN", round: 0, status: "running", session_id: $session_id, implementation_backend: $implementation_backend, verification_mode: $verification_mode, updated_at: $updated_at}' \
-    | atomic_write_state "$state"
+  if [ -z "$backend" ]; then
+    jq -n --arg change "$change" --arg session_id "$session_id" --arg updated_at "$(now_utc)" \
+      '{change:$change,phase:"PLAN",round:0,status:"running",session_id:$session_id,
+        routing_policy_version:1,attempts:[],verification_evidence:null,updated_at:$updated_at}' \
+      | atomic_write_state "$state"
+  else
+    jq -n --arg change "$change" --arg session_id "$session_id" \
+      --arg implementation_backend "$backend" --arg verification_mode "$verification_mode" \
+      --arg updated_at "$(now_utc)" \
+      '{change:$change,phase:"PLAN",round:0,status:"running",session_id:$session_id,
+        implementation_backend:$implementation_backend,verification_mode:$verification_mode,updated_at:$updated_at}' \
+      | atomic_write_state "$state"
+  fi
   if [ ! -e "$handoff" ]; then
     cat >"$handoff" <<EOF
 # $change
@@ -237,13 +249,18 @@ assert_active_change_owner() {
   case "$phase" in BLOCKED|FAILED) die "change is terminal: $change" ;; esac
   [ "$(jq -r '.session_id // empty' "$state")" = "$session_id" ] \
     || die 'runtime state is owned by another session'
-  backend="$(jq -r '.implementation_backend // "codex"' "$state")"
-  verification_mode="$(jq -r '.verification_mode // "independent"' "$state")"
-  valid_backend "$backend" || die 'runtime state has an invalid implementation backend'
-  case "$backend:$verification_mode" in
-    codex:independent|claude-fallback:claude-fallback-self-review) ;;
-    *) die 'runtime state has an invalid verification mode for its backend' ;;
-  esac
+  if jq -e '.routing_policy_version == 1' "$state" >/dev/null 2>&1; then
+    jq -e '(.attempts|type)=="array" and ((.verification_evidence==null) or (.verification_evidence|type)=="object")' "$state" >/dev/null \
+      || die 'runtime state has invalid phase-agent fields'
+  else
+    backend="$(jq -r '.implementation_backend // "codex"' "$state")"
+    verification_mode="$(jq -r '.verification_mode // "independent"' "$state")"
+    valid_backend "$backend" || die 'runtime state has an invalid implementation backend'
+    case "$backend:$verification_mode" in
+      codex:independent|claude-fallback:claude-process-separated-review) ;;
+      *) die 'runtime state has an invalid verification mode for its backend' ;;
+    esac
+  fi
 }
 
 assert_repo_lock() {
@@ -317,6 +334,11 @@ set_phase() {
   assert_active_change_owner "$change" "$session_id"
   current="$(jq -r '.phase' "$state")"
   valid_transition "$current" "$phase" || die "invalid phase transition: $current -> $phase"
+  if [ "$current" = FINAL_VERIFY ] && { [ "$phase" = RELEASE ] || [ "$phase" = ARCHIVE ]; } \
+    && jq -e '.routing_policy_version==1' "$state" >/dev/null 2>&1; then
+    jq -e '.verification_evidence.final_result=="success" and .verification_evidence.objective_gates_passed==true and (.verification_evidence.separation|IN("provider-independent","same-provider-process-separated"))' "$state" >/dev/null \
+      || die 'release/archive requires successful derived FINAL_VERIFY evidence'
+  fi
   jq \
     --arg phase "$phase" \
     --arg updated_at "$(now_utc)" \
@@ -391,15 +413,54 @@ route_phase() {
   local session_id="$2"
   local phase="$3"
   local state current_phase backend
-  case "$phase" in IMPLEMENT|FIX) ;; *) die "invalid route phase: $phase" ;; esac
+  case "$phase" in PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY) ;; *) die "invalid route phase: $phase" ;; esac
   state="$(state_file "$change")"
   [ -f "$state" ] || die "runtime state not found: $state"
   assert_active_change_owner "$change" "$session_id"
   current_phase="$(jq -r '.phase' "$state")"
   [ "$current_phase" = "$phase" ] || die "runtime phase is $current_phase, requested route phase is $phase"
-  backend="$(jq -r '.implementation_backend // "codex"' "$state")"
-  valid_backend "$backend" || die 'runtime state has an invalid implementation backend'
-  printf '%s\n' "$backend"
+  if jq -e '.routing_policy_version==1' "$state" >/dev/null 2>&1; then
+    printf '%s\n' phase-agent
+  else
+    case "$phase" in IMPLEMENT|FIX) ;; *) die 'legacy runtime routes only IMPLEMENT/FIX' ;; esac
+    backend="$(jq -r '.implementation_backend // "codex"' "$state")"
+    valid_backend "$backend" || die 'runtime state has an invalid implementation backend'
+    printf '%s\n' "$backend"
+  fi
+}
+
+record_attempt() {
+  local change="$1" session_id="$2" attempt_file="$3" state tmp
+  state="$(state_file "$change")"
+  [ -f "$attempt_file" ] || die "attempt record not found: $attempt_file"
+  assert_active_change_owner "$change" "$session_id"
+  jq -e 'type=="object" and (.attempt|type)=="number" and (.attempt>=1) and
+    (.phase|IN("PLAN","IMPLEMENT","VERIFY","FIX","FINAL_VERIFY")) and
+    (.round|type)=="number" and (.provider|IN("codex","claude")) and
+    (.model|type)=="string" and (.effort|type)=="string" and
+    (.continuation|type)=="boolean" and (.result_class|type)=="string" and
+    (.exit_status|type)=="number" and (.worktree_changed|type)=="boolean" and
+    (.objective_gates_passed|type)=="boolean" and
+    (.process_id|type)=="number" and (.evidence_base|type)=="string"' "$attempt_file" >/dev/null \
+    || die 'attempt record failed validation'
+  jq -e --argjson record "$(<"$attempt_file")" '
+    .routing_policy_version==1
+    and (.phase==$record.phase) and (.round==$record.round)
+    and (([.attempts[].attempt]|index($record.attempt))==null)' "$state" >/dev/null \
+    || die 'attempt does not match active state or already exists'
+  tmp="$(mktemp "${state}.attempt.XXXXXX")"
+  jq --argjson record "$(<"$attempt_file")" '
+    .attempts += [$record]
+    | if $record.phase=="FINAL_VERIFY" then
+        ([.attempts[]|select((.phase=="IMPLEMENT" or .phase=="FIX") and .result_class=="success")]|last) as $mutator
+        | .verification_evidence={
+            mutator_provider:($mutator.provider//null), verifier_provider:$record.provider,
+            mutator_attempt:($mutator.attempt//null), verifier_attempt:$record.attempt,
+            separation:(if $mutator==null then null elif $mutator.provider!=$record.provider then "provider-independent" elif $mutator.process_id!=$record.process_id then "same-provider-process-separated" else null end),
+            final_result:$record.result_class,objective_gates_passed:$record.objective_gates_passed}
+      else . end
+    | .updated_at=$record.completed_at' "$state" >"$tmp"
+  mv -- "$tmp" "$state"
 }
 
 trace_quant_origin() {
@@ -523,7 +584,7 @@ case "$command" in
     ;;
   init)
     [ "$#" -ge 3 ] && [ "$#" -le 5 ] || { usage; exit 2; }
-    init_change "$2" "$3" "${4:-codex}" "${5:-}"
+    init_change "$2" "$3" "${4:-}" "${5:-}"
     ;;
   unlock)
     [ "$#" -eq 3 ] || { usage; exit 2; }
@@ -556,6 +617,10 @@ case "$command" in
   route)
     [ "$#" -eq 4 ] || { usage; exit 2; }
     route_phase "$2" "$3" "$4"
+    ;;
+  record-attempt)
+    [ "$#" -eq 4 ] || { usage; exit 2; }
+    record_attempt "$2" "$3" "$4"
     ;;
   trace-origin)
     [ "$#" -ge 6 ] || { usage; exit 2; }

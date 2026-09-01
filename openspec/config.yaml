@@ -3,8 +3,9 @@ schema: spec-driven
 context: |
   finance-workspace is the orchestration repository for the Finance ecosystem;
   runtime code remains in finance-mw, finance-web, finance-live-action,
-  finance-broker, and mt5. Claude plans and verifies independently; Codex
-  implements, tests, and fixes. .agents/rules and .agents/skills are the
+  finance-broker, and mt5. Deterministic OPS state routes logical phases to
+  bounded Claude/Codex candidates; Claude is preferred for planning/review and
+  Codex for implementation/fix, with explicit fallback evidence. .agents/rules and .agents/skills are the
   shared Finance source of truth only. Agent-native OpenSpec integrations
   remain separate in each CLI's native directory.
 

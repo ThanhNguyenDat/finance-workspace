@@ -1,6 +1,6 @@
 ---
-description: "Xem hoặc chỉnh Codex model/effort riêng cho từng phase"
-argument-hint: "[probe|implement|fix|fix-fallback <model> <effort> | reset <role|all>]"
+description: "Compatibility command for phase-agent Codex candidates"
+argument-hint: "[implement|fix|fix-fallback <model> <effort> | reset <phase|all>]"
 ---
 
 Xử lý `$ARGUMENTS` theo đúng một trong các dạng dưới đây. Không dùng `eval`,
@@ -8,21 +8,16 @@ không nội suy argument thành shell code và không chấp nhận role khác.
 
 ```text
 /quant:codex-config
-/quant:codex-config <probe|implement|fix|fix-fallback> <model> <effort>
-/quant:codex-config reset <probe|implement|fix|fix-fallback|all>
+/quant:codex-config <implement|fix|fix-fallback> <model> <effort>
+/quant:codex-config reset <implement|fix|all>
 ```
 
-- Không argument: gọi `./.agents/scripts/quant-research-state.sh profile-get`
-  đúng một lần cho từng role `probe`, `implement`, `fix`, `fix-fallback`, rồi
-  hiển thị model/effort bằng tiếng Việt. Không in raw state JSON.
-- Update: gọi `./.agents/scripts/quant-research-state.sh profile-set <role>
-  <model> <effort>` đúng một lần. Helper chịu trách nhiệm validate model và
-  effort `none|minimal|low|medium|high|xhigh` trước atomic update.
-- Reset một role: gọi `profile-reset <role>` đúng một lần.
-- Reset all: gọi `profiles-reset` đúng một lần và chỉ hiển thị bốn default
-  profile an toàn, không in raw JSON.
+- Không argument: gọi `./.agents/scripts/configure-phase-agents.sh show`.
+- `implement`: gọi `configure-phase-agents.sh set implement codex <model> <effort>`.
+- `fix`: gọi `configure-phase-agents.sh candidate-set fix 0 codex <model> <effort>`.
+- `fix-fallback`: gọi `configure-phase-agents.sh candidate-set fix 1 codex <model> <effort>`.
+- Reset phase/all dùng `configure-phase-agents.sh reset <phase>` hoặc `reset-all`.
 
-Các profile chỉ áp dụng cho Codex `probe`, `IMPLEMENT`, primary `FIX` và eligible
-`FIX fallback`. `VERIFY` và `FINAL_VERIFY` luôn do Claude độc lập; không tạo
-Codex review profile. Command này không thay đổi mode/availability, không bắt
-đầu research, không chạy Codex, và không dừng hoặc khởi động lại `/loop`.
+Đây là alias migration; interface authoritative là
+`configure-phase-agents.sh`, hỗ trợ cả PLAN/VERIFY/FINAL_VERIFY và Claude.
+Command không thay đổi provider health, không bắt đầu research và không chạy Codex.

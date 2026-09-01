@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/../../.." && pwd -P)"
@@ -73,9 +74,9 @@ origin_hash="$(sha256sum "$origin" | awk '{print $1}')"
 expect_failure run_runtime trace-origin promoted-candidate session-promoted-candidate 88 XAU research/quant/rounds/candidate.md
 test "$(sha256sum "$origin" | awk '{print $1}')" = "$origin_hash" \
   || fail 'origin overwrite changed existing metadata'
-jq -e '.implementation_backend == "codex" and .phase == "PLAN"' \
+jq -e '.routing_policy_version == 1 and (.attempts|length) == 0 and .phase == "PLAN"' \
   "$workspace/.ops/changes/promoted-candidate/runtime/state.json" >/dev/null \
-  || fail 'trace-origin changed backend or phase'
+  || fail 'trace-origin changed routing history or phase'
 cleanup_change promoted-candidate
 
 for invalid in bad-iteration bad-instrument bad-traversal bad-missing bad-outside bad-old-root bad-symlink-escape; do

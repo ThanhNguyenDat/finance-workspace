@@ -28,6 +28,15 @@ jobs:
           bash -n .agents/scripts/detect-codex-availability.sh
           bash -n .agents/scripts/classify-codex-result.sh
           bash -n .agents/scripts/run-codex-phase.sh
+          bash -n .agents/scripts/phase-agent-state.sh
+          bash -n .agents/scripts/configure-phase-agents.sh
+          bash -n .agents/scripts/classify-claude-result.sh
+          bash -n .agents/scripts/detect-provider-availability.sh
+          bash -n .agents/scripts/run-claude-phase.sh
+          bash -n .agents/scripts/run-phase-agent.sh
+          bash -n .agents/scripts/run-phase-agent-command.sh
+          bash -n .agents/scripts/run-claude-command.sh
+          bash -n .agents/scripts/tests/hermetic-env.sh
           bash -n .claude/hooks/ops-stop-hook.sh
           bash -n .agents/scripts/tests/test_ops_orchestration.sh
           bash -n .agents/scripts/tests/test_quant_research_state.sh
@@ -36,6 +45,13 @@ jobs:
           bash -n .agents/scripts/tests/test_quant_backend_routing.sh
           bash -n .agents/scripts/tests/test_codex_worker_policy.sh
           bash -n .agents/scripts/tests/test_quant_promotion_trace.sh
+          bash -n .agents/scripts/tests/test_phase_agent_state.sh
+          bash -n .agents/scripts/tests/test_provider_availability.sh
+          bash -n .agents/scripts/tests/test_phase_agent_routing.sh
+          bash -n .agents/scripts/tests/test_phase_agent_quant_launcher.sh
+          bash -n .agents/scripts/tests/test_claude_quant_launcher.sh
+          bash -n .agents/scripts/tests/test_claude_worker_policy.sh
+          bash -n .agents/scripts/tests/test_hermetic_agent_contracts.sh
           jq -e . .claude/settings.json >/dev/null
 
       - name: Run bounded orchestration tests
@@ -56,6 +72,20 @@ jobs:
             ./.agents/scripts/tests/test_codex_worker_policy.sh
           timeout --signal=TERM --kill-after=10s 1m \
             ./.agents/scripts/tests/test_quant_promotion_trace.sh
+          timeout --signal=TERM --kill-after=10s 1m \
+            ./.agents/scripts/tests/test_phase_agent_state.sh
+          timeout --signal=TERM --kill-after=10s 1m \
+            ./.agents/scripts/tests/test_provider_availability.sh
+          timeout --signal=TERM --kill-after=10s 2m \
+            ./.agents/scripts/tests/test_phase_agent_routing.sh
+          timeout --signal=TERM --kill-after=10s 2m \
+            ./.agents/scripts/tests/test_phase_agent_quant_launcher.sh
+          timeout --signal=TERM --kill-after=10s 2m \
+            ./.agents/scripts/tests/test_claude_quant_launcher.sh
+          timeout --signal=TERM --kill-after=10s 2m \
+            ./.agents/scripts/tests/test_claude_worker_policy.sh
+          timeout --signal=TERM --kill-after=10s 5m \
+            ./.agents/scripts/tests/test_hermetic_agent_contracts.sh
 
       - name: Verify managed links and diff
         shell: bash

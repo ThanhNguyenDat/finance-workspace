@@ -3,26 +3,23 @@ description: "Run exactly one bounded, state-aware quant research iteration"
 ---
 
 Thực hiện đúng một vòng nghiên cứu bounded bằng tiếng Việt, timezone vận hành
-`UTC+7 / Asia/Ho_Chi_Minh`. Lệnh này được gọi bởi:
+`UTC+7 / Asia/Ho_Chi_Minh`. Operator chạy thủ công từ terminal:
 
 ```text
-/loop 20m /quant-research
+./.agents/scripts/run-phase-agent-command.sh quant-research
 ```
 
-Không tạo `/loop` khác, không sleep 20 phút, không tự gọi lại chính mình và
-không khởi động một Claude CLI/session lồng nhau.
+Launcher đã ghi iteration đúng một lần trước khi truyền prompt này. Không gọi
+`begin-iteration` lần nữa. Không tạo `/loop`, daemon, scheduler, sleep, tự gọi
+lại chính mình hoặc gọi trực tiếp provider CLI.
 
 ## Bắt đầu vòng
 
-1. Đọc state bằng `./.agents/scripts/quant-research-state.sh state`; state
-   authoritative là `.ops/runtime/quant-research/state.json`. Nếu
-   `codex_mode=auto`, chạy `./.agents/scripts/detect-codex-availability.sh`
-   đúng một lần rồi đọc lại state. Probe inconclusive không dừng iteration và
-   phải giữ nguyên resolved availability trước đó. Nếu `codex_mode=manual`,
-   tuyệt đối không chạy probe. Sau đó chạy
-   `./.agents/scripts/quant-research-state.sh begin-iteration` đúng một lần và
-   đọc lại state để lấy `codex_mode`, `codex_available`, `research_enabled`,
-   `iteration` và timestamp hiện tại.
+1. Đọc research state bằng `./.agents/scripts/quant-research-state.sh state`
+   và phase-agent state bằng `./.agents/scripts/phase-agent-state.sh state`.
+   Iteration trong research state đã được launcher increment; dùng đúng giá trị
+   đó cho mọi attempt tiếp quản. Provider health/probe/candidate selection do
+   launcher xử lý, không tự chạy probe hoặc đổi provider trong prompt.
 2. Nếu `research_enabled=false`, ghi nhận vòng đã bỏ qua và dừng trước mọi
    research/backtest tốn tài nguyên.
 3. Đọc `research/quant/reports/optimize_loop_update_v2.csv`,
@@ -73,8 +70,7 @@ PROMOTE
 
 `REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, và `NEEDS-MORE-RESEARCH` chỉ cập nhật
 research evidence dưới `research/quant/`. Không tạo OpenSpec change và không tạo OPS
-transaction cho các kết quả này. Một `/loop 20m` không được biến thành một
-OPS transaction mỗi 20 phút.
+transaction cho các kết quả này.
 
 ## Promotion gate
 
@@ -103,8 +99,8 @@ Với `PROMOTE`:
    metrics CSV bằng path; không copy toàn bộ research report.
 3. Sau khi OpenSpec sẵn sàng, thực hiện canonical lifecycle tại
    `@.claude/commands/ops/run.md`. Không copy PLAN/IMPLEMENT/VERIFY/FIX/release/
-   archive state machine vào command này và không launch CLI khác để gọi slash
-   command.
+   archive state machine vào command này. Mọi model-owned phase chỉ chạy qua
+   `.agents/scripts/run-phase-agent.sh`.
 4. Trong PLAN của OPS transaction, dùng cùng `<change>` tại
    `.ops/changes/<change>/` và attach origin references đúng một lần:
 
@@ -117,15 +113,13 @@ Với `PROMOTE`:
    `research/quant/samples/` hoặc `research/quant/reports/`; không truyền nội
    dung report, environment hay secret.
 
-Khi `codex_available=true`, promoted transaction dùng backend mặc định
-`implementation_backend=codex`; model/effort cho IMPLEMENT, FIX và FIX
-fallback lấy từ các profile độc lập trong quant state. VERIFY và FINAL_VERIFY
-vẫn do Claude độc lập, không phải một Codex review profile. Khi
-`codex_available=false`, promoted transaction chỉ được dùng fallback gate hiện
-hữu với `implementation_backend=claude-fallback`, context `quant-fallback`, và
-`verification_mode=claude-fallback-self-review`. Không sửa runtime code trực
-tiếp ngoài OPS. Backend của transaction đã khởi tạo luôn immutable; quota
-toggle chỉ ảnh hưởng transaction mới.
+Promoted transaction dùng routing policy mới: PLAN, IMPLEMENT, VERIFY, FIX và
+FINAL_VERIFY resolve ordered candidates riêng từ phase-agent state. Candidate
+đang chạy immutable; nếu provider xác nhận hết quota, process cũ phải kết thúc
+trước khi attempt mới tiếp quản cùng phase/round từ diff và commit hiện tại.
+Không sửa runtime code trực tiếp ngoài OPS. Verification evidence ghi
+`provider-independent` hoặc `same-provider-process-separated` từ provider thực
+tế, không claim độc lập khi cùng provider.
 
 Claude verification findings vẫn là execution evidence theo round tại:
 
@@ -138,5 +132,5 @@ Không ghi FIX findings vào `docs/archive/legacy-handoff-agent.md`.
 Mỗi iteration kết thúc bằng tóm tắt ngắn bằng tiếng Việt: state, iteration,
 instrument/scope, unseen-data evidence, classification, research files đã cập
 nhật và giới hạn thực tế. Với `PROMOTE`, thêm stable change name, OpenSpec path,
-OPS path và backend đã persist. Không hỏi user trong research bình thường và
+OPS path và routing attempts đã persist. Không hỏi user trong research bình thường và
 không biến suy luận thành fact.
