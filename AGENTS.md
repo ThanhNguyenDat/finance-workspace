@@ -68,6 +68,19 @@ finance/
 └── mt5/                     # MT5 adapter
 ```
 
+Durable workspace artifacts use these canonical roots:
+
+- `research/quant/rounds/`, `studies/`, `audits/`, `samples/`, and `reports/`
+  for quantitative research evidence;
+- `docs/reviews/` for investigation and review documents;
+- `docs/archive/` for explicitly historical material;
+- `openspec/changes/<change>/` plus `.ops/changes/<change>/` for active
+  engineering planning and execution.
+
+Do not recreate a top-level `raw/` directory. New engineering requests enter
+through the native `/opsx:*` OpenSpec workflow and, when execution is needed,
+the `/ops:run` lifecycle.
+
 Repository ownership rules:
 
 1. Put implementation changes in the repository that owns the runtime responsibility.

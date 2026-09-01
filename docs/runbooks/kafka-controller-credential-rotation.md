@@ -185,7 +185,8 @@ through Coolify. Never run a broad or wildcard volume restore.
 
 ## Independent production evidence
 
-After a successful apply, independently record in `raw/handoff_agent.md`:
+After a successful apply, independently record in
+`.ops/changes/<change>/handoff.md`:
 
 - the SSH session's exact automation commit and rotation ID;
 - Coolify resource/deployment identity and rotation ID (never the values);

@@ -21,11 +21,11 @@ không khởi động một Claude CLI/session lồng nhau.
    timestamp hiện tại.
 2. Nếu `research_enabled=false`, ghi nhận vòng đã bỏ qua và dừng trước mọi
    research/backtest tốn tài nguyên.
-3. Đọc `raw/reports/optimize_loop_update_v2.csv`,
-   `raw/researcher/SUMMARY-priority-backlog.md`, các file liên quan trong
-   `raw/researcher/`, và evidence liên quan trong `raw/explain/`.
-   `raw/handoff_agent.md` chỉ là lịch sử/index legacy, không phải engineering
-   queue hoặc nguồn task/lifecycle status authoritative.
+3. Đọc `research/quant/reports/optimize_loop_update_v2.csv`,
+   `research/quant/index.md`, rồi chỉ các round, study, audit hoặc sample liên
+   quan dưới `research/quant/`. `docs/reviews/` chứa supporting operational
+   reviews. `docs/archive/legacy-handoff-agent.md` chỉ là lịch sử legacy, không
+   phải engineering queue hoặc nguồn task/lifecycle status authoritative.
 
 ## Nghiên cứu và xác minh
 
@@ -46,13 +46,14 @@ không khởi động một Claude CLI/session lồng nhau.
 
 Sau research/backtest, cập nhật research truth nhất quán:
 
-- `raw/reports/optimize_loop_update_v2.csv` — một row cho mỗi
+- `research/quant/reports/optimize_loop_update_v2.csv` — một row cho mỗi
   instrument/broker/strategy touched, để trống metric không có evidence;
-- `raw/researcher/<meaningful-name>.md` hoặc addendum đúng lịch sử;
-- `raw/researcher/SUMMARY-priority-backlog.md` — navigation cho hướng mở/đóng.
+- `research/quant/rounds/round<iteration>-<meaningful-name>.md` hoặc addendum
+  đúng lịch sử;
+- `research/quant/index.md` — navigation cho hướng mở/đóng.
 
 Không ghi task mới, không di chuyển `Todo`/`Processing`/`Dev-done`/`Verify`/
-`Done`, và không dùng `raw/handoff_agent.md` để chờ Codex implementation.
+`Done`, và không dùng `docs/archive/legacy-handoff-agent.md` để chờ Codex implementation.
 
 ## Phân loại kết quả
 
@@ -67,7 +68,7 @@ PROMOTE
 ```
 
 `REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, và `NEEDS-MORE-RESEARCH` chỉ cập nhật
-research evidence dưới `raw/`. Không tạo OpenSpec change và không tạo OPS
+research evidence dưới `research/quant/`. Không tạo OpenSpec change và không tạo OPS
 transaction cho các kết quả này. Một `/loop 20m` không được biến thành một
 OPS transaction mỗi 20 phút.
 
@@ -107,8 +108,10 @@ Với `PROMOTE`:
    ./.agents/scripts/ops-runtime.sh trace-origin <change> <session-id> <iteration> <instrument> <research-artifact>...
    ```
 
-   Chỉ truyền repository-relative paths dưới `raw/researcher/`, `raw/explain/`
-   hoặc `raw/reports/`; không truyền nội dung report, environment hay secret.
+   Chỉ truyền repository-relative paths dưới `research/quant/rounds/`,
+   `research/quant/studies/`, `research/quant/audits/`,
+   `research/quant/samples/` hoặc `research/quant/reports/`; không truyền nội
+   dung report, environment hay secret.
 
 Khi `codex_available=true`, promoted transaction dùng backend mặc định
 `implementation_backend=codex`; Codex Luna/high IMPLEMENT và Terra/high FIX,
@@ -125,7 +128,7 @@ Claude verification findings vẫn là execution evidence theo round tại:
 .ops/changes/<change>/runtime/verification-findings-round-<round>.md
 ```
 
-Không ghi FIX findings vào `raw/handoff_agent.md`.
+Không ghi FIX findings vào `docs/archive/legacy-handoff-agent.md`.
 
 Mỗi iteration kết thúc bằng tóm tắt ngắn bằng tiếng Việt: state, iteration,
 instrument/scope, unseen-data evidence, classification, research files đã cập

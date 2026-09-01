@@ -80,7 +80,8 @@ compatibility copy trong một commit độc lập.
 
 ## Quy tắc sau migration
 
-1. Task/research/handoff bắt đầu tại `raw/handoff_agent.md` trong workspace.
+1. Engineering work starts in OpenSpec and OPS; quant evidence lives under
+   `research/quant/`, and coordination lives in `.ops/changes/<change>/handoff.md`.
 2. Agent sửa code tại repository sở hữu; workspace chỉ nhận spec/evidence và
    không trở thành nơi build/deploy application.
 3. Trong giai đoạn cutover, giữ bản copy tài liệu cũ ở các repo code để CI và

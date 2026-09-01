@@ -225,5 +225,5 @@ run by hand over guarded SSH per `docs/runbooks/kline-maintenance-tools.md`.
 Finish with the production continuity audit plus current Kafka/Redis/DB/API,
 Grafana `/metrics`, and ECS error-log checks. Record immutable evidence in
 the active OPS handoff and OpenSpec change. Let OPS state and OpenSpec tasks
-represent verification progress; never move legacy `raw/handoff_agent.md`
-entries as authoritative lifecycle state.
+represent verification progress; never move archived global-handoff entries as
+authoritative lifecycle state.

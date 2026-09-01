@@ -26,7 +26,7 @@
 
 ### Requirement: Research policy preserves quant and safety constraints
 
-Each enabled iteration SHALL respond in Vietnamese, prioritize XAU then BTC, treat other instruments as UI/backlog-only, require defensible OOS/holdout or walk-forward evidence before claiming improvement, allow a valid rejection/no-improvement result, limit exploratory work to at most two local strategy/service containers with bounded production-equivalent resources, and update research notes, metric history, and the research navigation backlog without fabricating metrics or secrets. When a candidate passes the promotion gate, the command SHALL create or reuse a scoped OpenSpec change, attach concise research-origin references to the corresponding OPS transaction, and enter the existing OPS lifecycle. It SHALL NOT use `raw/handoff_agent.md` as an engineering queue or source of lifecycle truth.
+Each enabled iteration SHALL respond in Vietnamese, prioritize XAU then BTC, treat other instruments as UI/backlog-only, require defensible OOS/holdout or walk-forward evidence before claiming improvement, allow a valid rejection/no-improvement result, limit exploratory work to at most two local strategy/service containers with bounded production-equivalent resources, and update research notes, metric history, and the research navigation backlog without fabricating metrics or secrets. When a candidate passes the promotion gate, the command SHALL create or reuse a scoped OpenSpec change, attach concise research-origin references to the corresponding OPS transaction, and enter the existing OPS lifecycle. It SHALL NOT use `docs/archive/legacy-handoff-agent.md` as an engineering queue or source of lifecycle truth.
 
 #### Scenario: Normal Codex-available mode
 

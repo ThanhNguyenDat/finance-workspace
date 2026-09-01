@@ -4,7 +4,7 @@ The quant research loop has run 170 iterations without a promotable candidate.
 Rounds 351–375 established that the reason is not an absence of candidates but a
 **measurement defect**: the tool cannot score the configuration it reports on.
 
-Four findings, each cited with evidence in `raw/researcher/`:
+Four findings, each cited with evidence in `research/quant/rounds/`:
 
 - **The holdout gate scores a different configuration than the one being
   optimised.** `crates/finance-research/src/daily_profit_gate.rs:408` replays
@@ -18,11 +18,11 @@ Four findings, each cited with evidence in `raw/researcher/`:
   score**. Round 371 measured the size of the discrepancy: on
   `binance.perpetual_future.BTC.USDT` at 900 days the gate scores a stream
   losing −9.90557 while the deployed path loses −4.81958.
-  (`raw/researcher/round356-*.md`, `round371-*.md`)
+  (`research/quant/rounds/round356-*.md`, `round371-*.md`)
 - **No out-of-sample period is independent.** Holdout is the trailing 20% of the
   requested window, so every `--days` value yields a holdout nested inside or
   containing every other. There is no walk-forward.
-  (`raw/researcher/round352-*.md`)
+  (`research/quant/rounds/round352-*.md`)
 - **The joint objective cannot be evaluated on the Portfolio path.**
   `ExecutionFootprint` (`portfolio_measurement.rs:23-28`) exposes only `ledgers`,
   `trades`, `realized_pnl` and `funding_paid`. Profit factor, win rate,
@@ -36,7 +36,7 @@ Four findings, each cited with evidence in `raw/researcher/`:
   resulting zero-trade rows report a non-zero `realized_pnl` equal to
   `-funding_paid`. A wrapper is also a silent no-op when the inner strategy's
   entry condition saturates the metric it filters on.
-  (`raw/researcher/round374-*.md`, `round375-*.md`)
+  (`research/quant/rounds/round374-*.md`, `round375-*.md`)
 
 Correctness is the reason for this change, not throughput: the tool currently
 publishes gate verdicts, holdout claims and scorecard metrics that do not

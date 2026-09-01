@@ -20,14 +20,20 @@ expect_failure() {
 }
 
 workspace="$tmp/workspace"
-mkdir -p -- "$workspace/.ops/changes" "$workspace/raw/researcher" \
-  "$workspace/raw/explain" "$workspace/raw/reports" "$workspace/openspec/changes"
+outside="$tmp/outside.md"
+mkdir -p -- "$workspace/.ops/changes" "$workspace/openspec/changes" \
+  "$workspace/research/quant/rounds" "$workspace/research/quant/studies" \
+  "$workspace/research/quant/audits" "$workspace/research/quant/samples" \
+  "$workspace/research/quant/reports" "$workspace/raw/researcher"
 git -C "$workspace" init -q
 git -C "$workspace" config user.email test@example.invalid
 git -C "$workspace" config user.name promotion-test
 printf '%s\n' fixture >"$workspace/README.md"
-printf '%s\n' evidence >"$workspace/raw/researcher/candidate.md"
-printf '%s\n' 'round,metric' >"$workspace/raw/reports/metrics.csv"
+printf '%s\n' evidence >"$workspace/research/quant/rounds/candidate.md"
+printf '%s\n' 'round,metric' >"$workspace/research/quant/reports/metrics.csv"
+printf '%s\n' legacy >"$workspace/raw/researcher/legacy.md"
+printf '%s\n' outside >"$outside"
+ln -s -- "$outside" "$workspace/research/quant/rounds/escaped.md"
 git -C "$workspace" add .
 git -C "$workspace" commit -qm fixture
 
@@ -51,20 +57,20 @@ cleanup_change() {
 
 prepare_change promoted-candidate
 run_runtime trace-origin promoted-candidate session-promoted-candidate 87 XAU \
-  raw/researcher/candidate.md raw/reports/metrics.csv
+  research/quant/rounds/candidate.md research/quant/reports/metrics.csv
 origin="$workspace/.ops/changes/promoted-candidate/runtime/origin.json"
 jq -e '
   .change == "promoted-candidate" and
   .origin == "quant-research" and
   .research_iteration == 87 and
   .instrument == "XAU" and
-  .research_artifacts == ["raw/researcher/candidate.md", "raw/reports/metrics.csv"]
+  .research_artifacts == ["research/quant/rounds/candidate.md", "research/quant/reports/metrics.csv"]
 ' "$origin" >/dev/null || fail 'valid origin metadata is incorrect'
 if grep -Fq -- evidence "$origin" || grep -Fq -- 'round,metric' "$origin"; then
   fail 'origin metadata duplicated research content'
 fi
 origin_hash="$(sha256sum "$origin" | awk '{print $1}')"
-expect_failure run_runtime trace-origin promoted-candidate session-promoted-candidate 88 XAU raw/researcher/candidate.md
+expect_failure run_runtime trace-origin promoted-candidate session-promoted-candidate 88 XAU research/quant/rounds/candidate.md
 test "$(sha256sum "$origin" | awk '{print $1}')" = "$origin_hash" \
   || fail 'origin overwrite changed existing metadata'
 jq -e '.implementation_backend == "codex" and .phase == "PLAN"' \
@@ -72,14 +78,16 @@ jq -e '.implementation_backend == "codex" and .phase == "PLAN"' \
   || fail 'trace-origin changed backend or phase'
 cleanup_change promoted-candidate
 
-for invalid in bad-iteration bad-instrument bad-traversal bad-missing bad-outside; do
+for invalid in bad-iteration bad-instrument bad-traversal bad-missing bad-outside bad-old-root bad-symlink-escape; do
   prepare_change "$invalid"
   case "$invalid" in
-    bad-iteration) args=(0 XAU raw/researcher/candidate.md) ;;
-    bad-instrument) args=(87 'xau gold' raw/researcher/candidate.md) ;;
-    bad-traversal) args=(87 XAU raw/../README.md) ;;
-    bad-missing) args=(87 XAU raw/researcher/missing.md) ;;
+    bad-iteration) args=(0 XAU research/quant/rounds/candidate.md) ;;
+    bad-instrument) args=(87 'xau gold' research/quant/rounds/candidate.md) ;;
+    bad-traversal) args=(87 XAU research/quant/rounds/../candidate.md) ;;
+    bad-missing) args=(87 XAU research/quant/rounds/missing.md) ;;
     bad-outside) args=(87 XAU README.md) ;;
+    bad-old-root) args=(87 XAU raw/researcher/legacy.md) ;;
+    bad-symlink-escape) args=(87 XAU research/quant/rounds/escaped.md) ;;
   esac
   expect_failure run_runtime trace-origin "$invalid" "session-$invalid" "${args[@]}"
   test ! -e "$workspace/.ops/changes/$invalid/runtime/origin.json" \
@@ -88,12 +96,12 @@ for invalid in bad-iteration bad-instrument bad-traversal bad-missing bad-outsid
 done
 
 prepare_change wrong-owner
-expect_failure run_runtime trace-origin wrong-owner another-session 87 XAU raw/researcher/candidate.md
+expect_failure run_runtime trace-origin wrong-owner another-session 87 XAU research/quant/rounds/candidate.md
 cleanup_change wrong-owner
 
 prepare_change wrong-phase
 run_runtime phase wrong-phase session-wrong-phase IMPLEMENT
-expect_failure run_runtime trace-origin wrong-phase session-wrong-phase 87 XAU raw/researcher/candidate.md
+expect_failure run_runtime trace-origin wrong-phase session-wrong-phase 87 XAU research/quant/rounds/candidate.md
 cleanup_change wrong-phase
 
 grep -Fq 'REJECTED' "$QUANT_COMMAND" || fail 'REJECTED classification missing'
@@ -106,7 +114,7 @@ grep -Fq 'scope rõ' "$QUANT_COMMAND" || fail 'promotion scope gate missing'
 grep -Fq 'trace-origin' "$QUANT_COMMAND" || fail 'OPS origin trace missing'
 grep -Fq '@.claude/commands/ops/run.md' "$QUANT_COMMAND" || fail 'canonical OPS reference missing'
 grep -Fq 'dùng cùng `<change>`' "$QUANT_COMMAND" || fail 'same change identity contract missing'
-grep -Fq 'raw/handoff_agent.md' "$QUANT_COMMAND" \
+grep -Fq 'docs/archive/legacy-handoff-agent.md' "$QUANT_COMMAND" \
   && grep -Fq 'authoritative' "$QUANT_COMMAND" \
   || fail 'quant command does not demote legacy handoff lifecycle'
 if rg -n 'codex exec|claude -p|claude exec' "$QUANT_COMMAND" >/dev/null \

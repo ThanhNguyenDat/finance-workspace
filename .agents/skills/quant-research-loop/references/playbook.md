@@ -10,12 +10,12 @@ shipped fix — never a no-op round.
 
 ## Read first
 
-- `raw/researcher/SUMMARY-priority-backlog.md` — navigation doc, read before
+- `research/quant/index.md` — navigation doc, read before
   anything else each round. Lists closed directions (don't re-test), open
   leads, and infra gaps. Update it, don't recreate it, when a direction opens
   or closes.
 - `openspec/changes/` and `.ops/changes/` — inspect active promoted engineering
-  work and its execution evidence. `raw/handoff_agent.md` is legacy history/
+  work and its execution evidence. `docs/archive/legacy-handoff-agent.md` is legacy history/
   index only and never owns task or lifecycle status.
 - Load `repository-delivery` and `quant-pipeline-development` (finance-live-action)
   for the underlying commit/CI/Coolify mechanics this skill's dev-mode step 5
@@ -671,7 +671,7 @@ fabricate one.
 ## Backtest correctness — audited, with citations
 
 A full look-ahead / fill / accounting audit is in
-`raw/researcher/backtest-correctness-audit-look-ahead-and-fill-invariants.md`. **No look-ahead
+`research/quant/audits/backtest-correctness-audit-look-ahead-and-fill-invariants.md`. **No look-ahead
 was found.** Do not re-derive these; cite them.
 
 - **Causal ordering is sound**: only `is_kline_closed` bars enter (`klines.rs:246`);
@@ -737,7 +737,7 @@ was found.** Do not re-derive these; cite them.
   `span` with `market.event.id`, `market.interval`, Kafka topic/offset/partition and W3C
   `trace.id`/`span.id`. VictoriaMetrics' API is **authenticated** — do not try to obtain
   credentials; metric-series checks are out of reach from this loop.
-  Verified from those logs (`raw/researcher/observability-trace-audit-*.md`): on `exness XAU`
+  Verified from those logs (`research/quant/audits/observability-trace-audit-*.md`): on `exness XAU`
   2026-08-28, **0 of 620** signals were emitted before their bar closed (min lag **+1.015 s**,
   median +2.133 s, all eight intervals); Kafka offsets strictly increase on all eight topics;
   **245 distinct `market.event.id`, none processed under two traces** — no duplicate execution;
@@ -1057,8 +1057,8 @@ was found.** Do not re-derive these; cite them.
   with five gates blocking, every counter far past the 36-decision hold guard. Each
   `gate_reason` reproduces from the two scores and `minimum_role_score = 0.1`
   (`trading_modes.rs:842-857`), so the read doubles as a live check that the gate
-  logic matches the code. Append samples to `raw/researcher/position-state-samples.csv`
-  and `raw/researcher/signal-state-samples.csv`.
+  logic matches the code. Append samples to `research/quant/samples/position-state-samples.csv`
+  and `research/quant/samples/signal-state-samples.csv`.
 - **Never size a gate lever from `gate_reason` labels.** The three conditions are
   evaluated in order, so a magnitude failure fires first and masks a sign conflict
   underneath: in round 308, 6 of 11 `*_below_threshold` blocks *also* had conflicting
@@ -1204,7 +1204,7 @@ being checked (this has caused two separate credential-exposure incidents on
 the Kafka container specifically). Grep the exact variable name instead:
 `docker exec <container> sh -c 'env | grep SPECIFIC_VAR'`, or read a mounted
 config file when one exists. If a broad dump happens anyway, stop, do not
-repeat the value anywhere (including in `raw/handoff_agent.md`), flag it to
+repeat the value anywhere (including in `docs/archive/legacy-handoff-agent.md`), flag it to
 the user in the same turn, and log a P0 security item for rotation without
 attempting the rotation yourself unless it's a low-risk, well-understood
 credential — a live distributed-system credential (Kafka controller/broker
@@ -1301,7 +1301,7 @@ Codex has resumed). While active:
 
 Every round updates the research evidence set, even a purely-negative round:
 
-1. **`raw/reports/optimize_loop_update_v2.csv`** — one row per
+1. **`research/quant/reports/optimize_loop_update_v2.csv`** — one row per
    instrument/broker/strategy combination touched this round. Columns:
    `round_date,round_seq,layer,instrument,broker,market_type,base_interval,
    strategy_or_rule,data_source,trades,win_rate_pct,rr_ratio,profit_factor,
@@ -1311,21 +1311,21 @@ Every round updates the research evidence set, even a purely-negative round:
    target1_profitable,target2_makedecision,target3_freq_ge1day_or_7week,notes`.
    Leave a metric blank rather than fabricating it when the tool didn't
    report it.
-2. **`raw/researcher/round<N>-<slug>.md`** — full writeup: methodology,
+2. **`research/quant/rounds/round<N>-<slug>.md`** — full writeup: methodology,
    numbers, honest caveats, comparison to prior rounds when relevant. When a
    round corrects an earlier round's conclusion, add a visible `⚠️
    CORRECTION` banner at the top of the original file pointing at the new
    one — never silently edit history. When a round only extends an existing
    thread with a small addendum, append a `## Cập nhật Round <N>` section to
    the existing file instead of creating a near-duplicate new one.
-3. **`raw/researcher/SUMMARY-priority-backlog.md`**: refresh the relevant
+3. **`research/quant/index.md`**: refresh the relevant
    direction so the next round can navigate open/closed research without
    treating it as engineering task state.
 
-For REJECTED, NO-CHANGE, DATA-ISSUE, or NEEDS-MORE-RESEARCH, stop after raw
+For REJECTED, NO-CHANGE, DATA-ISSUE, or NEEDS-MORE-RESEARCH, stop after research
 evidence. For PROMOTE, reference these paths from OpenSpec and OPS origin
 metadata; do not copy report contents and do not write an implementation task
-to `raw/handoff_agent.md`.
+to `docs/archive/legacy-handoff-agent.md`.
 
 - **A route's "maximum frequency" is a property of the settings you have run, not
   of the route.** Round 367 called `binance BTC` the only route that ever cleared

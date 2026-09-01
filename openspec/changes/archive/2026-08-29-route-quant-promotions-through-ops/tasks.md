@@ -11,7 +11,7 @@
 
 ## 3. Source-of-Truth Migration
 
-- [x] 3.1 Mark `raw/handoff_agent.md` legacy/non-authoritative without deleting or moving concurrent history, and verify the staged change contains only the banner hunk for that file.
+- [x] 3.1 Mark `docs/archive/legacy-handoff-agent.md` legacy/non-authoritative without deleting or moving concurrent history, and verify the staged change contains only the banner hunk for that file.
 - [x] 3.2 Update shared quant, delivery, deployment-verification, and domain guidance so OpenSpec tasks and OPS state/archive replace Todo/Dev-done/Verify/Done handoff semantics; run managed-link synchronization and contract searches.
 - [x] 3.3 Document RAW/OpenSpec/OPS/Git ownership, promotion criteria, trace example, legacy migration, and archive behavior in README and command contracts; verify documentation assertions pass.
 

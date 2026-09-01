@@ -31,7 +31,7 @@ A promoted candidate SHALL derive one meaningful kebab-case change name and SHAL
 
 ### Requirement: Quant-origin OPS metadata is concise and immutable
 
-During PLAN, a promoted transaction SHALL attach an immutable origin record containing the stable change name, `origin=quant-research`, a positive research iteration, a safe instrument identifier, and one or more repository-relative research artifact paths. Artifacts SHALL be existing references under approved `raw/researcher/`, `raw/explain/`, or `raw/reports/` locations and SHALL NOT be copied into OPS, contain absolute/traversal paths, or serialize their contents. Origin metadata SHALL contain no credentials, environment values, or secrets.
+During PLAN, a promoted transaction SHALL attach an immutable origin record containing the stable change name, `origin=quant-research`, a positive research iteration, a safe instrument identifier, and one or more repository-relative research artifact paths. Artifacts SHALL be existing references under approved `research/quant/rounds/`, `research/quant/studies/`, `research/quant/audits/`, `research/quant/samples/`, or `research/quant/reports/` locations and SHALL NOT be copied into OPS, contain absolute/traversal paths, resolve outside those roots through a symlink, or serialize their contents. Origin metadata SHALL contain no credentials, environment values, or secrets.
 
 #### Scenario: Valid origin metadata is attached
 - **WHEN** the owning PLAN session records a promoted XAU candidate from iteration 87
@@ -43,7 +43,7 @@ During PLAN, a promoted transaction SHALL attach an immutable origin record cont
 
 ### Requirement: Delivery and archive retain the trace chain
 
-A completed promoted change SHALL be traceable from implementation commit and CI/deployment evidence through the OPS archive, OpenSpec archive, and referenced research evidence. OPS and OpenSpec archives SHALL retain references only; research artifacts SHALL remain under `raw/` and SHALL NOT be duplicated into archive directories.
+A completed promoted change SHALL be traceable from implementation commit and CI/deployment evidence through the OPS archive, OpenSpec archive, and referenced research evidence. OPS and OpenSpec archives SHALL retain references only; research artifacts SHALL remain under `research/quant/` and SHALL NOT be duplicated into archive directories.
 
 #### Scenario: Completed promotion is auditable
 - **WHEN** a promoted change completes its applicable lifecycle
@@ -51,7 +51,7 @@ A completed promoted change SHALL be traceable from implementation commit and CI
 
 ### Requirement: Legacy handoff is non-authoritative
 
-`raw/handoff_agent.md` MAY remain as preserved historical context or a human-readable index, but SHALL NOT own the implementation queue or authoritative `Todo`, `Processing`, `Dev-done`, `Verify`, or `Done` state. Any displayed status SHALL direct readers to OpenSpec tasks and OPS runtime/archive state. Existing history SHALL not be destroyed or blindly migrated into new engineering transactions.
+`docs/archive/legacy-handoff-agent.md` MAY remain as preserved historical context or a human-readable index, but SHALL NOT own the implementation queue or authoritative `Todo`, `Processing`, `Dev-done`, `Verify`, or `Done` state. Any displayed status SHALL direct readers to OpenSpec tasks and OPS runtime/archive state. Existing history SHALL not be destroyed or blindly migrated into new engineering transactions.
 
 #### Scenario: Existing handoff history is preserved
 - **WHEN** legacy entries include historical, research-only, obsolete, and active-looking records

@@ -57,8 +57,8 @@ outage thực tế.
 4. Chỉ sau khi đạt mục tiêu mới retire resource Compose cũ qua Coolify; giữ
    image/manifest rollback đã xác nhận.
 5. Ghi lại deployment ID, immutable image digest, probe window và rollback test
-   vào `raw/handoff_agent.md`; chuyển task sang `Verify` để Claude kiểm tra độc
-   lập.
+   vào `.ops/changes/<change>/handoff.md`; cập nhật OpenSpec task tương ứng để
+   Claude kiểm tra độc lập.
 
 ## Cổng quyết định còn mở
 

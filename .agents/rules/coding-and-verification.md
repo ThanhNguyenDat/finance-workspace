@@ -75,7 +75,7 @@ When the user's request to Claude is a bug investigation or a system review
 (not an explicit "fix this" instruction), Claude stops after step 1 —
 inspect, do not implement. Document the root cause with exact file:line
 citations, a fix-direction note explicitly marked "not applied —
-investigation only", and a verification checklist in `raw/<topic>.md`
+investigation only", and a verification checklist in `docs/reviews/<topic>.md`
 instead of proceeding to steps 2-7. A separate Codex agent implements,
 commits, pushes, and carries the change through the rest of this
 verification order; Claude verifies the result afterward once Codex reports

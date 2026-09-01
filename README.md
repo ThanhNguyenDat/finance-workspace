@@ -31,10 +31,10 @@ research từ workspace, sau đó sửa đúng repository sở hữu code.
   `openspec*`.
 - `openspec/specs/` và `openspec/changes/` là source of truth cho behavioral
   specs, active changes và task status.
-- `docs/` chứa architecture, ADR, runbook, diagram và tài liệu hỗ trợ; không
-  tạo thêm một hệ spec hành vi cạnh OpenSpec.
-- `raw/` giữ research, evidence, audit history và handoff; không rewrite lịch
-  sử chỉ để làm gọn.
+- `research/quant/` chứa quant rounds, studies, audits, samples, reports và
+  navigation index; research-only result không tạo engineering transaction.
+- `docs/` chứa architecture, ADR, runbook, review, diagram và tài liệu lưu trữ;
+  không tạo thêm một hệ spec hành vi cạnh OpenSpec.
 
 ## Bắt đầu một vòng làm việc
 
@@ -42,8 +42,8 @@ research từ workspace, sau đó sửa đúng repository sở hữu code.
 2. Đọc `AGENTS.md` hoặc `CLAUDE.md`, rồi đọc shared rule phù hợp.
 3. Xác định và sử dụng shared skill liên quan; load capability/OpenSpec-native
    integration của CLI nếu cần.
-4. Đọc research note được dẫn link, `raw/researcher/SUMMARY-priority-backlog.md`
-   và OpenSpec active work. `raw/handoff_agent.md` chỉ đọc khi cần tra cứu
+4. Đọc research note được dẫn link, `research/quant/index.md`
+   và OpenSpec active work. `docs/archive/legacy-handoff-agent.md` chỉ đọc khi cần tra cứu
    lịch sử/index, không dùng làm engineering queue.
 5. Kiểm tra branch/status và deployed revision của repository code trước khi sửa.
 6. Thực hiện theo role: Claude plan/verify; Codex implement/test/fix.
@@ -57,14 +57,15 @@ research từ workspace, sau đó sửa đúng repository sở hữu code.
 ```text
 .agents/   rule, skill và utility dùng chung
 docs/      architecture, ADR, runbook, diagram, migration và supporting docs
-raw/       handoff, research history, report và evidence
+research/  durable quant research, evidence, samples và reports
 docker/    source hạ tầng dùng chung và observability/POC
 AGENTS.md  contract cho Codex và agent tương thích
 CLAUDE.md  hướng dẫn riêng cho Claude
 ```
 
-`raw/` là audit history. Không rewrite hoặc xóa lịch sử chỉ để làm gọn repo;
-không ghi credential/token/secret vào đó.
+Không tạo lại top-level `raw/`. Engineering request đi qua native `/opsx:*` và
+OPS; quant evidence đi vào `research/quant/`; legacy-only content nằm dưới
+`docs/archive/`. Không ghi credential/token/secret vào các artifact này.
 
 ## Quant research loop
 
@@ -136,7 +137,7 @@ mới quan sát trạng thái mới.
 ## Source of truth cho quant promotion
 
 ```text
-RAW      = research evidence
+Research = research evidence
 OpenSpec = engineering truth
 OPS      = execution/tracing truth
 Git/CI   = delivery truth
@@ -151,12 +152,13 @@ canonical `/ops:run`. Một iteration research-only không tạo OPS transaction
 
 Promoted change dùng cùng tên stable `<change>` tại
 `openspec/changes/<change>/` và `.ops/changes/<change>/`; origin metadata chỉ
-reference tới research iteration/instrument và các file dưới `raw/`, không copy
-nội dung. Completed flow giữ trace từ research artifact → OpenSpec → OPS →
+reference tới research iteration/instrument và các file dưới
+`research/quant/`, không copy nội dung. Completed flow giữ trace từ research
+artifact → OpenSpec → OPS →
 commit/CI/deploy → archive.
 
-`raw/handoff_agent.md` chỉ là legacy human-readable history/index,
-non-authoritative. Nó không còn sở hữu implementation queue hay trạng thái
+`docs/archive/legacy-handoff-agent.md` chỉ là archived human-readable history,
+non-authoritative. Nó không sở hữu implementation queue hay trạng thái
 `Todo`/`Processing`/`Dev-done`/`Verify`/`Done`; hãy đọc OpenSpec tasks và OPS
 runtime/archive để biết trạng thái thật.
 

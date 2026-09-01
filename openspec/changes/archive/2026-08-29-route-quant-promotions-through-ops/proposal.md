@@ -1,13 +1,13 @@
 ## Why
 
-Quant research currently promotes engineering work through `raw/handoff_agent.md`, duplicating task and lifecycle truth already owned by OpenSpec and OPS. Promotion needs one stable change identity that traces defensible research evidence through implementation, verification, delivery, and archive without creating an OPS transaction for every research iteration.
+Quant research currently promotes engineering work through `docs/archive/legacy-handoff-agent.md`, duplicating task and lifecycle truth already owned by OpenSpec and OPS. Promotion needs one stable change identity that traces defensible research evidence through implementation, verification, delivery, and archive without creating an OPS transaction for every research iteration.
 
 ## What Changes
 
 - Classify each bounded quant iteration as `REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, `NEEDS-MORE-RESEARCH`, or `PROMOTE`; only `PROMOTE` enters engineering orchestration.
 - Require promoted candidates to satisfy an explicit evidence, scope, acceptance, risk, trading-safety, and rollback gate before creating or reusing OpenSpec and entering the existing OPS lifecycle.
 - Use the same stable change name for `openspec/changes/<change>/` and `.ops/changes/<change>/` and attach concise immutable quant-origin metadata to the OPS transaction.
-- Demote `raw/handoff_agent.md` to a legacy, non-authoritative human index while preserving its history; OpenSpec tasks and OPS runtime state become the engineering and execution truth.
+- Demote `docs/archive/legacy-handoff-agent.md` to a legacy, non-authoritative human index while preserving its history; OpenSpec tasks and OPS runtime state become the engineering and execution truth.
 - Update shared rules/skills, command contracts, bounded tests, CI, and documentation to remove the duplicate handoff queue semantics.
 - Preserve Codex Luna/high IMPLEMENT, Terra/high FIX, Sol/high eligible fallback, immutable backend selection, atomic FIX, maximum FIX rounds, quant availability toggles, and existing release/archive behavior.
 

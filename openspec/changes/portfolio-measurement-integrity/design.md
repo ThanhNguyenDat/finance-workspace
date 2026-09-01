@@ -16,7 +16,7 @@ models the wrong system; the measurement path models the right system but has no
 holdout and few metrics. Every promotion attempt in 170 iterations has died in
 that gap.
 
-The replay is bit-for-bit deterministic (`raw/researcher/round351-*.md`), which
+The replay is bit-for-bit deterministic (`research/quant/rounds/round351-*.md`), which
 makes an exact-equivalence regression test possible and is the basis of the
 correctness gate below.
 

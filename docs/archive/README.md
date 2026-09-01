@@ -9,5 +9,6 @@ Không dùng chúng để mô tả hành vi production hiện tại và không m
 - `superpowers/specs/`: spec cũ; decision pipeline hiện hành đã được đưa lên
   [`docs/specs/trading-decision-pipeline.md`](../specs/trading-decision-pipeline.md).
 
-Không rewrite lịch sử trong `raw/`; archive này chỉ làm gọn navigation của
-`docs/` và có thể phục hồi bằng `git mv`.
+Nội dung dưới `legacy-raw/` và `legacy-handoff-agent.md` chỉ là lịch sử
+non-authoritative từ namespace đã retire; archive này không phải task queue
+hay nơi tạo artifact mới.

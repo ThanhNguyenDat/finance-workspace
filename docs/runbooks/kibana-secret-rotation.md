@@ -151,7 +151,6 @@ Coolify deployment IDs, exact Kibana image ID, snapshot repository/name/UUID,
 rotation-result digest and counts, old credential rejection, current Kibana
 and Elasticsearch status, Filebeat output test plus fresh document count,
 clean targeted argv result, container restart/OOM state, host safety, and the
-retained rollback path in `raw/handoff_agent.md`. Never record secret values.
-Keep the task in `Processing` for the security/reporting-key prerequisite or
-any other gap; Codex moves a fully verified task only to `Verify`, never
-`Done`.
+retained rollback path in `.ops/changes/<change>/handoff.md`. Never record
+secret values. Keep incomplete work reflected in the OpenSpec task and OPS
+runtime phase; a fully verified task proceeds through the normal OPS gates.

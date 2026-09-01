@@ -21,7 +21,7 @@ The quant command currently writes engineering work into a mutable legacy handof
 
 ### Add one owner-checked OPS origin operation
 
-`ops-runtime.sh trace-origin` writes `runtime/origin.json` only while the owning session is in PLAN. It accepts a positive iteration, safe instrument, and one or more existing repository-relative research paths under approved `raw/` evidence roots. It refuses overwrite. This keeps lifecycle transitions in the existing runtime while making trace creation deterministic. Embedding optional fields in `init` was rejected because it would overload backend-origin arguments and complicate all normal transactions.
+`ops-runtime.sh trace-origin` writes `runtime/origin.json` only while the owning session is in PLAN. It accepts a positive iteration, safe instrument, and one or more existing repository-relative research paths under approved `research/quant/` evidence roots. It refuses overwrite. This keeps lifecycle transitions in the existing runtime while making trace creation deterministic. Embedding optional fields in `init` was rejected because it would overload backend-origin arguments and complicate all normal transactions.
 
 ### Keep classification and promotion policy in the quant command contract
 
@@ -43,7 +43,7 @@ Runtime tests exercise valid origin creation, immutability, ownership/phase chec
 
 - [Legacy headings can still look active to humans] → Add a prominent banner and make all active command/rule/skill contracts point to OpenSpec/OPS.
 - [Concurrent research edits overlap the legacy file] → Change only the top banner and stage that hunk independently; never rewrite or discard concurrent history.
-- [Broken research references weaken traceability] → Require existing repository-relative paths under an allowlisted set of raw evidence roots.
+- [Broken research references weaken traceability] → Require existing repository-relative paths under the allowlisted `research/quant/` evidence roots.
 - [Promotion metadata could become another state machine] → Keep it immutable reference data only; phase/backend/transitions stay exclusively in OPS state.
 
 ## Migration Plan

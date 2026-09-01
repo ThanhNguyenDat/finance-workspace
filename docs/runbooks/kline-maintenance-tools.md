@@ -38,8 +38,8 @@ workflows did two different kinds of work:
   GitHub Actions run. It is **not** reimplemented as a script. The operator
   running this runbook performs the equivalent checks by hand, using the
   already-existing standalone scripts referenced below, and keeps the
-  before/plan/after evidence files on the host (or copies them to
-  `raw/handoff_agent.md`-adjacent storage) instead of a workflow artifact.
+  before/plan/after evidence files on the host (or references their approved
+  durable location from `.ops/changes/<change>/handoff.md`) instead of a workflow artifact.
 
 ## Building the binaries
 
@@ -164,8 +164,9 @@ exact `BROKER.MARKET_TYPE.BASE.QUOTE` route and interval:
 This writes `kline-gap-marker-plan.json` (mode `dry-run`, with `plan_sha256`
 and `expected_updates` fields) and `kline-gap-marker-backup.json` (the
 empty-state backup needed to `--rollback`). Keep both files — retained on
-the host or copied alongside `raw/handoff_agent.md`, since there is no
-workflow artifact upload to retain them automatically.
+the host or in an approved durable evidence location referenced by
+`.ops/changes/<change>/handoff.md`, since there is no workflow artifact upload
+to retain them automatically.
 
 Re-run the audit (`kline-continuity-audit` above, output to
 `kline-continuity-after.json` isn't needed pre-apply, but re-running the
@@ -205,7 +206,7 @@ summary as before. Retain `kline-continuity-before.json`,
 `kline-gap-marker-backup.json`, `kline-gap-marker-plan.json`,
 `kline-continuity-after.json`, and (if produced)
 `kline-gap-marker-rollback.json`/`kline-continuity-rollback.json` as the
-rollback/audit evidence for `raw/handoff_agent.md`.
+rollback/audit evidence referenced from `.ops/changes/<change>/handoff.md`.
 
 ### Explicit rollback
 

@@ -441,14 +441,14 @@ trace_quant_origin() {
       *'/../'*|*'/./'*) die "research artifact path contains traversal: $artifact" ;;
     esac
     case "$artifact" in
-      raw/researcher/*|raw/explain/*|raw/reports/*) ;;
+      research/quant/rounds/*|research/quant/studies/*|research/quant/audits/*|research/quant/samples/*|research/quant/reports/*) ;;
       *) die "research artifact is outside approved evidence roots: $artifact" ;;
     esac
     [ -f "$ROOT_DIR/$artifact" ] || die "research artifact not found: $artifact"
     resolved="$(realpath -e -- "$ROOT_DIR/$artifact")" \
       || die "cannot resolve research artifact: $artifact"
     case "$resolved" in
-      "$root_canonical"/raw/researcher/*|"$root_canonical"/raw/explain/*|"$root_canonical"/raw/reports/*) ;;
+      "$root_canonical"/research/quant/rounds/*|"$root_canonical"/research/quant/studies/*|"$root_canonical"/research/quant/audits/*|"$root_canonical"/research/quant/samples/*|"$root_canonical"/research/quant/reports/*) ;;
       *) die "research artifact resolves outside approved evidence roots: $artifact" ;;
     esac
   done

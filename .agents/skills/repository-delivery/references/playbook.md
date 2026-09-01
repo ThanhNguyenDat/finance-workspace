@@ -182,10 +182,11 @@ both workflow completion and production headroom.
   evidence and next action before moving with the transaction to archive.
 - Record SHA, workflow, watcher, deployment, and verification evidence in the
   active OPS handoff, never credential payloads or full logs.
-- `raw/handoff_agent.md` is legacy/non-authoritative. Do not create or move
-  `Todo`, `Processing`, `Dev-done`, `Verify`, or `Done` entries to represent
-  engineering state. If a human-readable index is explicitly requested, add
-  links to the stable OpenSpec/OPS change and say status must be read there.
+- The archived global handoff is legacy/non-authoritative. Do not create or
+  move `Todo`, `Processing`, `Dev-done`, `Verify`, or `Done` entries to
+  represent engineering state. If a human-readable index is explicitly
+  requested, add links to the stable OpenSpec/OPS change and say status must be
+  read there.
 - During CI/deployment waits, re-read active OpenSpec/OPS work and progress
   independent actionable tasks. A detached watcher is not a reason to stop.
 

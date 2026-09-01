@@ -95,7 +95,7 @@
 - [x] 6.3 Annotate the affected research rounds rather than reinterpreting them
   silently: gate verdicts in rounds 335, 336, 337 and every `--daily-profit-gate`
   result described a different configuration.
-  → verify: a correction banner names those rounds in `raw/researcher/`.
+  → verify: a correction banner names those rounds in `research/quant/rounds/`.
 - [ ] 6.4 Re-run one previously-blocked configuration end to end — a hold-bearing
   setting with a gate score — and record it as the first holdout-scored
   Portfolio configuration.
