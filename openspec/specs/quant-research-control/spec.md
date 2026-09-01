@@ -7,7 +7,17 @@ Provides a safe, repeatable Claude Code entry point for one bounded quant resear
 
 ### Requirement: Quant commands expose an explicit availability toggle
 
-The workspace SHALL provide `/quant-research`, `/quant:codex-off`, and `/quant:codex-on` as Claude Code custom commands. The toggle commands SHALL update only the transient Codex availability state, SHALL NOT start or stop a loop, and SHALL report the resulting mode in Vietnamese without exposing raw runtime JSON by default. A Codex worker MAY invoke the same `codex-off` state operation automatically only after deterministic classification of explicit global quota exhaustion. Generic HTTP 429, model-local limits, and other worker failures SHALL NOT automatically disable Codex. Re-enable SHALL remain manual through `/quant:codex-on`.
+The workspace SHALL provide `/quant-research`, `/quant:codex-off`,
+`/quant:codex-on`, `/quant:codex-auto`, `/quant:codex-manual`, and
+`/quant:codex-config` as Claude Code custom commands. These commands SHALL
+update only transient Codex routing state, SHALL NOT start or stop a loop, and
+SHALL report in Vietnamese without exposing raw runtime JSON or probe logs.
+Auto SHALL probe immediately and before each later auto-mode research
+iteration. Success SHALL resolve available, explicit global quota SHALL resolve
+unavailable, and every ambiguous outcome SHALL preserve the prior resolved
+value. On/off SHALL be manual overrides; manual SHALL preserve availability.
+Config SHALL inspect, update, or reset `probe`, `implement`, `fix`, and
+`fix-fallback` profiles independently and SHALL NOT expose a Codex review role.
 
 #### Scenario: Disable Codex for future iterations
 
@@ -29,14 +39,41 @@ The workspace SHALL provide `/quant-research`, `/quant:codex-off`, and `/quant:c
 - **WHEN** a user invokes `/quant:codex-on` while a `/loop 20m /quant-research` schedule exists
 - **THEN** the runtime state records `codex_available=true`, the existing loop remains active, and the next iteration can observe the new value
 
+#### Scenario: Auto mode detects recovery
+
+- **WHEN** `/quant:codex-auto` runs and its bounded probe succeeds
+- **THEN** state records `codex_mode=auto` and `codex_available=true` without starting research or restarting the loop
+
+#### Scenario: Inconclusive auto probe preserves state
+
+- **WHEN** auto detection encounters a generic 429, model-local limit, authentication, network, timeout, missing executable, implementation, or unknown failure
+- **THEN** state remains in auto mode with the previous resolved availability and the research iteration may continue
+
+#### Scenario: Configure one worker role
+
+- **WHEN** `/quant:codex-config implement <model> <effort>` receives valid values
+- **THEN** only the implementation profile changes and verification remains independently Claude-owned
+
 ### Requirement: Runtime state updates are validated and atomic
 
-The state helper SHALL maintain `schema_version`, boolean `codex_available`, boolean `research_enabled`, non-negative integer `iteration`, nullable timestamps, and atomic file replacement under `.ops/runtime/quant-research/state.json`. It SHALL reject malformed existing state without overwriting it and SHALL fail safely when another mutation holds the short-lived state lock.
+The state helper SHALL maintain `schema_version=2`, `codex_mode` constrained to
+auto/manual, boolean `codex_available`, validated role-specific Codex profiles,
+boolean `research_enabled`, non-negative integer `iteration`, nullable
+timestamps, and atomic file replacement under
+`.ops/runtime/quant-research/state.json`. It SHALL atomically migrate valid v1
+state to manual mode with role defaults while preserving existing values. It
+SHALL reject malformed or unsupported state without overwriting it and SHALL
+fail safely when another mutation holds the short-lived state lock.
 
 #### Scenario: Initialize missing state
 
 - **WHEN** the state helper runs `init` with no state file
-- **THEN** it creates valid state with both availability and research enabled, iteration zero, and null run/update timestamps
+- **THEN** it creates valid state in manual mode with Codex and research enabled, role-specific defaults, iteration zero, and null run/update timestamps
+
+#### Scenario: Migrate version-one state
+
+- **WHEN** the state helper reads a valid schema-version-1 state
+- **THEN** it writes schema version 2 in manual mode with default profiles while preserving availability, research, iteration, and timestamps
 
 #### Scenario: Refuse malformed state
 
@@ -50,12 +87,19 @@ The state helper SHALL maintain `schema_version`, boolean `codex_available`, boo
 
 ### Requirement: A research command is exactly one state-aware iteration
 
-`/quant-research` SHALL read the runtime state at the start of every invocation, record one iteration mechanically, check `research_enabled` before expensive research, and classify the result as `REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, `NEEDS-MORE-RESEARCH`, or `PROMOTE`. It SHALL not schedule another loop, sleep for the loop interval, recursively invoke Claude, embed Codex quota state in the loop prompt, or create an OPS transaction unless the result is `PROMOTE` and the promotion gate passes.
+`/quant-research` SHALL read runtime state at the start of every invocation. In
+auto mode it SHALL run exactly one bounded probe and re-read state; in manual
+mode it SHALL skip probing. It SHALL then record one iteration mechanically,
+check `research_enabled` before expensive research, and classify the result as
+`REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, `NEEDS-MORE-RESEARCH`, or `PROMOTE`. It
+SHALL not schedule another loop, sleep for the loop interval, recursively
+invoke Claude, embed Codex quota state in the loop prompt, or create an OPS
+transaction unless the result is `PROMOTE` and the promotion gate passes.
 
 #### Scenario: Intended recurring invocation
 
 - **WHEN** a user configures recurring research
-- **THEN** the documented invocation is `/quant:codex-off` followed by `/loop 20m /quant-research`, with quota state held in runtime state rather than loop arguments
+- **THEN** the documented invocation may use `/quant:codex-auto` or an explicit manual override followed by `/loop 20m /quant-research`, with routing state held outside loop arguments
 
 #### Scenario: Research is disabled
 

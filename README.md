@@ -69,23 +69,31 @@ OPS; quant evidence đi vào `research/quant/`; legacy-only content nằm dướ
 
 ## Quant research loop
 
-Claude Code hỗ trợ một vòng research bounded qua state runtime:
+Claude Code hỗ trợ auto-detection trước mỗi vòng research bounded:
 
 ```text
-/quant:codex-off
+/quant:codex-auto
 /loop 20m /quant-research
 ```
 
-Khi muốn bật lại Codex, chạy:
+Có thể chuyển về manual override mà không restart loop:
 
 ```text
 /quant:codex-on
+/quant:codex-off
+/quant:codex-manual
 ```
 
-Lệnh này không khởi động lại loop; vòng `/quant-research` kế tiếp tự đọc
-`codex_available` từ `.ops/runtime/quant-research/state.json`. State được tạo
-và cập nhật atomic bằng `.agents/scripts/quant-research-state.sh`, là runtime
-transient và không được commit.
+Các lệnh này không khởi động lại loop. Trong auto mode, vòng
+`/quant-research` kế tiếp chạy một probe bounded rồi đọc resolved
+`codex_available`; kết quả ambiguous giữ nguyên giá trị gần nhất. State schema
+v2 lưu cả `codex_mode` và các model profile tại
+`.ops/runtime/quant-research/state.json`, được cập nhật atomic bằng
+`.agents/scripts/quant-research-state.sh`, là runtime transient và không commit.
+
+Xem hoặc chỉnh model/effort độc lập theo role bằng
+`/quant:codex-config`: `probe`, `implement`, `fix`, và `fix-fallback`. Không có
+Codex review profile; VERIFY và FINAL_VERIFY vẫn do Claude độc lập.
 
 Ở chế độ bình thường, quant research chỉ nghiên cứu, OOS/holdout-validate và
 handoff cho Codex. Chỉ khi state tường minh tắt Codex, một candidate đã validate
@@ -111,9 +119,12 @@ transaction mới; transaction fallback đang chạy vẫn giữ route Claude v�
 | FIX primary | `gpt-5.6-terra` | `high` |
 | FIX fallback | `gpt-5.6-sol` | `high` |
 
-Operator có thể override qua `CODEX_IMPLEMENT_MODEL`, `CODEX_FIX_MODEL`,
-`CODEX_FIX_FALLBACK_MODEL` và `CODEX_REASONING_EFFORT`. Launcher không phụ
-thuộc model mặc định trong user config và không dùng `xhigh` mặc định. Codex
+Persisted profile có thể chỉnh bằng `/quant:codex-config`. Explicit environment
+override vẫn có ưu tiên qua `CODEX_IMPLEMENT_MODEL`, `CODEX_FIX_MODEL`,
+`CODEX_FIX_FALLBACK_MODEL`, `CODEX_IMPLEMENT_REASONING_EFFORT`,
+`CODEX_FIX_REASONING_EFFORT`, `CODEX_FIX_FALLBACK_REASONING_EFFORT`, hoặc shared
+`CODEX_REASONING_EFFORT`. Launcher không phụ thuộc model mặc định trong user
+config và không dùng `xhigh` mặc định. Codex
 CLI hiện tại không có literal `--yolo`; launcher dùng flag chính thức tương
 đương `--dangerously-bypass-approvals-and-sandbox`. Workflow hiện không launch
 Claude CLI lồng nhau; nếu sau này có một Claude CLI worker route được thiết kế
@@ -129,10 +140,10 @@ Mỗi attempt giữ stdout JSONL, stderr, last message, exit code và metadata
 allowlist tại
 `codex-<phase>-round-<round>-attempt-<n>.meta.json`. Classifier phân biệt global
 quota với model-local limit và transient HTTP 429. Chỉ
-`global-quota-exhausted` tự chạy `quant-research-state.sh codex-off`; không thử
-model khác và không đổi backend của transaction hiện tại. Generic 429 không tự
-tắt Codex. Việc bật lại luôn thủ công bằng `/quant:codex-on`, và chỉ transaction
-mới quan sát trạng thái mới.
+`global-quota-exhausted` tự cập nhật resolved availability; không thử model
+khác, không đổi auto/manual mode và không đổi backend của transaction hiện tại.
+Generic 429 không tự tắt Codex. Auto mode có thể phát hiện quota hồi phục ở
+iteration kế tiếp; chỉ transaction mới quan sát trạng thái mới.
 
 ## Source of truth cho quant promotion
 

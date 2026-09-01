@@ -24,13 +24,10 @@ shipped fix — never a no-op round.
 
 ## Round structure
 
-1. **Check Codex status.** `git -C <repo> log --oneline -3` in both
-   `finance-mw` and `finance-live-action`. New commits since last round mean
-   Codex is active — review and verify its Verify-section items instead of
-   implementing yourself. No new commits for several rounds plus an explicit
-   user statement that Codex is out of quota means full ownership: research
-   **and** implement **and** review, until the user says otherwise (see
-   "Codex-down mode" below).
+1. **Resolve Codex status.** Read quant runtime state first. In `auto` mode run
+   the bounded detector exactly once and re-read resolved availability; in
+   `manual` mode trust the explicit on/off value and do not probe. This routing
+   applies only to future transactions; an active OPS backend is immutable.
 2. **Research.** Read the backlog doc, decide the round's focus: extend an
    open lead, close a stale one with fresh data, or search for a genuinely
    new mechanism (Rule 2/3 of the standing `/loop` prompt: web search,
@@ -1242,10 +1239,11 @@ references with `ops-runtime.sh trace-origin` during PLAN. Never implement
 runtime code directly from a research-only result and never copy the OPS state
 machine into the research command.
 
-Codex-down mode is triggered by an explicit user statement that Codex is out of quota (check
-current memory for the standing instruction and its scope/end condition
-before assuming it still applies — it toggles back the moment the user says
-Codex has resumed). While active:
+Codex-down mode is active whenever the current resolved state reports
+`codex_available=false`, either from an explicit manual override or conclusive
+global-quota detection. Auto mode retries one bounded probe at each iteration
+boundary and can recover without restarting `/loop`; ambiguous probe outcomes
+retain the last resolved value. While Codex-down mode is active:
 
 1. Route an actionable implementation through the existing `/ops:run`
    lifecycle in the current top-level Claude session; do not modify runtime

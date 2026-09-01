@@ -103,6 +103,7 @@ case "${FAKE_SCENARIO:-success}:$model" in
   global-sol:gpt-5.6-sol) emit_error insufficient_quota 12 ;;
   both-unavailable:gpt-5.6-terra|both-unavailable:gpt-5.6-sol) emit_error model_unavailable 10 ;;
   generic-429:gpt-5.6-terra) emit_error rate_limit_exceeded 13 ;;
+  profile-fallback:state-fix) emit_error model_unavailable 10 ;;
   explicit-quota:*)
     printf '%s\n' 'Account-wide Codex quota is exhausted.' >&2
     exit 12
@@ -182,6 +183,28 @@ CODEX_IMPLEMENT_MODEL=operator-model CODEX_REASONING_EFFORT=medium \
   run_worker success "$trace" operator-overrides IMPLEMENT
 assert_file_contains "$trace/call-1.args" operator-model 'IMPLEMENT model override was ignored'
 assert_file_contains "$trace/call-1.args" 'model_reasoning_effort="medium"' 'reasoning override was ignored'
+
+"$QUANT" profile-set implement state-implement low >/dev/null
+"$QUANT" profile-set fix state-fix medium >/dev/null
+"$QUANT" profile-set fix-fallback state-fallback xhigh >/dev/null
+new_change state-implement-profile
+enter_implement state-implement-profile
+trace="$tmp/trace-state-implement"
+run_worker success "$trace" state-implement-profile IMPLEMENT
+assert_file_contains "$trace/call-1.args" state-implement 'IMPLEMENT ignored its persisted model profile'
+assert_file_contains "$trace/call-1.args" 'model_reasoning_effort="low"' 'IMPLEMENT ignored its persisted effort profile'
+new_change state-fix-profiles
+enter_fix state-fix-profiles 'profile routing finding'
+trace="$tmp/trace-state-fix"
+run_worker profile-fallback "$trace" state-fix-profiles FIX
+assert_file_contains "$trace/call-1.args" state-fix 'primary FIX ignored its persisted model profile'
+assert_file_contains "$trace/call-1.args" 'model_reasoning_effort="medium"' 'primary FIX ignored its persisted effort profile'
+assert_file_contains "$trace/call-2.args" state-fallback 'FIX fallback ignored its persisted model profile'
+assert_file_contains "$trace/call-2.args" 'model_reasoning_effort="xhigh"' 'FIX fallback ignored its persisted effort profile'
+jq -e '.model == "state-fallback" and .reasoning_effort == "xhigh"' \
+  "$workspace/.ops/changes/state-fix-profiles/runtime/logs/codex-fix-round-1-attempt-2.meta.json" >/dev/null \
+  || fail 'fallback metadata did not record its effective profile'
+"$QUANT" profiles-reset >/dev/null
 
 new_change fix-fallback
 enter_fix fix-fallback 'ROUND ONE UNIQUE FINDING'

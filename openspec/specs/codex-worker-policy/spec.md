@@ -5,9 +5,19 @@ Defines deterministic, auditable Codex worker selection and failure handling for
 
 ## Requirements
 
-### Requirement: Worker phases select explicit models and reasoning effort
+### Requirement: Worker phases select explicit role-specific profiles
 
-Every Codex worker attempt SHALL pass an explicit model and reasoning effort. IMPLEMENT SHALL default to `gpt-5.6-luna` with `high`; the primary FIX attempt SHALL default to `gpt-5.6-terra` with `high`; and an eligible FIX fallback SHALL use `gpt-5.6-sol` with `high`. Operators MAY override these values through the documented environment variables, and no default SHALL use `xhigh`. Every Codex worker attempt SHALL use the installed CLI's supported bypass-approval-and-sandbox flag; every Claude CLI worker invocation in the same orchestration scope SHALL use `--dangerously-skip-permissions`.
+Every Codex worker attempt SHALL pass an explicit model and reasoning effort.
+The phase runner SHALL resolve the persisted `implement` profile for IMPLEMENT,
+the `fix` profile for primary FIX, and the `fix_fallback` profile only for an
+eligible FIX fallback. Defaults SHALL remain Luna/high, Terra/high, and Sol/high
+respectively. Explicit phase-runner environment overrides SHALL take precedence
+over persisted profiles. The availability detector SHALL use only the `probe`
+profile. VERIFY and FINAL_VERIFY SHALL remain independent Claude phases and
+SHALL NOT be routed through a Codex review profile. Every Codex worker attempt
+SHALL use the installed CLI's supported bypass-approval-and-sandbox flag; every
+Claude CLI worker invocation in the same orchestration scope SHALL use
+`--dangerously-skip-permissions`.
 
 #### Scenario: IMPLEMENT uses Luna high
 - **WHEN** a Codex-backed transaction invokes IMPLEMENT without overrides
@@ -16,6 +26,14 @@ Every Codex worker attempt SHALL pass an explicit model and reasoning effort. IM
 #### Scenario: FIX uses Terra high
 - **WHEN** a Codex-backed transaction invokes FIX without overrides
 - **THEN** the first attempt explicitly selects `gpt-5.6-terra`, `high`, and the supported Codex permission-bypass flag
+
+#### Scenario: Configured FIX fallback is isolated
+- **WHEN** primary FIX is eligible for fallback and no environment override is present
+- **THEN** attempt two uses both the persisted fix-fallback model and effort without changing the primary FIX or IMPLEMENT profiles
+
+#### Scenario: Verification remains independent
+- **WHEN** IMPLEMENT or FIX succeeds
+- **THEN** the next required VERIFY or FINAL_VERIFY phase is executed by Claude rather than a configured Codex profile
 
 #### Scenario: Claude worker bypass is explicit
 - **WHEN** orchestration launches a Claude CLI worker
@@ -51,7 +69,13 @@ Every attempt SHALL produce exactly one of `success`, `global-quota-exhausted`, 
 
 ### Requirement: Global quota disables only future Codex selection
 
-On `global-quota-exhausted`, the worker SHALL atomically invoke the quant state helper's `codex-off` operation, SHALL NOT attempt another model, and SHALL exit nonzero so orchestration can perform terminal cleanup. It SHALL NOT mutate the active transaction's persisted backend. Re-enabling Codex SHALL remain a manual operation.
+On `global-quota-exhausted`, the worker SHALL atomically update resolved Codex
+availability to false without changing the selected auto/manual mode, SHALL NOT
+attempt another model, and SHALL exit nonzero so orchestration can perform
+terminal cleanup. It SHALL NOT mutate the active transaction's persisted
+backend. Re-enabling Codex SHALL require either an explicit manual on override
+or a successful probe while auto mode is selected. Inconclusive probes SHALL
+preserve the last resolved availability.
 
 #### Scenario: Primary FIX exhausts global quota
 - **WHEN** Terra reports global quota exhaustion
@@ -60,6 +84,10 @@ On `global-quota-exhausted`, the worker SHALL atomically invoke the quant state 
 #### Scenario: Fallback FIX exhausts global quota
 - **WHEN** Sol reports global quota exhaustion after an eligible Terra fallback
 - **THEN** future quant transactions observe Codex disabled and no additional model is attempted
+
+#### Scenario: Successful auto probe re-enables future selection
+- **WHEN** auto mode is selected, resolved availability is false, and the bounded probe succeeds
+- **THEN** future transactions observe Codex enabled without changing any active transaction backend
 
 ### Requirement: FIX consumes round-specific Claude findings
 

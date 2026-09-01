@@ -15,10 +15,14 @@ không khởi động một Claude CLI/session lồng nhau.
 ## Bắt đầu vòng
 
 1. Đọc state bằng `./.agents/scripts/quant-research-state.sh state`; state
-   authoritative là `.ops/runtime/quant-research/state.json`. Sau đó chạy
+   authoritative là `.ops/runtime/quant-research/state.json`. Nếu
+   `codex_mode=auto`, chạy `./.agents/scripts/detect-codex-availability.sh`
+   đúng một lần rồi đọc lại state. Probe inconclusive không dừng iteration và
+   phải giữ nguyên resolved availability trước đó. Nếu `codex_mode=manual`,
+   tuyệt đối không chạy probe. Sau đó chạy
    `./.agents/scripts/quant-research-state.sh begin-iteration` đúng một lần và
-   đọc lại state để lấy `codex_available`, `research_enabled`, `iteration` và
-   timestamp hiện tại.
+   đọc lại state để lấy `codex_mode`, `codex_available`, `research_enabled`,
+   `iteration` và timestamp hiện tại.
 2. Nếu `research_enabled=false`, ghi nhận vòng đã bỏ qua và dừng trước mọi
    research/backtest tốn tài nguyên.
 3. Đọc `research/quant/reports/optimize_loop_update_v2.csv`,
@@ -114,8 +118,9 @@ Với `PROMOTE`:
    dung report, environment hay secret.
 
 Khi `codex_available=true`, promoted transaction dùng backend mặc định
-`implementation_backend=codex`; Codex Luna/high IMPLEMENT và Terra/high FIX,
-với Sol/high fallback chỉ theo worker policy hiện hữu. Khi
+`implementation_backend=codex`; model/effort cho IMPLEMENT, FIX và FIX
+fallback lấy từ các profile độc lập trong quant state. VERIFY và FINAL_VERIFY
+vẫn do Claude độc lập, không phải một Codex review profile. Khi
 `codex_available=false`, promoted transaction chỉ được dùng fallback gate hiện
 hữu với `implementation_backend=claude-fallback`, context `quant-fallback`, và
 `verification_mode=claude-fallback-self-review`. Không sửa runtime code trực

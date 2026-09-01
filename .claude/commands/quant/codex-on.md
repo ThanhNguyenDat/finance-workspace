@@ -10,5 +10,5 @@ Chạy lệnh state helper sau đúng một lần:
 
 Không bắt đầu research và không khởi động lại `/loop`. Khi lệnh thành công,
 chỉ xác nhận bằng tiếng Việt rằng vòng `/quant-research` kế tiếp sẽ đọc
-`codex_available=true` và trở về chế độ Codex bình thường. Không in raw JSON
-runtime trừ khi người dùng yêu cầu debug.
+`codex_mode=manual`, `codex_available=true` và trở về chế độ Codex bình thường.
+Không in raw JSON runtime trừ khi người dùng yêu cầu debug.

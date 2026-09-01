@@ -40,11 +40,21 @@ command -v jq >/dev/null 2>&1 || die 'jq is required'
 
 timeout_seconds="${CODEX_TIMEOUT_SECONDS:-3600}"
 [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || die 'CODEX_TIMEOUT_SECONDS must be a positive integer'
-implement_model="${CODEX_IMPLEMENT_MODEL:-gpt-5.6-luna}"
-fix_model="${CODEX_FIX_MODEL:-gpt-5.6-terra}"
-fix_fallback_model="${CODEX_FIX_FALLBACK_MODEL:-gpt-5.6-sol}"
-reasoning_effort="${CODEX_REASONING_EFFORT:-high}"
-for setting in "$implement_model" "$fix_model" "$fix_fallback_model" "$reasoning_effort"; do
+quant_state_dir="${QUANT_RESEARCH_STATE_DIR:-$RUNTIME_ROOT/.ops/runtime/quant-research}"
+read -r implement_profile_model implement_profile_effort \
+  < <(QUANT_RESEARCH_STATE_DIR="$quant_state_dir" "$QUANT_STATE_HELPER" profile-get implement)
+read -r fix_profile_model fix_profile_effort \
+  < <(QUANT_RESEARCH_STATE_DIR="$quant_state_dir" "$QUANT_STATE_HELPER" profile-get fix)
+read -r fallback_profile_model fallback_profile_effort \
+  < <(QUANT_RESEARCH_STATE_DIR="$quant_state_dir" "$QUANT_STATE_HELPER" profile-get fix-fallback)
+implement_model="${CODEX_IMPLEMENT_MODEL:-$implement_profile_model}"
+fix_model="${CODEX_FIX_MODEL:-$fix_profile_model}"
+fix_fallback_model="${CODEX_FIX_FALLBACK_MODEL:-$fallback_profile_model}"
+implement_effort="${CODEX_IMPLEMENT_REASONING_EFFORT:-${CODEX_REASONING_EFFORT:-$implement_profile_effort}}"
+fix_effort="${CODEX_FIX_REASONING_EFFORT:-${CODEX_REASONING_EFFORT:-$fix_profile_effort}}"
+fix_fallback_effort="${CODEX_FIX_FALLBACK_REASONING_EFFORT:-${CODEX_REASONING_EFFORT:-$fallback_profile_effort}}"
+for setting in "$implement_model" "$fix_model" "$fix_fallback_model" \
+  "$implement_effort" "$fix_effort" "$fix_fallback_effort"; do
   valid_setting "$setting" || die 'model and reasoning overrides must contain only safe identifier characters'
 done
 
@@ -103,8 +113,9 @@ attempt_result=unknown-error
 
 run_attempt() {
   local model="$1"
-  local attempt="$2"
-  local fallback_from="$3"
+  local effort="$2"
+  local attempt="$3"
+  local fallback_from="$4"
   local base stdout_log stderr_log last_message exit_code_file meta_file meta_tmp status
   base="$log_dir/codex-${phase,,}-round-${round}-attempt-${attempt}"
   stdout_log="$base.stdout.jsonl"
@@ -117,7 +128,7 @@ run_attempt() {
   set +e
   timeout --signal=TERM --kill-after=30s "${timeout_seconds}s" \
     codex exec --ignore-user-config --model "$model" \
-    --config "model_reasoning_effort=\"$reasoning_effort\"" \
+    --config "model_reasoning_effort=\"$effort\"" \
     --cd "$workspace_root" --add-dir "$repository_root" --ephemeral \
     --dangerously-bypass-approvals-and-sandbox --json \
     --output-last-message "$last_message" - \
@@ -135,7 +146,7 @@ run_attempt() {
     --argjson round "$round" \
     --argjson attempt "$attempt" \
     --arg model "$model" \
-    --arg reasoning_effort "$reasoning_effort" \
+    --arg reasoning_effort "$effort" \
     --arg fallback_from "$fallback_from" \
     --arg result_class "$attempt_result" \
     '{worker: $worker, phase: $phase, round: $round, attempt: $attempt,
@@ -145,8 +156,8 @@ run_attempt() {
   mv -f -- "$meta_tmp" "$meta_file"
 
   if [ "$attempt_result" = global-quota-exhausted ]; then
-    QUANT_RESEARCH_STATE_DIR="${QUANT_RESEARCH_STATE_DIR:-$RUNTIME_ROOT/.ops/runtime/quant-research}" \
-      "$QUANT_STATE_HELPER" codex-off >/dev/null \
+    QUANT_RESEARCH_STATE_DIR="$quant_state_dir" \
+      "$QUANT_STATE_HELPER" codex-worker-off >/dev/null \
       || die 'global quota was detected but Codex availability could not be disabled'
   fi
 
@@ -155,11 +166,13 @@ run_attempt() {
 
 if [ "$phase" = IMPLEMENT ]; then
   primary_model="$implement_model"
+  primary_effort="$implement_effort"
 else
   primary_model="$fix_model"
+  primary_effort="$fix_effort"
 fi
 
-if run_attempt "$primary_model" 1 ''; then
+if run_attempt "$primary_model" "$primary_effort" 1 ''; then
   printf 'Codex phase %s completed; evidence: %s\n' "$phase" "$log_dir"
   exit 0
 fi
@@ -167,7 +180,7 @@ primary_status="$attempt_status"
 primary_result="$attempt_result"
 
 if [ "$phase" = FIX ] && { [ "$primary_result" = model-unavailable ] || [ "$primary_result" = model-specific-limit ]; }; then
-  if run_attempt "$fix_fallback_model" 2 "$primary_model"; then
+  if run_attempt "$fix_fallback_model" "$fix_fallback_effort" 2 "$primary_model"; then
     printf 'Codex phase %s completed via fallback; evidence: %s\n' "$phase" "$log_dir"
     exit 0
   fi

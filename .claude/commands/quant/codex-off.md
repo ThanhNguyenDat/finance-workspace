@@ -10,5 +10,6 @@ Chạy lệnh state helper sau đúng một lần:
 
 Không bắt đầu research, không khởi động Codex, không dừng hoặc khởi động lại
 `/loop`. Khi lệnh thành công, chỉ xác nhận bằng tiếng Việt rằng các vòng
-`/quant-research` kế tiếp sẽ dùng chế độ Claude fallback khi cần implement.
-Không in raw JSON runtime trừ khi người dùng yêu cầu debug.
+`/quant-research` kế tiếp sẽ đọc `codex_mode=manual`,
+`codex_available=false` và dùng chế độ Claude fallback khi cần implement. Không
+in raw JSON runtime trừ khi người dùng yêu cầu debug.
