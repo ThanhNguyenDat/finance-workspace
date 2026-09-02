@@ -181,9 +181,19 @@ spec for every task below that says "matches the current bash behavior."
   dry run reproducing the same steps in a clean checkout with no
   pre-existing `.agents/orchestrator/.venv`) completes the "Run bounded
   orchestration tests" step successfully.
+  Evidence (2026-09-02): commit `1f68f7b431edc7a000c745fb23846dd45a54ebc8`
+  adds `astral-sh/setup-uv@v6.1.0`; [Agent contracts run
+  33607048099](https://github.com/ThanhNguyenDat/finance-workspace/actions/runs/33607048099)
+  completed successfully, including both the setup and bounded-test steps on
+  the hosted clean runner.
 - [x] 8.5 Commit every file this change touches (`.agents/orchestrator/`,
   the three shims, `.agents/rules/coding-and-verification.md`,
   `.agents/skills/quant-research-loop/SKILL.md`, and the CI workflow from
   8.4) in one reviewable commit or small stack, push to `origin/main`, and
   verify the `Agent contracts` workflow run for that exact commit SHA
   succeeds on GitHub Actions before this change is archived.
+  Evidence (2026-09-02): scoped implementation commit
+  `1f68f7b431edc7a000c745fb23846dd45a54ebc8` was pushed to `origin/main` and
+  succeeded in run 33607048099; delivery-record commit
+  `10c090b0d9cd3c391332c840a5a7ef72d2ace4c3` also passed [run
+  33607379165](https://github.com/ThanhNguyenDat/finance-workspace/actions/runs/33607379165).
