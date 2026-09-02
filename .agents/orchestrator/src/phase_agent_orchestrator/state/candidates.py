@@ -159,7 +159,10 @@ def state_valid(value: Any) -> bool:
                 try:
                     normalized, _ = resolve_account_dir(provider, account_name, PREFIX)
                 except CLIError:
-                    return False
+                    try:
+                        normalized = normalize_account(account_name, PREFIX)
+                    except CLIError:
+                        return False
                 if normalized != account_name or not isinstance(account_item.get("available"), bool):
                     return False
                 for key in ("reason", "observed_at", "next_probe_at"):

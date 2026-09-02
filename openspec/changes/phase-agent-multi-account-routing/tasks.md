@@ -104,7 +104,7 @@ Impact).
 
 ## 4. FIX round — Claude VERIFY finding
 
-- [ ] 4.1 **P1 (correctness/operability).** `state_valid()`
+- [x] 4.1 **P1 (correctness/operability).** `state_valid()`
   (`.agents/orchestrator/src/phase_agent_orchestrator/state/candidates.py`,
   the `accounts` loop around line 156) calls `resolve_account_dir` for
   *every* account name ever recorded under `providers.<provider>.accounts`

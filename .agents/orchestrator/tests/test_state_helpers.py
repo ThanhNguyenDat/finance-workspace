@@ -213,3 +213,28 @@ def test_account_provider_result_does_not_disable_provider_or_sibling(tmp_path: 
     assert state["providers"]["codex"]["available"] is True
     assert state["providers"]["codex"]["accounts"]["work"]["available"] is False
     assert state["providers"]["codex"]["accounts"]["personal"]["available"] is True
+
+
+def test_state_validation_tolerates_unresolvable_historical_account(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    state_dir = tmp_path / "phase-state"
+    monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(state_dir))
+    monkeypatch.delenv("PHASE_AGENT_CLAUDE_ACCOUNT_STALE_DIR", raising=False)
+
+    monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "init"])
+    phase_cli.main()
+    state_path = state_dir / "state.json"
+    state = json.loads(state_path.read_text())
+    state["providers"]["claude"]["accounts"] = {"stale": candidates.availability_record()}
+    io.atomic_write_json(state_path, state)
+
+    assert candidates.state_valid(json.loads(state_path.read_text()))
+    for argv in (
+        ["phase-agent-state", "state"],
+        ["phase-agent-state", "auto", "plan"],
+        ["phase-agent-state", "set", "plan", "codex", "safe-model", "high"],
+        ["phase-agent-state", "pin", "plan", "codex"],
+    ):
+        monkeypatch.setattr(phase_cli.sys, "argv", argv)
+        assert phase_cli.main() == 0
+
+    assert "stale" in json.loads(state_path.read_text())["providers"]["claude"]["accounts"]
