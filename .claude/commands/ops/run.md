@@ -10,6 +10,26 @@ Invoke as `/ops:run "<request>"`. The parent process orchestrates deterministic
 state and never calls a model CLI directly. Every model-owned phase runs only
 through `./.agents/scripts/run-phase-agent.sh`.
 
+## Running a phase attempt without blocking
+
+`run-phase-agent.sh` can run up to its full timeout (default 3600s). Never
+invoke it as a plain foreground call and never poll it with an ad-hoc
+`sleep`/`ps aux | grep <pid>` loop — the PID changes every attempt and is
+easy to get wrong. Always:
+
+1. Launch it with `run_in_background: true`.
+2. Immediately arm `./.agents/scripts/wait-for-phase-attempt.sh <change>`
+   in a `Monitor` (or as a second `run_in_background` command) — it blocks
+   on the change's `.phase-attempt-lock` lease itself, not a PID, so it
+   works unmodified across retries/continuations. Also arm
+   `./.agents/scripts/watch-phase-attempt-log.sh <change>` in a second
+   `Monitor` to stream real agent progress (tool calls, file changes,
+   messages) instead of manually polling status.
+3. Do not manually re-check status between notifications. A stop hook may
+   repeatedly report the change is still active while the attempt runs;
+   that is expected and is not a signal to poll — wait for the Monitor/
+   background-task notification instead.
+
 ## Contract
 
 - Logical agents own PLAN, IMPLEMENT, VERIFY, FIX and FINAL_VERIFY; ordered

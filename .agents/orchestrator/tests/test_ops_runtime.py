@@ -6,17 +6,18 @@ from pathlib import Path
 
 import pytest
 
-from phase_agent_orchestrator.common import CLIError
-from phase_agent_orchestrator import ops_runtime as ops
+from phase_agent_orchestrator.io import CLIError
+from phase_agent_orchestrator.locks import change_lock
+from phase_agent_orchestrator.state import ops_transaction
 
 
 def test_transition_matrix_preserves_all_allowed_and_rejected_edges() -> None:
     accepted = {"PLAN:IMPLEMENT", "IMPLEMENT:VERIFY", "VERIFY:FINAL_VERIFY", "FIX:VERIFY", "FINAL_VERIFY:RELEASE", "FINAL_VERIFY:ARCHIVE", "RELEASE:DEPLOY_VERIFY", "RELEASE:ARCHIVE", "DEPLOY_VERIFY:ARCHIVE"}
-    assert ops.TRANSITIONS == accepted
-    all_phases = sorted(ops.PHASES)
+    assert ops_transaction.TRANSITIONS == accepted
+    all_phases = sorted(ops_transaction.PHASES)
     for source in all_phases:
         for target in all_phases:
-            assert (f"{source}:{target}" in ops.TRANSITIONS) == (f"{source}:{target}" in accepted)
+            assert (f"{source}:{target}" in ops_transaction.TRANSITIONS) == (f"{source}:{target}" in accepted)
 
 
 def prepare_origin_change(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[str, str]:
@@ -40,7 +41,7 @@ def prepare_origin_change(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tu
 def test_trace_origin_rejects_traversal_and_outside_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, artifact: str) -> None:
     change, session = prepare_origin_change(tmp_path, monkeypatch)
     with pytest.raises(CLIError):
-        ops.trace_origin(change, session, "1", "XAU", [artifact])
+        ops_transaction.trace_origin(change, session, "1", "XAU", [artifact])
     assert not (tmp_path / ".ops/changes" / change / "runtime/origin.json").exists()
 
 
@@ -50,11 +51,10 @@ def test_repo_lock_rechecks_owner_after_existence_snapshot(tmp_path: Path, monke
     repositories = [str(tmp_path / "repo-a"), str(tmp_path / "repo-b")]
     locks = {repository: tmp_path / f"lock-{index}" for index, repository in enumerate(repositories)}
     locks[repositories[0]].mkdir()
-    monkeypatch.setattr(ops, "change_dir", lambda _change: change_dir)
-    monkeypatch.setattr(ops, "assert_active_owner", lambda _change, _session: {})
-    monkeypatch.setattr(ops, "canonical_repo", lambda repository: repository)
-    monkeypatch.setattr(ops, "repo_lock_dir", lambda repository: locks[repository])
-    monkeypatch.setattr(ops, "release_repo_locks", lambda _change, _session: None)
+    monkeypatch.setattr(change_lock, "change_dir", lambda _change: change_dir)
+    monkeypatch.setattr(change_lock, "canonical_repo", lambda repository: repository)
+    monkeypatch.setattr(change_lock, "repo_lock_dir", lambda repository: locks[repository])
+    monkeypatch.setattr(change_lock, "release_repo_locks", lambda _change, _session: None)
 
     class SnapshotExecutor:
         def __enter__(self) -> "SnapshotExecutor":
@@ -64,11 +64,11 @@ def test_repo_lock_rechecks_owner_after_existence_snapshot(tmp_path: Path, monke
             return [(value, function(value)) for value in values]  # type: ignore[operator]
 
         def __exit__(self, _type: object, _value: object, _traceback: object) -> None:
-            (locks[repositories[0]] / "owner.json").write_text(json.dumps({"pid": str(os.getpid()), "hostname": ops.socket.gethostname()}))
+            (locks[repositories[0]] / "owner.json").write_text(json.dumps({"pid": str(os.getpid()), "hostname": change_lock.socket.gethostname()}))
 
-    monkeypatch.setattr(ops, "ThreadPoolExecutor", lambda **_kwargs: SnapshotExecutor())
-    with pytest.raises(ops._ReturnStatus) as error:
-        ops.lock_repositories("change", "session", repositories)
+    monkeypatch.setattr(change_lock, "ThreadPoolExecutor", lambda **_kwargs: SnapshotExecutor())
+    with pytest.raises(change_lock._ReturnStatus) as error:
+        change_lock.lock_repositories("change", "session", repositories)
     assert error.value.status == 1
     assert "repository lock exists" in capsys.readouterr().err
     assert json.loads((locks[repositories[0]] / "owner.json").read_text())["pid"] == str(os.getpid())

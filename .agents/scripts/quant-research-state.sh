@@ -5,10 +5,10 @@ PROJECT_DIR="${PHASE_AGENT_ORCHESTRATOR_PROJECT:-$SCRIPT_DIR/../orchestrator}"
 PROJECT_DIR="$(cd -- "$PROJECT_DIR" 2>/dev/null && pwd -P || true)"
 [[ -n "$PROJECT_DIR" && -d "$PROJECT_DIR" ]] || { printf 'quant-research-state: orchestrator project not found\n' >&2; exit 1; }
 if UV_BIN="$(command -v uv 2>/dev/null)"; then
-  exec "$UV_BIN" run --project "$PROJECT_DIR" python -m phase_agent_orchestrator.quant_research_state "$@"
+  exec "$UV_BIN" run --project "$PROJECT_DIR" python -m phase_agent_orchestrator.cli.quant_research_state "$@"
 fi
 if [[ -x "$PROJECT_DIR/.venv/bin/python" ]]; then
-  exec "$PROJECT_DIR/.venv/bin/python" -m phase_agent_orchestrator.quant_research_state "$@"
+  exec "$PROJECT_DIR/.venv/bin/python" -m phase_agent_orchestrator.cli.quant_research_state "$@"
 fi
 printf 'quant-research-state: uv is required (or bootstrap .agents/orchestrator/.venv first)\n' >&2
 exit 1

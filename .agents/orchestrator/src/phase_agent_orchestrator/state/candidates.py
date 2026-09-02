@@ -1,4 +1,4 @@
-"""Implementation of .agents/scripts/phase-agent-state.sh."""
+"""Candidate profiles, provider health, and phase-agent state."""
 
 from __future__ import annotations
 
@@ -6,22 +6,12 @@ import copy
 import json
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
-from .common import (
-    CLIError,
-    PidDirectoryLock,
-    atomic_write_json,
-    die,
-    json_text,
-    normalize_account,
-    resolve_account_dir,
-    run_cli,
-    utc_after,
-    utc_now,
-)
+from ..accounts.registry import normalize_account, resolve_account_dir
+from ..io import CLIError, atomic_write_json, die, json_text, utc_after, utc_now
+from ..locks.directory_lock import PidDirectoryLock
 
 PREFIX = "phase-agent-state"
 PHASES = ("quant_research", "plan", "implement", "verify", "fix", "final_verify")
@@ -30,7 +20,7 @@ SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9._:-]+$")
 
 
 def root_dir() -> Path:
-    return Path(os.environ.get("PHASE_AGENT_ROOT", Path(__file__).resolve().parents[4]))
+    return Path(os.environ.get("PHASE_AGENT_ROOT", Path(__file__).resolve().parents[5]))
 
 
 def state_dir() -> Path:
@@ -43,14 +33,6 @@ def state_path() -> Path:
 
 def lock() -> PidDirectoryLock:
     return PidDirectoryLock(state_dir() / ".lock", PREFIX)
-
-
-def usage() -> None:
-    print(
-        "Usage: phase-agent-state.sh <init|state|account-dir PROVIDER ACCOUNT|validate PROVIDER MODEL EFFORT [ACCOUNT]|resolve PHASE|set PHASE PROVIDER MODEL EFFORT [ACCOUNT]|candidate-set PHASE INDEX PROVIDER MODEL EFFORT [ACCOUNT]|reset PHASE|reset-all|pin PHASE PROVIDER [ACCOUNT]|auto PHASE|provider-on PROVIDER [ACCOUNT]|provider-off PROVIDER [REASON] [ACCOUNT]|provider-manual PROVIDER|provider-auto PROVIDER|provider-result PROVIDER RESULT [COOLDOWN_SECONDS] [ACCOUNT]|probe-due PROVIDER [ACCOUNT]>",
-        file=sys.stderr,
-    )
-    raise SystemExit(2)
 
 
 def valid_phase(value: str) -> bool:
@@ -73,10 +55,7 @@ def validate_candidate(provider: str, model: str, effort: str, account: str | No
         die(PREFIX, f"unsupported provider: {provider}")
     if not SAFE_IDENTIFIER.fullmatch(model):
         die(PREFIX, "model contains unsafe characters")
-    valid_efforts = {
-        "codex": {"none", "minimal", "low", "medium", "high", "xhigh"},
-        "claude": {"low", "medium", "high", "xhigh", "max"},
-    }
+    valid_efforts = {"codex": {"none", "minimal", "low", "medium", "high", "xhigh"}, "claude": {"low", "medium", "high", "xhigh", "max"}}
     if effort not in valid_efforts[provider]:
         die(PREFIX, f"unsupported effort for {provider}: {effort}")
     if provider == "claude" and re.search(r"(^|[-.:])opus($|[-.:])", model) and effort not in {"medium", "high"}:
@@ -93,23 +72,14 @@ def candidate(provider: str, model: str, effort: str, account: str | None = None
 
 
 def default_state() -> dict[str, Any]:
-    return {
-        "schema_version": 1,
-        "phases": {
-            "quant_research": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "sonnet", "high"), candidate("codex", "gpt-5.6-luna", "high")]},
-            "plan": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "opus", "medium"), candidate("codex", "gpt-5.6-terra", "high")]},
-            "implement": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("codex", "gpt-5.6-luna", "high"), candidate("claude", "sonnet", "high")]},
-            "verify": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "opus", "medium"), candidate("codex", "gpt-5.6-terra", "high")]},
-            "fix": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("codex", "gpt-5.6-terra", "high"), candidate("codex", "gpt-5.6-sol", "high"), candidate("claude", "opus", "high")]},
-            "final_verify": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "opus", "high"), candidate("codex", "gpt-5.6-terra", "high")]},
-        },
-        "providers": {
-            "codex": {"mode": "auto", "available": True, "reason": None, "observed_at": None, "next_probe_at": None},
-            "claude": {"mode": "auto", "available": True, "reason": None, "observed_at": None, "next_probe_at": None},
-        },
-        "legacy_imported": False,
-        "updated_at": None,
-    }
+    return {"schema_version": 1, "phases": {
+        "quant_research": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "sonnet", "high"), candidate("codex", "gpt-5.6-luna", "high")]},
+        "plan": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "opus", "medium"), candidate("codex", "gpt-5.6-terra", "high")]},
+        "implement": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("codex", "gpt-5.6-luna", "high"), candidate("claude", "sonnet", "high")]},
+        "verify": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "opus", "medium"), candidate("codex", "gpt-5.6-terra", "high")]},
+        "fix": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("codex", "gpt-5.6-terra", "high"), candidate("codex", "gpt-5.6-sol", "high"), candidate("claude", "opus", "high")]},
+        "final_verify": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "opus", "high"), candidate("codex", "gpt-5.6-terra", "high")]},
+    }, "providers": {"codex": {"mode": "auto", "available": True, "reason": None, "observed_at": None, "next_probe_at": None}, "claude": {"mode": "auto", "available": True, "reason": None, "observed_at": None, "next_probe_at": None}}, "legacy_imported": False, "updated_at": None}
 
 
 def availability_record() -> dict[str, Any]:
@@ -130,8 +100,7 @@ def is_string(value: Any) -> bool:
 def state_valid(value: Any) -> bool:
     if not isinstance(value, dict) or value.get("schema_version") != 1:
         return False
-    phases = value.get("phases")
-    providers = value.get("providers")
+    phases, providers = value.get("phases"), value.get("providers")
     if not isinstance(phases, dict) or set(phases) != set(PHASES) or not isinstance(providers, dict) or set(providers) != set(PROVIDERS):
         return False
     for phase in PHASES:
@@ -257,7 +226,7 @@ def ensure_state() -> dict[str, Any]:
 
 def save(state: dict[str, Any]) -> None:
     if not state_valid(state):
-        die(PREFIX, "refusing invalid state")
+        die(PREFIX, "refusing to write state that fails schema validation")
     atomic_write_json(state_path(), state)
 
 
@@ -275,138 +244,63 @@ def emit(state: dict[str, Any]) -> None:
     print(json_text(state))
 
 
-def main() -> int:
-    args = sys.argv[1:]
-    command = args[0] if args else ""
-    if command in {"init", "state"}:
-        if len(args) != 1:
-            usage()
-        current_lock, state = with_state()
-        try:
-            emit(state)
-        finally:
-            current_lock.release()
-        return 0
-    if command == "account-dir":
-        if len(args) != 3:
-            usage()
-        _, directory = resolve_account_dir(args[1], args[2], PREFIX)
-        print(directory)
-        return 0
-    if command == "validate":
-        if len(args) not in {4, 5}:
-            usage()
-        validate_candidate(args[1], args[2], args[3], args[4] if len(args) == 5 else None)
-        return 0
-    if command == "resolve":
-        if len(args) != 2:
-            usage()
-        phase = normalize_phase(args[1])
-        current_lock, state = with_state()
-        try:
-            item = state["phases"][phase]
-            for option in item["candidates"]:
-                provider = option["provider"]
-                account = option.get("account")
-                pinned_account = item.get("pinned_account")
-                provider_available = state["providers"][provider]["available"]
-                if account is not None:
-                    provider_available = state["providers"][provider].get("accounts", {}).get(account, {}).get("available", True)
-                if (item["mode"] != "manual" or item["pinned_provider"] == provider) and (pinned_account is None or pinned_account == account) and provider_available:
-                    fields = [provider, option["model"], option["effort"]]
-                    if account is not None:
-                        fields.append(account)
-                    print("\t".join(fields))
-                    break
-        finally:
-            current_lock.release()
-        return 0
-    if command in {"set", "candidate-set"}:
-        expected = {"set": {5, 6}, "candidate-set": {6, 7}}[command]
-        if len(args) not in expected:
-            usage()
-        phase = normalize_phase(args[1])
-        if command == "set":
-            provider, model, effort = args[2:5]
-            account = args[5] if len(args) == 6 else None
-        else:
-            index = args[2]
-            if not index.isdigit():
-                die(PREFIX, "candidate index must be non-negative")
-            provider, model, effort = args[3:6]
-            account = args[6] if len(args) == 7 else None
-        validate_candidate(provider, model, effort, account)
-        current_lock, state = with_state()
-        try:
-            if command == "set":
-                state["phases"][phase]["candidates"] = [candidate(provider, model, effort, account)] + [item for item in state["phases"][phase]["candidates"] if item["provider"] != provider]
-            else:
-                position = int(index)
-                candidates = state["phases"][phase]["candidates"]
-                if position >= len(candidates):
-                    die(PREFIX, "candidate index is out of range")
-                candidates[position] = candidate(provider, model, effort, account)
-            state["updated_at"] = utc_now()
-            save(state)
-        finally:
-            current_lock.release()
-        return 0
-    if command in {"reset", "reset-all", "pin", "auto", "provider-on", "provider-off", "provider-manual", "provider-auto", "provider-result"}:
-        return mutate_command(command, args)
-    if command == "probe-due":
-        if len(args) not in {2, 3}:
-            usage()
-        provider = args[1]
-        if not valid_provider(provider):
-            die(PREFIX, f"unsupported provider: {provider}")
-        account = args[2] if len(args) == 3 else None
+def resolve(phase: str, state: dict[str, Any]) -> None:
+    item = state["phases"][phase]
+    for option in item["candidates"]:
+        provider = option["provider"]
+        account = option.get("account")
+        pinned_account = item.get("pinned_account")
+        provider_available = state["providers"][provider]["available"]
         if account is not None:
-            account, _ = resolve_account_dir(provider, account, PREFIX)
-        current_lock, state = with_state()
-        try:
-            item = state["providers"][provider] if account is None else state["providers"][provider].get("accounts", {}).get(account, availability_record())
-            due = (item["mode"] == "auto" and not item["available"] and item["next_probe_at"] is not None and item["next_probe_at"] <= utc_now()) if account is None else (not item["available"] and item["next_probe_at"] is not None and item["next_probe_at"] <= utc_now())
-            return int(not due)
-        finally:
-            current_lock.release()
-    usage()
-    return 2
+            provider_available = state["providers"][provider].get("accounts", {}).get(account, {}).get("available", True)
+        if (item["mode"] != "manual" or item["pinned_provider"] == provider) and (pinned_account is None or pinned_account == account) and provider_available:
+            fields = [provider, option["model"], option["effort"]]
+            if account is not None:
+                fields.append(account)
+            print("\t".join(fields))
+            break
 
 
-def mutate_command(command: str, args: list[str]) -> int:
+def set_candidate(phase: str, provider: str, model: str, effort: str, account: str | None, index: int | None = None) -> None:
+    validate_candidate(provider, model, effort, account)
+    current_lock, state = with_state()
+    try:
+        if index is None:
+            state["phases"][phase]["candidates"] = [candidate(provider, model, effort, account)] + [item for item in state["phases"][phase]["candidates"] if item["provider"] != provider]
+        else:
+            candidates = state["phases"][phase]["candidates"]
+            if index >= len(candidates):
+                die(PREFIX, "candidate index is out of range")
+            candidates[index] = candidate(provider, model, effort, account)
+        state["updated_at"] = utc_now()
+        save(state)
+    finally:
+        current_lock.release()
+
+
+def probe_due(provider: str, account: str | None) -> int:
+    current_lock, state = with_state()
+    try:
+        item = state["providers"][provider] if account is None else state["providers"][provider].get("accounts", {}).get(account, availability_record())
+        due = (item["mode"] == "auto" and not item["available"] and item["next_probe_at"] is not None and item["next_probe_at"] <= utc_now()) if account is None else (not item["available"] and item["next_probe_at"] is not None and item["next_probe_at"] <= utc_now())
+        return int(not due)
+    finally:
+        current_lock.release()
+
+
+def mutate(command: str, args: list[str]) -> int:
     if command == "reset":
-        if len(args) != 2:
-            usage()
         phase = normalize_phase(args[1])
     elif command == "reset-all":
-        if len(args) != 1:
-            usage()
+        phase = ""
     elif command == "pin":
-        if len(args) not in {3, 4}:
-            usage()
         phase = normalize_phase(args[1])
         provider = args[2]
-        if not valid_provider(provider):
-            die(PREFIX, f"unsupported provider: {provider}")
         account = args[3] if len(args) == 4 else None
     elif command == "auto":
-        if len(args) != 2:
-            usage()
         phase = normalize_phase(args[1])
     else:
-        if command == "provider-off":
-            if len(args) not in {2, 3, 4}:
-                usage()
-        elif command in {"provider-on", "provider-manual", "provider-auto"} and len(args) not in {2, 3}:
-            usage()
-        elif command == "provider-result" and len(args) not in {3, 4, 5}:
-            usage()
-        if command != "provider-result":
-            provider = args[1]
-        else:
-            provider, result = args[1:3]
-        if not valid_provider(provider):
-            die(PREFIX, f"unsupported provider: {provider}")
+        provider, result = ((args[1], args[2]) if command == "provider-result" else (args[1], ""))
 
     current_lock, state = with_state()
     try:
@@ -441,8 +335,7 @@ def mutate_command(command: str, args: list[str]) -> int:
             reason = args[2] if len(args) == 3 else "manual-off"
             account_arg = args[3] if len(args) == 4 else None
             if len(args) == 3 and not SAFE_IDENTIFIER.fullmatch(reason):
-                account_arg = reason
-                reason = "manual-off"
+                account_arg, reason = reason, "manual-off"
             if not SAFE_IDENTIFIER.fullmatch(reason):
                 die(PREFIX, "unsafe reason")
             if account_arg is None:
@@ -457,12 +350,10 @@ def mutate_command(command: str, args: list[str]) -> int:
                 state["providers"][provider]["mode"] = "auto"
         elif command == "provider-result":
             optional = args[3:]
-            account_arg = None
-            cooldown_text = "3600"
+            account_arg, cooldown_text = None, "3600"
             if optional:
                 if optional[0].isdigit():
-                    cooldown_text = optional[0]
-                    account_arg = optional[1] if len(optional) == 2 else None
+                    cooldown_text, account_arg = optional[0], optional[1] if len(optional) == 2 else None
                 else:
                     account_arg = optional[0]
                     if len(optional) == 2:
@@ -470,7 +361,6 @@ def mutate_command(command: str, args: list[str]) -> int:
             if not cooldown_text.isdigit():
                 die(PREFIX, "cooldown must be a non-negative integer")
             now = utc_now()
-            changed = True
             target = state["providers"][provider] if account_arg is None else account_record(state, provider, account_arg)
             if result == "success":
                 target.update(available=True, reason=None, observed_at=now, next_probe_at=None)
@@ -489,15 +379,8 @@ def mutate_command(command: str, args: list[str]) -> int:
         if command != "reset-all" and changed:
             state["updated_at"] = utc_now()
         if command != "reset-all" and not changed:
-            current_lock.release()
             return 0
         save(state)
-        if command in {"provider-on", "provider-off", "provider-manual", "provider-auto", "provider-result", "reset", "reset-all", "pin", "auto"}:
-            return 0
+        return 0
     finally:
         current_lock.release()
-    return 0
-
-
-if __name__ == "__main__":
-    run_cli(main, PREFIX)

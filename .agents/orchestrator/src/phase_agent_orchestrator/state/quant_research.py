@@ -1,4 +1,4 @@
-"""Implementation of .agents/scripts/quant-research-state.sh."""
+"""Persistent quant-research state and Codex profile logic."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ import copy
 import json
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
-from .common import PidDirectoryLock, atomic_write_json, die, json_text, run_cli, utc_after, utc_now
+from ..io import atomic_write_json, die, json_text, utc_after, utc_now
+from ..locks.directory_lock import PidDirectoryLock
 
 PREFIX = "quant-research-state"
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9._:-]+$")
@@ -18,7 +18,7 @@ EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh"}
 
 
 def root_dir() -> Path:
-    return Path(os.environ.get("QUANT_RESEARCH_ROOT", Path(__file__).resolve().parents[4]))
+    return Path(os.environ.get("QUANT_RESEARCH_ROOT", Path(__file__).resolve().parents[5]))
 
 
 def state_dir() -> Path:
@@ -29,34 +29,12 @@ def state_path() -> Path:
     return state_dir() / "state.json"
 
 
-def usage() -> None:
-    print(
-        "Usage: quant-research-state.sh <init|state|codex-auto|codex-manual|codex-off|codex-on|codex-worker-off|codex-detected-off|codex-detected-on|profile-get ROLE|profile-set ROLE MODEL EFFORT|profile-reset ROLE|profiles-reset|begin-iteration>",
-        file=sys.stderr,
-    )
-    raise SystemExit(2)
-
-
 def default_profiles() -> dict[str, dict[str, str]]:
-    return {
-        "probe": {"model": "gpt-5.6-luna", "effort": "high"},
-        "implement": {"model": "gpt-5.6-luna", "effort": "high"},
-        "fix": {"model": "gpt-5.6-terra", "effort": "high"},
-        "fix_fallback": {"model": "gpt-5.6-sol", "effort": "high"},
-    }
+    return {"probe": {"model": "gpt-5.6-luna", "effort": "high"}, "implement": {"model": "gpt-5.6-luna", "effort": "high"}, "fix": {"model": "gpt-5.6-terra", "effort": "high"}, "fix_fallback": {"model": "gpt-5.6-sol", "effort": "high"}}
 
 
 def default_state() -> dict[str, Any]:
-    return {
-        "schema_version": 2,
-        "codex_mode": "manual",
-        "codex_available": True,
-        "codex_profiles": default_profiles(),
-        "research_enabled": True,
-        "iteration": 0,
-        "last_run_at": None,
-        "updated_at": None,
-    }
+    return {"schema_version": 2, "codex_mode": "manual", "codex_available": True, "codex_profiles": default_profiles(), "research_enabled": True, "iteration": 0, "last_run_at": None, "updated_at": None}
 
 
 def profile_valid(value: Any) -> bool:
@@ -151,95 +129,63 @@ def profile_line(state: dict[str, Any], role: str) -> None:
     print(f"{item['model']}\t{item['effort']}")
 
 
-def main() -> int:
-    args = sys.argv[1:]
-    command = args[0] if args else ""
-    if command in {"init", "state"}:
-        if len(args) != 1:
-            usage()
-        current_lock, state = with_state()
-        try:
-            emit(state)
-        finally:
-            current_lock.release()
-        return 0
-    if command in {"codex-auto", "codex-manual", "codex-off", "codex-on", "codex-worker-off", "codex-detected-off", "codex-detected-on"}:
-        if len(args) != 1:
-            usage()
-        current_lock, state = with_state()
-        try:
-            now = utc_now()
-            if command == "codex-auto":
-                state["codex_mode"] = "auto"
-            elif command == "codex-manual":
-                state["codex_mode"] = "manual"
-            elif command in {"codex-off", "codex-on"}:
-                state["codex_mode"] = "manual"
-                state["codex_available"] = command == "codex-on"
-            else:
-                if command.startswith("codex-detected") and state["codex_mode"] != "auto":
-                    die(PREFIX, "automatic detection result is stale because manual mode is selected")
-                state["codex_available"] = command.endswith("-on")
-            state["updated_at"] = now
-            write(state)
-            emit(state)
-        finally:
-            current_lock.release()
-        return 0
-    if command in {"profile-get", "profile-set", "profile-reset"}:
-        if command == "profile-get" or command == "profile-reset":
-            if len(args) != 2:
-                usage()
+def update_mode(command: str) -> None:
+    current_lock, state = with_state()
+    try:
+        now = utc_now()
+        if command == "codex-auto":
+            state["codex_mode"] = "auto"
+        elif command == "codex-manual":
+            state["codex_mode"] = "manual"
+        elif command in {"codex-off", "codex-on"}:
+            state["codex_mode"] = "manual"
+            state["codex_available"] = command == "codex-on"
         else:
-            if len(args) != 4:
-                usage()
-        role = normalize_role(args[1])
+            if command.startswith("codex-detected") and state["codex_mode"] != "auto":
+                die(PREFIX, "automatic detection result is stale because manual mode is selected")
+            state["codex_available"] = command.endswith("-on")
+        state["updated_at"] = now
+        write(state)
+        emit(state)
+    finally:
+        current_lock.release()
+
+
+def update_profile(command: str, role: str, model: str | None = None, effort: str | None = None) -> None:
+    current_lock, state = with_state()
+    try:
         if command == "profile-set":
-            validate_model(args[2])
-            validate_effort(args[3])
-        current_lock, state = with_state()
-        try:
-            if command == "profile-set":
-                state["codex_profiles"][role] = {"model": args[2], "effort": args[3]}
-                state["updated_at"] = utc_now()
-                write(state)
-            elif command == "profile-reset":
-                state["codex_profiles"][role] = copy.deepcopy(default_profiles()[role])
-                state["updated_at"] = utc_now()
-                write(state)
-            profile_line(state, role)
-        finally:
-            current_lock.release()
-        return 0
-    if command == "profiles-reset":
-        if len(args) != 1:
-            usage()
-        current_lock, state = with_state()
-        try:
-            state["codex_profiles"] = default_profiles()
+            state["codex_profiles"][role] = {"model": model or "", "effort": effort or ""}
             state["updated_at"] = utc_now()
             write(state)
-            emit(state)
-        finally:
-            current_lock.release()
-        return 0
-    if command == "begin-iteration":
-        if len(args) != 1:
-            usage()
-        current_lock, state = with_state()
-        try:
-            now = utc_now()
-            state["iteration"] += 1
-            state["last_run_at"] = now
-            state["updated_at"] = now
+        elif command == "profile-reset":
+            state["codex_profiles"][role] = copy.deepcopy(default_profiles()[role])
+            state["updated_at"] = utc_now()
             write(state)
-            emit(state)
-        finally:
-            current_lock.release()
-        return 0
-    usage()
-    return 2
+        profile_line(state, role)
+    finally:
+        current_lock.release()
 
 
-if __name__ == "__main__":
-    run_cli(main, PREFIX)
+def reset_profiles() -> None:
+    current_lock, state = with_state()
+    try:
+        state["codex_profiles"] = default_profiles()
+        state["updated_at"] = utc_now()
+        write(state)
+        emit(state)
+    finally:
+        current_lock.release()
+
+
+def begin_iteration() -> None:
+    current_lock, state = with_state()
+    try:
+        now = utc_now()
+        state["iteration"] += 1
+        state["last_run_at"] = now
+        state["updated_at"] = now
+        write(state)
+        emit(state)
+    finally:
+        current_lock.release()
