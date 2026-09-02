@@ -203,6 +203,13 @@ paraphrasing from memory] Concretely:
   success/auth-error/quota-error result, map to the existing availability
   result classes.
 
+Account-aware retry note: a provider-reported transient rate limit is also
+retryable against the next configured account/candidate. It is not persisted as
+an account-off state, because the SDK may be reporting a temporary session
+window rather than a permanently exhausted credential. This keeps the
+personal-02-first ordering while allowing personal to continue the same
+attempt when personal-02 returns HTTP 429/session-limit evidence.
+
 ## Risks / Trade-offs
 
 - **[Risk — new, highest priority]** Decision 2's hard-kill fallback

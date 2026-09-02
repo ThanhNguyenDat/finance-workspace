@@ -166,7 +166,7 @@ def run(argv: list[str]) -> int:
                 args = ["provider-result", provider, result_class] + ([account] if account else [])
                 candidates.mutate("provider-result", args)
                 continuation = True
-            elif result_class in {"model-unavailable", "model-specific-limit"}:
+            elif result_class in {"model-unavailable", "model-specific-limit", "transient-rate-limit"}:
                 continuation = True
             else:
                 return status

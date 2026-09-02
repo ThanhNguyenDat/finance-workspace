@@ -17,7 +17,7 @@ from .state import candidates, ops_transaction
 
 PREFIX = "run-phase-agent"
 PHASES = {"PLAN", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
-RETRYABLE = {"global-quota-exhausted", "auth-error", "model-unavailable", "model-specific-limit"}
+RETRYABLE = {"global-quota-exhausted", "auth-error", "model-unavailable", "model-specific-limit", "transient-rate-limit"}
 
 
 @contextlib.contextmanager

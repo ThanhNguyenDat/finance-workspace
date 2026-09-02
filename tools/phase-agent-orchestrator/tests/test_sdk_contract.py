@@ -9,6 +9,7 @@ import stat
 import subprocess
 from pathlib import Path
 
+import pytest
 from claude_agent_sdk import ResultMessage
 from openai_codex import TurnResult
 from openai_codex.generated.v2_all import TurnStatus
@@ -125,7 +126,11 @@ def test_claude_sdk_reads_distinct_account_config_dirs(tmp_path: Path, monkeypat
     assert captured == [str(account_a), str(account_b)]
 
 
-def test_quant_claude_rotates_from_personal_02_to_personal(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize(
+    ("mode", "first_result"),
+    [("quota-first", "global-quota-exhausted"), ("rate-first", "transient-rate-limit")],
+)
+def test_quant_claude_rotates_from_personal_02_to_personal(tmp_path: Path, monkeypatch, mode: str, first_result: str) -> None:
     cli = Path(__file__).parent / "fixtures/fake_claude_sdk_cli.py"
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
@@ -149,18 +154,21 @@ def test_quant_claude_rotates_from_personal_02_to_personal(tmp_path: Path, monke
     monkeypatch.setenv("QUANT_RESEARCH_STATE_DIR", str(quant_dir))
     monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(registry))
     monkeypatch.setenv("PATH", f"{fake_bin}:{os.environ['PATH']}")
-    monkeypatch.setenv("FAKE_SDK_MODE", "quota-first")
+    monkeypatch.setenv("FAKE_SDK_MODE", mode)
     monkeypatch.setenv("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK", "1")
     monkeypatch.setenv("PHASE_AGENT_QUANT_TIMEOUT_SECONDS", "2")
     candidates.ensure_state()
     assert run_phase_agent_command.run(["quant-research"]) == 0
     current_lock, state = candidates.with_state()
     try:
-        assert state["providers"]["claude"]["accounts"]["personal-02"]["available"] is False
+        expected_available = first_result != "global-quota-exhausted"
+        account_state = state["providers"]["claude"].get("accounts", {}).get("personal-02", {"available": True})
+        assert account_state["available"] is expected_available
     finally:
         current_lock.release()
     metas = sorted((root / ".ops/runtime/phase-agents/quant-runs/iteration-1").glob("*.meta.json"))
     assert [json.loads(path.read_text(encoding="utf-8"))["account"] for path in metas] == ["personal-02", "personal"]
+    assert json.loads(metas[0].read_text(encoding="utf-8"))["result_class"] == first_result
 
 
 def test_codex_sdk_adapter_completes_with_protocol_fixture(tmp_path: Path, monkeypatch) -> None:
