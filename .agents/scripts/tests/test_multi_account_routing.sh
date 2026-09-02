@@ -44,9 +44,13 @@ export OPS_ROOT="$workspace" OPS_WORKSPACE_ROOT="$workspace"
 export PHASE_AGENT_STATE_DIR="$workspace/.ops/runtime/phase-agents"
 export PHASE_AGENT_LEGACY_QUANT_STATE="$tmp/no-quant"
 export PHASE_AGENT_LEGACY_CLAUDE_STATE="$tmp/no-claude"
-export PHASE_AGENT_CLAUDE_ACCOUNT_WORK_DIR="$tmp/claude-work"
-export PHASE_AGENT_CLAUDE_ACCOUNT_PERSONAL_DIR="$tmp/claude-personal"
+export PHASE_AGENT_ACCOUNTS_FILE="$tmp/accounts.yaml"
 mkdir -p "$tmp/claude-personal"
+cat >"$PHASE_AGENT_ACCOUNTS_FILE" <<EOF
+claude:
+  work: $tmp/claude-work
+  personal: $tmp/claude-personal
+EOF
 export FAKE_TRACE="$trace"
 export CLAUDE_TIMEOUT_SECONDS=10
 

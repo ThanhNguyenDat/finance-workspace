@@ -11,8 +11,11 @@
 .env.*
 !.env.example
 *.log
+.agents/orchestrator/accounts.yaml
 
 # Do not ignore raw/: handoff and research history are workspace artifacts.
 
 # Autonomous /ops runtime is transient; handoff remains tracked.
 .ops/**/runtime/
+raw
+__pycache__/

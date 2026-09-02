@@ -6,12 +6,24 @@ import threading
 from pathlib import Path
 
 import pytest
+import yaml
 
 from phase_agent_orchestrator import io
 from phase_agent_orchestrator.accounts import registry
 from phase_agent_orchestrator.cli import phase_agent_state as phase_cli
 from phase_agent_orchestrator.locks import account_lock, change_lock, pid_liveness
 from phase_agent_orchestrator.state import candidates, ops_transaction
+
+
+def configure_accounts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    accounts: dict[str, dict[str, str]],
+) -> Path:
+    path = tmp_path / "accounts.yaml"
+    path.write_text(yaml.safe_dump(accounts, sort_keys=True), encoding="utf-8")
+    monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(path))
+    return path
 
 
 def test_atomic_json_write_never_exposes_partial_payload(tmp_path: Path) -> None:
@@ -96,13 +108,24 @@ def test_unverifiable_owner_is_manual_release_only(tmp_path: Path, monkeypatch: 
 
 @pytest.mark.parametrize("provider", ["claude", "codex"])
 def test_account_registry_rejects_unset_and_missing_directories(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, provider: str) -> None:
-    _, variable = registry.account_environment_name(provider, "work", "phase-agent-state")
-    monkeypatch.delenv(variable, raising=False)
-    with pytest.raises(io.CLIError, match=f"unregistered account 'work'.*{variable}"):
+    accounts_file = tmp_path / "accounts.yaml"
+    monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(accounts_file))
+    with pytest.raises(io.CLIError, match="accounts registry file does not exist"):
+        registry.resolve_account_dir(provider, "work", "phase-agent-state")
+
+    other_provider = "codex" if provider == "claude" else "claude"
+    configure_accounts(tmp_path, monkeypatch, {other_provider: {"work": str(tmp_path)}})
+    with pytest.raises(io.CLIError, match=f"no accounts configured for provider {provider}"):
+        registry.resolve_account_dir(provider, "work", "phase-agent-state")
+
+    account_dir = tmp_path / "account"
+    account_dir.mkdir()
+    configure_accounts(tmp_path, monkeypatch, {provider: {"personal": str(account_dir)}})
+    with pytest.raises(io.CLIError, match=f"account 'work' not found under provider {provider}"):
         registry.resolve_account_dir(provider, "work", "phase-agent-state")
 
     missing = tmp_path / "missing-account"
-    monkeypatch.setenv(variable, str(missing))
+    configure_accounts(tmp_path, monkeypatch, {provider: {"work": str(missing)}})
     with pytest.raises(io.CLIError, match="account 'work'.*directory does not exist"):
         registry.resolve_account_dir(provider, "WORK", "phase-agent-state")
 
@@ -110,7 +133,7 @@ def test_account_registry_rejects_unset_and_missing_directories(tmp_path: Path, 
 def test_account_lock_rejects_live_owner_and_reclaims_dead_owner(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     account_dir = tmp_path / "claude-work"
     account_dir.mkdir()
-    monkeypatch.setenv("PHASE_AGENT_CLAUDE_ACCOUNT_WORK_DIR", str(account_dir))
+    configure_accounts(tmp_path, monkeypatch, {"claude": {"work": str(account_dir)}})
     monkeypatch.setenv("OPS_ROOT", str(tmp_path))
     monkeypatch.setattr(change_lock.socket, "gethostname", lambda: "host-a")
     monkeypatch.setattr(change_lock, "pid_is_alive", lambda _pid, _host: True)
@@ -128,7 +151,7 @@ def test_account_lock_rejects_live_owner_and_reclaims_dead_owner(tmp_path: Path,
 def test_account_lock_uses_recorded_owner_change_for_staleness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     account_dir = tmp_path / "claude-work"
     account_dir.mkdir()
-    monkeypatch.setenv("PHASE_AGENT_CLAUDE_ACCOUNT_WORK_DIR", str(account_dir))
+    configure_accounts(tmp_path, monkeypatch, {"claude": {"work": str(account_dir)}})
     monkeypatch.setenv("OPS_ROOT", str(tmp_path))
     old_change = tmp_path / ".ops/changes/old-change/runtime/.phase-attempt-lock"
     new_change = tmp_path / ".ops/changes/new-change/runtime/.phase-attempt-lock"
@@ -159,25 +182,24 @@ def test_account_candidate_validation_pin_and_resolution(tmp_path: Path, monkeyp
     personal = tmp_path / "claude-personal"
     work.mkdir()
     personal.mkdir()
-    monkeypatch.setenv("PHASE_AGENT_CLAUDE_ACCOUNT_WORK_DIR", str(work))
-    monkeypatch.setenv("PHASE_AGENT_CLAUDE_ACCOUNT_PERSONAL_DIR", str(personal))
+    configure_accounts(tmp_path, monkeypatch, {"claude": {"work": str(work), "personal": str(personal)}})
     monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(tmp_path / "phase-state"))
 
-    with pytest.raises(io.CLIError, match="unregistered account 'unknown'"):
+    with pytest.raises(io.CLIError, match="account 'unknown' not found under provider claude"):
         candidates.validate_candidate("claude", "sonnet", "high", "unknown")
 
     monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "set", "implement", "claude", "sonnet", "high", "work"])
     phase_cli.main()
     monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "set", "implement", "claude", "sonnet", "high", "unknown"])
-    with pytest.raises(io.CLIError, match="unregistered account 'unknown'"):
+    with pytest.raises(io.CLIError, match="account 'unknown' not found under provider claude"):
         phase_cli.main()
     monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "candidate-set", "implement", "1", "claude", "sonnet", "high", "personal"])
     phase_cli.main()
     monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "candidate-set", "implement", "1", "claude", "sonnet", "high", "unknown"])
-    with pytest.raises(io.CLIError, match="unregistered account 'unknown'"):
+    with pytest.raises(io.CLIError, match="account 'unknown' not found under provider claude"):
         phase_cli.main()
     monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "pin", "implement", "claude", "unknown"])
-    with pytest.raises(io.CLIError, match="unregistered account 'unknown'"):
+    with pytest.raises(io.CLIError, match="account 'unknown' not found under provider claude"):
         phase_cli.main()
     monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "pin", "implement", "claude", "work"])
     phase_cli.main()
@@ -199,8 +221,7 @@ def test_account_provider_result_does_not_disable_provider_or_sibling(tmp_path: 
     personal = tmp_path / "codex-personal"
     work.mkdir()
     personal.mkdir()
-    monkeypatch.setenv("PHASE_AGENT_CODEX_ACCOUNT_WORK_DIR", str(work))
-    monkeypatch.setenv("PHASE_AGENT_CODEX_ACCOUNT_PERSONAL_DIR", str(personal))
+    configure_accounts(tmp_path, monkeypatch, {"codex": {"work": str(work), "personal": str(personal)}})
     monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(tmp_path / "phase-state"))
 
     monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "init"])
@@ -218,7 +239,7 @@ def test_account_provider_result_does_not_disable_provider_or_sibling(tmp_path: 
 def test_state_validation_tolerates_unresolvable_historical_account(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     state_dir = tmp_path / "phase-state"
     monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(state_dir))
-    monkeypatch.delenv("PHASE_AGENT_CLAUDE_ACCOUNT_STALE_DIR", raising=False)
+    monkeypatch.delenv("PHASE_AGENT_ACCOUNTS_FILE", raising=False)
 
     monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "init"])
     phase_cli.main()
