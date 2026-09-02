@@ -181,7 +181,7 @@ spec for every task below that says "matches the current bash behavior."
   dry run reproducing the same steps in a clean checkout with no
   pre-existing `.agents/orchestrator/.venv`) completes the "Run bounded
   orchestration tests" step successfully.
-- [ ] 8.5 Commit every file this change touches (`.agents/orchestrator/`,
+- [x] 8.5 Commit every file this change touches (`.agents/orchestrator/`,
   the three shims, `.agents/rules/coding-and-verification.md`,
   `.agents/skills/quant-research-loop/SKILL.md`, and the CI workflow from
   8.4) in one reviewable commit or small stack, push to `origin/main`, and
