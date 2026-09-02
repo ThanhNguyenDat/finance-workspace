@@ -140,5 +140,7 @@ Impact).
   read/mutate command (`state`, `auto <phase>`, `set <phase> ...`, `pin
   <phase> <provider>` with no account) still succeeds — reproducing the
   exact 2026-09-02 regression and proving it is fixed.
-- [ ] 4.2 Verify: re-run the full bash + pytest suite (Task 3.1's list)
-  after 4.1, and re-run the live smoke check from 3.3 once more.
+- [x] 4.2 Verify: re-run the full bash + pytest suite (Task 3.1's list)
+  after 4.1, and re-run the live smoke check from 3.3 once more. Verified
+  by Claude (VERIFY) 2026-09-02: 14/14 bash suites, 22/22 pytest, live
+  smoke `Quant iteration 218 completed with claude`.
