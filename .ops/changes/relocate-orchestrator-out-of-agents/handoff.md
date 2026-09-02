@@ -102,3 +102,13 @@
   Task 5.4 without claiming provider success.
 - Task 5.5 remains pending until the final relocation diff is committed,
   pushed, and checked through the exact-SHA CI handoff.
+
+## FINAL_VERIFY evidence (2026-09-02)
+
+- A fresh configured FINAL_VERIFY attempt with Claude (Opus/high) ended
+  bounded with `result_class=timeout`; an earlier Claude attempt reported a
+  provider session-limit response. The explicit configured Codex fallback
+  (gpt-5.6-terra/high) also ended bounded with `result_class=timeout`.
+- Both FINAL_VERIFY attempts recorded `worktree_changed=false`, but neither
+  produced the required objective-gate attestation. Therefore FINAL_VERIFY is
+  not PASS and the exact-SHA push/CI handoff must remain pending.
