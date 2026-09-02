@@ -21,7 +21,7 @@ All tasks are in the `finance-workspace` repository only.
   exercised by the phase-agent bash test suite, now expressed as a
   captured SDK result object) and asserts an identical `result_class`
   string to what the bash classifier produces for the equivalent scenario.
-- [ ] 1.2 Port `detect-provider-availability.sh` and
+- [x] 1.2 Port `detect-provider-availability.sh` and
   `detect-codex-availability.sh` the same way, probing via each SDK and
   reading its structured success/auth-error/quota-error result. Verify: a
   unit test with a fake `claude`/`codex` SDK-facing fixture reproduces
@@ -80,7 +80,7 @@ All tasks are in the `finance-workspace` repository only.
 
 ## 4. Phase adapters
 
-- [ ] 4.1 Port `run-claude-phase.sh` to
+- [x] 4.1 Port `run-claude-phase.sh` to
   `phase_agent_orchestrator.run_claude_phase`, constructing a
   `ClaudeSDKClient` (design.md Decision 2 requires the streaming client,
   not the one-shot `query()` function, since only the streaming client
@@ -96,11 +96,11 @@ All tasks are in the `finance-workspace` repository only.
   `FINAL_VERIFY`, continuation mode on/off); a separate test confirms a
   distinct `CLAUDE_CONFIG_DIR` value actually changes which account
   identity the SDK client authenticates as.
-- [ ] 4.2 Port `run-codex-phase.sh` the same way, using `Codex()`/
+- [x] 4.2 Port `run-codex-phase.sh` the same way, using `Codex()`/
   `thread.turn(...)` and confirming `CODEX_HOME` resolution per account
   (already documented in design.md Context, still needs an in-repo test,
   not just doc trust).
-- [ ] 4.3 Port the git-status/diff/untracked-file fingerprint function
+- [x] 4.3 Port the git-status/diff/untracked-file fingerprint function
   (design.md Decision 4 — unaffected by the SDK pivot) used by both
   adapters' VERIFY/FINAL_VERIFY mutation check. Verify: a unit test asserts
   the Python fingerprint of a fixed fixture repository state matches a
@@ -114,14 +114,14 @@ All tasks are in the `finance-workspace` repository only.
 
 ## 5. Resolver and quant launcher
 
-- [ ] 5.1 Port `run-phase-agent.sh` to
+- [x] 5.1 Port `run-phase-agent.sh` to
   `phase_agent_orchestrator.run_phase_agent`, calling the Task 1/2/4
   modules directly as Python functions rather than as subprocesses
   (design.md Decision 1), while keeping its own standalone shim/CLI entry
   point. Verify: `test_ops_orchestration.sh`, `test_phase_agent_routing.sh`,
   `test_quant_backend_routing.sh`, and `test_hermetic_agent_contracts.sh`
   pass unmodified.
-- [ ] 5.2 Port `run-phase-agent-command.sh` to
+- [x] 5.2 Port `run-phase-agent-command.sh` to
   `phase_agent_orchestrator.run_phase_agent_command`. Verify:
   `test_claude_quant_launcher.sh`, `test_phase_agent_quant_launcher.sh`,
   and `test_multi_account_routing.sh`'s quant-research failover assertions
