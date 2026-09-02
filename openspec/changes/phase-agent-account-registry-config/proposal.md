@@ -23,7 +23,7 @@ are untouched).
   caller of `resolve_account_dir` (the account lock, `account-dir`,
   candidate validation) is unaffected since they only call that function,
   never read the env vars directly.
-- Add `pyyaml` as a dependency of `.agents/orchestrator` (`uv add pyyaml`).
+- Add `pyyaml` as a dependency of `tools/phase-agent-orchestrator` (`uv add pyyaml`).
 - No bash script changes: `run-claude-phase.sh`/`run-codex-phase.sh`/
   `run-phase-agent-command.sh` already resolve an account's directory by
   calling out to the Python CLI (`phase-agent-state.sh account-dir ...`)
@@ -44,8 +44,8 @@ implementation change and `skip_specs: true` is set on this change)
 ## Impact
 
 - **Affected repository**: `finance-workspace` only.
-- **Affected files**: `.agents/orchestrator/src/phase_agent_orchestrator/common.py`
-  (registry resolution), `.agents/orchestrator/pyproject.toml`/`uv.lock`
+- **Affected files**: `tools/phase-agent-orchestrator/src/phase_agent_orchestrator/common.py`
+  (registry resolution), `tools/phase-agent-orchestrator/pyproject.toml`/`uv.lock`
   (new dependency), the existing account-related pytest tests (must be
   updated from `monkeypatch.setenv` to writing/pointing at a temp YAML
   file), and `.agents/scripts/tests/test_multi_account_routing.sh` (its

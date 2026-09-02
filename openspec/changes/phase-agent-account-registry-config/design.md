@@ -18,13 +18,13 @@ any of its callers.
 
 **Non-Goals:**
 - No UI or CLI command to edit the file; it is hand-edited, like
-  `.agents/orchestrator/pyproject.toml` already is.
+  `tools/phase-agent-orchestrator/pyproject.toml` already is.
 - No secret storage in this file — it holds directory *paths* only, the
   same thing the env vars held.
 
 ## Decisions
 
-**1. File location: `.agents/orchestrator/accounts.yaml`, overridable via
+**1. File location: `tools/phase-agent-orchestrator/accounts.yaml`, overridable via
 `PHASE_AGENT_ACCOUNTS_FILE`.**
 Kept beside the Python package that reads it, matching where
 `pyproject.toml`/`uv.lock` already live. The env-var override exists for

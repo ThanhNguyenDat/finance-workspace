@@ -35,8 +35,8 @@ state; a confirmed quota interruption may continue through another candidate
 without incrementing the iteration or discarding existing artifacts.
 
 The launcher depends on the repository-local `uv` project at
-`.agents/orchestrator/`; bootstrap it with `uv sync --project
-.agents/orchestrator` before running the quant command in a new environment.
+`tools/phase-agent-orchestrator/`; bootstrap it with `uv sync --project
+tools/phase-agent-orchestrator` before running the quant command in a new environment.
 
 ## Non-negotiable invariants
 

@@ -2,11 +2,11 @@ All tasks are in the `finance-workspace` repository only.
 
 ## 1. YAML registry
 
-- [x] 1.1 Add `pyyaml` via `uv add --project .agents/orchestrator pyyaml`,
-  and verify `uv run --project .agents/orchestrator python -c "import yaml"`
+- [x] 1.1 Add `pyyaml` via `uv add --project tools/phase-agent-orchestrator pyyaml`,
+  and verify `uv run --project tools/phase-agent-orchestrator python -c "import yaml"`
   succeeds.
 - [x] 1.2 Replace `account_environment_name`/`resolve_account_dir` in
-  `common.py` to read `.agents/orchestrator/accounts.yaml` (or
+  `common.py` to read `tools/phase-agent-orchestrator/accounts.yaml` (or
   `$PHASE_AGENT_ACCOUNTS_FILE` when set, design.md Decision 1), keeping the
   exact same function signatures so `ops_runtime.py` and
   `phase_agent_state.py` need no changes. Verify: unit tests assert distinct
@@ -23,10 +23,10 @@ All tasks are in the `finance-workspace` repository only.
   `PHASE_AGENT_CLAUDE_ACCOUNT_*_DIR`. Verify: the test still passes
   end-to-end (lock exclusivity + real failover cycle, unchanged from
   `phase-agent-multi-account-routing`).
-- [x] 1.5 Add a real `.agents/orchestrator/accounts.yaml.example` (not the
+- [x] 1.5 Add a real `tools/phase-agent-orchestrator/accounts.yaml.example` (not the
   operator's real one, which stays untracked/gitignored) documenting the
   shape from design.md Decision 2, and reference it from
-  `.agents/orchestrator/README.md`.
+  `tools/phase-agent-orchestrator/README.md`.
 
 ## 2. Full-system verification
 
@@ -53,7 +53,7 @@ All tasks are in the `finance-workspace` repository only.
   immediate data loss, but the regression is live and silent for the next
   one created.
   Fix: remove the `raw` line from `.gitignore`. Only keep
-  `.agents/orchestrator/accounts.yaml` and `__pycache__/` if `__pycache__/`
+  `tools/phase-agent-orchestrator/accounts.yaml` and `__pycache__/` if `__pycache__/`
   is still wanted — it is unrelated to `raw/` and does not contradict the
   adjacent comment, so it may stay if useful, but the `raw` line must go.
   Verify: `git ls-files --others --ignored --exclude-standard | grep -x raw`

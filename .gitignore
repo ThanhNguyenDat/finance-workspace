@@ -11,7 +11,7 @@
 .env.*
 !.env.example
 *.log
-.agents/orchestrator/accounts.yaml
+tools/phase-agent-orchestrator/accounts.yaml
 
 # Do not ignore raw/: handoff and research history are workspace artifacts.
 
