@@ -43,10 +43,62 @@
 - The full 15-suite shell run is not green because pre-existing dirty
   classifier/SDK changes depend on `uv` in hermetic suites and the copied
   fixture does not contain the relocated project. The unaffected state,
-  routing, contract, promotion, and worker-policy suites pass. Those changes
-  were preserved and not repaired here.
+  routing, contract, promotion, and worker-policy suites pass. The two
+  classifier shims were edited during IMPLEMENT but were already dirty and
+  outside this change's originally scoped file list; they are intentionally
+  left uncommitted pending the classifier work owned by
+  `phase-agent-python-spawn-layer`.
 - The live quant smoke check and push/CI verification were not run because
   the user explicitly prohibited launching another model process and pushing.
 - Local implementation commit: `45d107e065735c12fb003293e4264bae8f4d38d4`.
   No remote workflow URL exists because the commit was intentionally not
   pushed.
+
+## FIX evidence (2026-09-02)
+
+- Added a bounded Python test step to the `orchestration` job in
+  `.github/workflows/agent-contracts.yml`. It runs the relocated project's
+  pytest suite with a one-minute TERM/kill-after boundary, so Task 3.1's
+  default-root regression test is now an automated CI gate.
+- Reconciled every remaining `agents/orchestrator` path in the active
+  `phase-agent-python-orchestrator` planning artifacts. Therefore Task 2.6's
+  existing acceptance criterion is now met without an exception for that
+  unarchived change.
+- Commit `45d107e065735c12fb003293e4264bae8f4d38d4` first tracked the
+  `phase-agent-python-spawn-layer` planning artifacts as part of the cutover.
+  Their path substitutions are correct, but they were not path-only edits to
+  files already tracked before that commit; this was an explicit cutover
+  choice, not an implied pre-existing-file edit.
+- The two classifier shims described above remain untouched by this FIX round
+  and uncommitted. They are not included in this change's work.
+- Local verification: the default-root regression passes directly and the
+  current dirty-worktree Python suite passes 29/29 under the same one-minute
+  timeout used by CI. Strict OpenSpec validation passes for both this change
+  and `phase-agent-python-orchestrator`; the scoped diff and workflow YAML
+  parse cleanly.
+
+## CONTINUATION evidence (2026-09-02)
+
+- `./.agents/scripts/sync-agent-links.sh --check` passes.
+- All 15 suites under `.agents/scripts/tests/` pass with their bounded
+  `timeout --signal=TERM --kill-after=30s` wrappers, including the hermetic
+  contract suite. The classifier shims currently present in the dirty
+  worktree use the relocated project with a virtualenv-Python fallback; those
+  unrelated classifier changes remain outside this relocation commit.
+- `timeout --signal=TERM --kill-after=30s 5m uv run --project
+  tools/phase-agent-orchestrator pytest` passes 29/29.
+- The account-resolution command completes after the artifact move without
+  exposing account paths or credentials.
+- Live smoke was attempted independently with Claude (iteration 219,
+  attempt 1) and Codex (iteration 220, attempt 1), each with the bounded
+  quant timeout. Both metadata records classify the attempt as `timeout` and
+  both quant leases were released. No quota/auth/error indicator was present
+  in either stderr log. This does not satisfy Task 5.4's successful live
+  smoke criterion by itself.
+- A separate bounded contention smoke held the quant lease with a live
+  launcher, confirmed the concurrent launcher was rejected with the expected
+  lease-contention status, and confirmed the lease was released after the
+  holder timed out. This satisfies the controlled-contention alternative in
+  Task 5.4 without claiming provider success.
+- Task 5.5 remains pending until the final relocation diff is committed,
+  pushed, and checked through the exact-SHA CI handoff.

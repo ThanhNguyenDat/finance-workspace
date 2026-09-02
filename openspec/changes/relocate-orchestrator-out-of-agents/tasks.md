@@ -38,7 +38,7 @@ after Task 1.
   again from a different working directory, e.g. `/tmp`) returns the same
   output it returns before this change rather than
   `orchestrator project not found`.
-- [ ] 2.2 Update `PHASE_AGENT_ORCHESTRATOR_PROJECT` in
+- [x] 2.2 Update `PHASE_AGENT_ORCHESTRATOR_PROJECT` in
   `.agents/scripts/tests/hermetic-env.sh` to
   `"$HERMETIC_ROOT_DIR/tools/phase-agent-orchestrator"`. Verify:
   `./.agents/scripts/tests/test_hermetic_agent_contracts.sh` passes unmodified.
@@ -57,7 +57,7 @@ after Task 1.
   tooling" section) and `.agents/skills/quant-research-loop/SKILL.md`. Verify:
   `./.agents/scripts/sync-agent-links.sh` then
   `./.agents/scripts/sync-agent-links.sh --check` both succeed.
-- [ ] 2.6 Verify no reference survives:
+- [x] 2.6 Verify no reference survives:
   `grep -rn "agents/orchestrator" --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ .`
   returns hits only under `openspec/changes/archive/` (historical records,
   deliberately untouched per design.md Non-Goals) and under
@@ -91,7 +91,7 @@ after Task 1.
 
 ## 5. Full verification and delivery
 
-- [ ] 5.1 Verify: every bash suite under `.agents/scripts/tests/` passes
+- [x] 5.1 Verify: every bash suite under `.agents/scripts/tests/` passes
   unmodified with its existing bounded timeout — the same 15-suite list
   `.github/workflows/agent-contracts.yml` runs (`test_ops_orchestration.sh`,
   `test_quant_research_state.sh`, `test_codex_availability_detection.sh`,
@@ -104,12 +104,12 @@ after Task 1.
 - [x] 5.2 Verify: `uv run --project tools/phase-agent-orchestrator pytest`
   passes with the same test count as before the move plus the one added in
   Task 3.1.
-- [ ] 5.3 Verify account resolution survived the local-artifact move
+- [x] 5.3 Verify account resolution survived the local-artifact move
   (design.md Decision 5, the most likely silent failure):
   `./.agents/scripts/configure-phase-agents.sh show` reports the same
   `ACCOUNT` column values it reported before this change. Report the account
   *names* only; never print account directory paths or any credential.
-- [ ] 5.4 Run one live end-to-end smoke check:
+- [x] 5.4 Run one live end-to-end smoke check:
   `./.agents/scripts/run-phase-agent-command.sh quant-research`, and verify it
   completes with a `Quant iteration <n> completed with <provider>` line (or
   the same lease-contention message when a prior run still holds the lease).
