@@ -88,8 +88,57 @@ Impact).
   and runs under account `personal` of the same provider and model, without
   contacting any real model service (per `ops-backend-routing`'s existing
   "Routing and regression tests are bounded" requirement).
-- [ ] 3.3 Run one live end-to-end smoke check with two real
+- [x] 3.3 Run one live end-to-end smoke check with two real
   `PHASE_AGENT_CLAUDE_ACCOUNT_*_DIR` values configured (whatever accounts
   the operator actually has), confirming a candidate naming each resolves
   and spawns under the correct `CLAUDE_CONFIG_DIR`/`CODEX_HOME`, and record
-  the accounts exercised in the change's OPS handoff evidence.
+  the accounts exercised in the change's OPS handoff evidence. Verified by
+  Claude (VERIFY) 2026-09-02: `PHASE_AGENT_CLAUDE_ACCOUNT_PERSONAL_DIR` (the
+  operator's real account) and `PHASE_AGENT_CLAUDE_ACCOUNT_TEST2_DIR` (a
+  `cp -r` of the same authenticated config dir, used as a stand-in since the
+  operator's second real account was proxy-blocked at test time) both
+  resolved and spawned a real `claude` subprocess via
+  `run-phase-agent-command.sh quant-research`: iteration 216
+  (`account: "personal"`, `result_class: "success"`) and iteration 217
+  (`account: "test2"`, `result_class: "success"`).
+
+## 4. FIX round — Claude VERIFY finding
+
+- [ ] 4.1 **P1 (correctness/operability).** `state_valid()`
+  (`.agents/orchestrator/src/phase_agent_orchestrator/state/candidates.py`,
+  the `accounts` loop around line 156) calls `resolve_account_dir` for
+  *every* account name ever recorded under `providers.<provider>.accounts`
+  on *every* validation pass — not only when a candidate or pin currently
+  references it. Once any account has been used once (even for a one-off
+  manual test), its `PHASE_AGENT_<PROVIDER>_ACCOUNT_<NAME>_DIR` env var
+  must remain set in *every future invocation of any phase-agent-state.sh
+  command, for any phase*, or the entire state file is rejected as
+  invalid — including by the `auto`/`reset`/`pin` commands whose job is to
+  fix exactly this kind of problem, and including completely unrelated
+  commands (`resolve`, `probe-due`, `state`) for phases that never touched
+  that account. This was reproduced directly against this repository's own
+  `.ops/runtime/phase-agents/state.json` on 2026-09-02: after a one-time
+  test with a temporary `test2` account, every `phase-agent-state.sh`
+  invocation failed with "state failed validation" the moment
+  `PHASE_AGENT_CLAUDE_ACCOUNT_TEST2_DIR` was unset — including the reset
+  commands intended to remove that account, which had to be run *with* the
+  now-obsolete env var still set as a workaround. An unattended environment
+  (the quant-research cron launcher, or a future session) that has never
+  heard of `test2` would hard-fail on every phase-agent-state.sh call
+  until someone manually diagnosed and either restored the env var or
+  hand-edited the state file — exactly what happened here.
+  Fix: `state_valid()`'s `accounts` loop must not treat an unresolvable
+  *recorded* account name as invalidating the whole file. An account entry
+  whose registry lookup fails should be tolerated as-is (it is historical
+  data, not a currently-active reference) rather than rejected; only a
+  *newly written* `pinned_account` or candidate `account` (i.e. one an
+  operator is *pinning to right now*, per the existing checks elsewhere in
+  `state_valid()`) should require the registry to resolve. Verify: a unit
+  test writes a state file with a `providers.claude.accounts.stale` entry
+  whose `PHASE_AGENT_CLAUDE_ACCOUNT_STALE_DIR` is *not* set in the test
+  environment, and asserts `state_valid()` still accepts the file and every
+  read/mutate command (`state`, `auto <phase>`, `set <phase> ...`, `pin
+  <phase> <provider>` with no account) still succeeds — reproducing the
+  exact 2026-09-02 regression and proving it is fixed.
+- [ ] 4.2 Verify: re-run the full bash + pytest suite (Task 3.1's list)
+  after 4.1, and re-run the live smoke check from 3.3 once more.
