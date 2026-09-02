@@ -137,21 +137,51 @@ lock_anchor_pid() {
   printf '%s' "${CLAUDE_PID:-${CODEX_PID:-}}"
 }
 
+# A phase attempt's own lease (run-phase-agent.sh's .phase-attempt-lock)
+# already self-heals on a normal exit via its `trap release_lease EXIT`, and
+# on a hard kill the same owning session re-detects and reclaims it the next
+# time it runs a phase attempt for this change. So an *absent* lease is the
+# ordinary idle state between phase attempts and must never be read as
+# staleness. Only a lease directory that still exists with a pid confirmed
+# dead on this host is real evidence: the owning session survived the crash
+# (kill -0 on its own anchor pid still succeeds) but is wedged and will never
+# retry on its own.
+phase_attempt_lease_is_dead() {
+  local change_dir="$1"
+  local lease="$change_dir/runtime/.phase-attempt-lock"
+  local lease_pid
+  [ -f "$lease/pid" ] || return 1
+  lease_pid="$(<"$lease/pid")"
+  [[ "$lease_pid" =~ ^[0-9]+$ ]] || return 1
+  ! kill -0 "$lease_pid" 2>/dev/null
+}
+
 # Returns success (treat as live) whenever liveness cannot be positively
 # disproved, so an unverifiable owner is never wrongly reclaimed:
 #   - owner.json missing entirely: no recorded claim at all -> reclaimable (stale).
 #   - pid non-numeric, or hostname differs from this host: we cannot check that
 #     pid locally -> assume live, require the existing manual release path.
-#   - pid numeric and same host: the only case where `kill -0` decides it.
+#     (The phase-attempt lease is skipped too in this branch: it lives under
+#     the same host-local .ops tree, so it is no more verifiable than the
+#     owner pid when the recorded hostname does not match.)
+#   - pid numeric and same host: `kill -0` decides the owning session itself;
+#     if it is still alive, an abandoned dead phase-attempt lease for this
+#     change is additional staleness evidence (see phase_attempt_lease_is_dead).
 lock_owner_is_live() {
   local owner="$1"
+  local change_dir="$2"
   local existing_pid existing_host
   [ -f "$owner" ] || return 1
   existing_pid="$(jq -r '.pid // empty' "$owner" 2>/dev/null || true)"
   existing_host="$(jq -r '.hostname // empty' "$owner" 2>/dev/null || true)"
   if [[ "$existing_pid" =~ ^[0-9]+$ ]] && [ "$existing_host" = "$(hostname)" ]; then
-    kill -0 "$existing_pid" 2>/dev/null
-    return $?
+    if ! kill -0 "$existing_pid" 2>/dev/null; then
+      return 1
+    fi
+    if [ -n "$change_dir" ] && phase_attempt_lease_is_dead "$change_dir"; then
+      return 1
+    fi
+    return 0
   fi
   return 0
 }
@@ -175,7 +205,7 @@ lock_change() {
   [ -n "$session_id" ] || die 'session id is required'
   mkdir -p -- "$dir/runtime/logs"
   if ! mkdir -- "$lock" 2>/dev/null; then
-    if lock_owner_is_live "$owner"; then
+    if lock_owner_is_live "$owner" "$dir"; then
       printf 'ops-runtime: active lock exists: %s\n' "$lock" >&2
       jq -c '{change, session_id, pid, hostname, started_at}' "$owner" >&2 || true
       return 1
@@ -337,7 +367,7 @@ lock_repositories() {
     owner="$lock/owner.json"
     mkdir -p -- "$(dirname -- "$lock")"
     if ! mkdir -- "$lock" 2>/dev/null; then
-      if lock_owner_is_live "$owner"; then
+      if lock_owner_is_live "$owner" "$(change_dir "$change")"; then
         printf 'ops-runtime: repository lock exists for %s\n' "$canonical" >&2
         jq -c '{change, session_id, repository, pid, started_at}' "$owner" >&2 || true
         release_repo_locks "$change" "$session_id"
