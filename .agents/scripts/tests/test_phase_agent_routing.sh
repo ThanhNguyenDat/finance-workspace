@@ -46,6 +46,7 @@ grep -Fq 'Do not issue shell commands containing rm, rm -f, git reset, or git ch
 grep -Fq 'sequentially; do not launch exploratory scans' "$trace/codex.prompt" || fail 'FINAL_VERIFY bounded-check guidance missing'
 grep -Fq 'This is the pre-push gate' "$trace/codex.prompt" || fail 'FINAL_VERIFY pre-push gate guidance missing'
 grep -Fq 'active change task that explicitly covers push/CI' "$trace/codex.prompt" || fail 'FINAL_VERIFY pending push task guidance missing'
+grep -Fq 'do not run unscoped `git diff --check HEAD`' "$trace/codex.prompt" || fail 'FINAL_VERIFY dirty-tree scope guidance missing'
 jq -e '.verification_evidence.separation=="provider-independent" and .verification_evidence.mutator_provider=="claude" and .verification_evidence.verifier_provider=="codex" and .verification_evidence.final_result=="success" and .verification_evidence.objective_gates_passed' "$state_file" >/dev/null || fail 'verification derivation invalid'
 "$OPS" phase "$change" "$session" RELEASE
 
