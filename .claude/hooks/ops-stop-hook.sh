@@ -17,7 +17,6 @@ set -Eeuo pipefail
 # per .claude/commands/ops/run.md, not this hook.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 RUNTIME="$SCRIPT_DIR/../../.agents/scripts/ops-runtime.sh"
-STATUS_FILE="$SCRIPT_DIR/../../.ops/runtime/last-active-transaction.log"
 payload="$(cat || true)"
 cwd="$(jq -r '.cwd // empty' <<<"$payload" 2>/dev/null || true)"
 session_id="$(jq -r '.session_id // empty' <<<"$payload" 2>/dev/null || true)"
@@ -28,6 +27,9 @@ session_id="${session_id:-${CLAUDE_SESSION_ID:-}}"
 active="$("$RUNTIME" active "$cwd" "$session_id" 2>/dev/null || true)"
 [ -n "$active" ] || exit 0
 
+# Log under the target workspace's own .ops/runtime/, not the hook script's
+# location, so this works correctly for any cwd (including a test fixture).
+STATUS_FILE="$cwd/.ops/runtime/last-active-transaction.log"
 mkdir -p -- "$(dirname -- "$STATUS_FILE")" 2>/dev/null || exit 0
 printf '%s %s\n' "$(date -u +%FT%TZ)" "$active" >>"$STATUS_FILE" 2>/dev/null || true
 exit 0

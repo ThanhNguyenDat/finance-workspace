@@ -19,11 +19,18 @@ expect_failure() {
     fail "expected command to fail: $*"
   fi
 }
-expect_hook_blocked() {
+expect_hook_logs_active() {
+  # The Stop hook no longer blocks (2026-09-02, operator request): it always
+  # exits 0 and quietly appends the active transaction to
+  # <cwd>/.ops/runtime/last-active-transaction.log instead.
   local payload="$1"
-  if printf '%s' "$payload" | "$HOOK" >/dev/null 2>&1; then
-    fail 'expected Stop hook to block an active workflow'
-  fi
+  local log="$workspace/.ops/runtime/last-active-transaction.log"
+  local before=0 after=0
+  [ -f "$log" ] && before="$(wc -l <"$log")"
+  printf '%s' "$payload" | "$HOOK" >/dev/null || fail 'Stop hook must always exit 0'
+  [ -f "$log" ] || fail 'Stop hook did not create the active-transaction log'
+  after="$(wc -l <"$log")"
+  [ "$after" -gt "$before" ] || fail 'Stop hook did not log the active transaction'
 }
 
 jq -e . "$ROOT_DIR/.claude/settings.json" >/dev/null || fail 'invalid Claude settings JSON'
@@ -318,7 +325,7 @@ expect_failure "$RUNTIME" init change-a session-other codex
 "$RUNTIME" init change-a session-a codex
 "$RUNTIME" phase change-a session-a IMPLEMENT
 payload_a="$(jq -nc --arg cwd "$workspace" --arg sid session-a '{cwd: $cwd, session_id: $sid}')"
-expect_hook_blocked "$payload_a"
+expect_hook_logs_active "$payload_a"
 "$RUNTIME" cleanup change-a session-a BLOCKED
 printf '%s' "$payload_a" | "$HOOK" >/dev/null
 
@@ -452,10 +459,10 @@ test -z "$active_after_limit" || fail "max-round cleanup left active workflow: $
 payload_a="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd, session_id: "session-hook-a"}')"
 payload_b="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd, session_id: "session-hook-b"}')"
 payload_unowned="$(jq -nc --arg cwd "$workspace" '{cwd: $cwd, session_id: "session-unowned"}')"
-expect_hook_blocked "$payload_a"
-expect_hook_blocked "$payload_b"
+expect_hook_logs_active "$payload_a"
+expect_hook_logs_active "$payload_b"
 "$RUNTIME" cleanup hook-a session-hook-a BLOCKED
-expect_hook_blocked "$payload_b"
+expect_hook_logs_active "$payload_b"
 "$RUNTIME" cleanup hook-b session-hook-b BLOCKED
 printf '%s' "$payload_unowned" | "$HOOK" >/dev/null
 
