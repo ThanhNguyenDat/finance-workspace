@@ -133,6 +133,38 @@ release_repo_locks() {
   done < <(find "$REPO_LOCKS_DIR" -mindepth 2 -maxdepth 2 -type f -name owner.json -print0)
 }
 
+lock_anchor_pid() {
+  printf '%s' "${CLAUDE_PID:-${CODEX_PID:-}}"
+}
+
+# Returns success (treat as live) whenever liveness cannot be positively
+# disproved, so an unverifiable owner is never wrongly reclaimed:
+#   - owner.json missing entirely: no recorded claim at all -> reclaimable (stale).
+#   - pid non-numeric, or hostname differs from this host: we cannot check that
+#     pid locally -> assume live, require the existing manual release path.
+#   - pid numeric and same host: the only case where `kill -0` decides it.
+lock_owner_is_live() {
+  local owner="$1"
+  local existing_pid existing_host
+  [ -f "$owner" ] || return 1
+  existing_pid="$(jq -r '.pid // empty' "$owner" 2>/dev/null || true)"
+  existing_host="$(jq -r '.hostname // empty' "$owner" 2>/dev/null || true)"
+  if [[ "$existing_pid" =~ ^[0-9]+$ ]] && [ "$existing_host" = "$(hostname)" ]; then
+    kill -0 "$existing_pid" 2>/dev/null
+    return $?
+  fi
+  return 0
+}
+
+# Recorded pid is the owning session's stable anchor process (Claude Code sets
+# $CLAUDE_PID; Codex's equivalent, if any, is read as $CODEX_PID), never
+# $BASHPID/$PPID: ops-runtime.sh runs as a short-lived subshell per
+# invocation, and any wrapping shell created for a multi-command Bash call is
+# itself ephemeral too, so neither reliably identifies the process that
+# stays alive for the whole locked lifetime. When neither env var is set we
+# cannot identify a trustworthy anchor, so the pid is left unrecorded and
+# lock_owner_is_live's unverifiable-pid branch keeps the old manual-release
+# requirement rather than guessing.
 lock_change() {
   local change="$1"
   local session_id="$2"
@@ -143,14 +175,19 @@ lock_change() {
   [ -n "$session_id" ] || die 'session id is required'
   mkdir -p -- "$dir/runtime/logs"
   if ! mkdir -- "$lock" 2>/dev/null; then
-    printf 'ops-runtime: active lock exists: %s\n' "$lock" >&2
-    [ ! -f "$owner" ] || jq -c '{change, session_id, pid, hostname, started_at}' "$owner" >&2 || true
-    return 1
+    if lock_owner_is_live "$owner"; then
+      printf 'ops-runtime: active lock exists: %s\n' "$lock" >&2
+      jq -c '{change, session_id, pid, hostname, started_at}' "$owner" >&2 || true
+      return 1
+    fi
+    printf 'ops-runtime: releasing stale lock (owning process is dead): %s\n' "$lock" >&2
+    rm -rf -- "$lock"
+    mkdir -- "$lock" 2>/dev/null || { printf 'ops-runtime: cannot acquire lock after stale release: %s\n' "$lock" >&2; return 1; }
   fi
   jq -n \
     --arg change "$change" \
     --arg session_id "$session_id" \
-    --arg pid "$BASHPID" \
+    --arg pid "$(lock_anchor_pid)" \
     --arg hostname "$(hostname)" \
     --arg started_at "$(now_utc)" \
     '{change: $change, session_id: $session_id, pid: $pid, hostname: $hostname, started_at: $started_at}' \
@@ -300,18 +337,28 @@ lock_repositories() {
     owner="$lock/owner.json"
     mkdir -p -- "$(dirname -- "$lock")"
     if ! mkdir -- "$lock" 2>/dev/null; then
-      printf 'ops-runtime: repository lock exists for %s\n' "$canonical" >&2
-      [ ! -f "$owner" ] || jq -c '{change, session_id, repository, pid, started_at}' "$owner" >&2 || true
-      release_repo_locks "$change" "$session_id"
-      return 1
+      if lock_owner_is_live "$owner"; then
+        printf 'ops-runtime: repository lock exists for %s\n' "$canonical" >&2
+        jq -c '{change, session_id, repository, pid, started_at}' "$owner" >&2 || true
+        release_repo_locks "$change" "$session_id"
+        return 1
+      fi
+      printf 'ops-runtime: releasing stale repository lock (owning process is dead): %s\n' "$canonical" >&2
+      rm -rf -- "$lock"
+      if ! mkdir -- "$lock" 2>/dev/null; then
+        printf 'ops-runtime: cannot acquire repository lock after stale release: %s\n' "$canonical" >&2
+        release_repo_locks "$change" "$session_id"
+        return 1
+      fi
     fi
     jq -n \
       --arg change "$change" \
       --arg session_id "$session_id" \
       --arg repository "$canonical" \
-      --arg pid "$BASHPID" \
+      --arg pid "$(lock_anchor_pid)" \
+      --arg hostname "$(hostname)" \
       --arg started_at "$(now_utc)" \
-      '{change: $change, session_id: $session_id, repository: $repository, pid: $pid, started_at: $started_at}' \
+      '{change: $change, session_id: $session_id, repository: $repository, pid: $pid, hostname: $hostname, started_at: $started_at}' \
       >"$owner"
   done
 }
