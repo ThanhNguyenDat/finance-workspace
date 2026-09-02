@@ -43,12 +43,13 @@ fingerprint() {
 phase_key="${phase,,}"
 agent_json="$($STATE state)"
 prefix="PHASE_AGENT_${phase}_"
-provider_var="${prefix}PROVIDER"; model_var="${prefix}MODEL"; effort_var="${prefix}EFFORT"
-override_provider="${!provider_var:-${PHASE_AGENT_PROVIDER:-}}"; override_model="${!model_var:-${PHASE_AGENT_MODEL:-}}"; override_effort="${!effort_var:-${PHASE_AGENT_EFFORT:-}}"
-if [[ -n "$override_provider$override_model$override_effort" ]]; then
+provider_var="${prefix}PROVIDER"; model_var="${prefix}MODEL"; effort_var="${prefix}EFFORT"; account_var="${prefix}ACCOUNT"
+override_provider="${!provider_var:-${PHASE_AGENT_PROVIDER:-}}"; override_model="${!model_var:-${PHASE_AGENT_MODEL:-}}"; override_effort="${!effort_var:-${PHASE_AGENT_EFFORT:-}}"; override_account="${!account_var:-${PHASE_AGENT_ACCOUNT:-}}"
+override_account="${override_account,,}"
+if [[ -n "$override_provider$override_model$override_effort$override_account" ]]; then
   [[ -n "$override_provider" && -n "$override_model" && -n "$override_effort" ]] || die 'provider/model/effort overrides must be supplied together'
-  "$STATE" validate "$override_provider" "$override_model" "$override_effort"
-  candidates="$(jq -cn --arg p "$override_provider" --arg m "$override_model" --arg e "$override_effort" '[{provider:$p,model:$m,effort:$e}]')"
+  if [[ -n "$override_account" ]]; then "$STATE" validate "$override_provider" "$override_model" "$override_effort" "$override_account"; else "$STATE" validate "$override_provider" "$override_model" "$override_effort"; fi
+  candidates="$(jq -cn --arg p "$override_provider" --arg m "$override_model" --arg e "$override_effort" --arg a "$override_account" '[{provider:$p,model:$m,effort:$e} + (if $a == "" then {} else {account:$a} end)]')"
 else
   candidates="$(jq -c --arg phase "$phase_key" '.phases[$phase].candidates' <<<"$agent_json")"
 fi
@@ -56,16 +57,16 @@ continuation=false; last_status=1; selected_any=false
 count="$(jq 'length' <<<"$candidates")"
 for ((index=0; index<count; index++)); do
   candidate="$(jq -c ".[$index]" <<<"$candidates")"
-  provider="$(jq -r '.provider' <<<"$candidate")"; model="$(jq -r '.model' <<<"$candidate")"; effort="$(jq -r '.effort' <<<"$candidate")"
-  "$STATE" validate "$provider" "$model" "$effort"
+  provider="$(jq -r '.provider' <<<"$candidate")"; model="$(jq -r '.model' <<<"$candidate")"; effort="$(jq -r '.effort' <<<"$candidate")"; account="$(jq -r '.account // empty' <<<"$candidate")"; account="${account,,}"
+  if [[ -n "$account" ]]; then "$STATE" validate "$provider" "$model" "$effort" "$account"; else "$STATE" validate "$provider" "$model" "$effort"; fi
   agent_json="$($STATE state)"
   mode="$(jq -r --arg phase "$phase_key" '.phases[$phase].mode' <<<"$agent_json")"
-  pinned="$(jq -r --arg phase "$phase_key" '.phases[$phase].pinned_provider//empty' <<<"$agent_json")"
-  if [[ -z "$override_provider" && "$mode" = manual && "$pinned" != "$provider" ]]; then continue; fi
-  available="$(jq -r --arg provider "$provider" '.providers[$provider].available' <<<"$agent_json")"
+  pinned="$(jq -r --arg phase "$phase_key" '.phases[$phase].pinned_provider//empty' <<<"$agent_json")"; pinned_account="$(jq -r --arg phase "$phase_key" '.phases[$phase].pinned_account//empty' <<<"$agent_json")"
+  if [[ -z "$override_provider" && "$mode" = manual && ( "$pinned" != "$provider" || ( -n "$pinned_account" && "$pinned_account" != "$account" ) ) ]]; then continue; fi
+  if [[ -n "$account" ]]; then available="$(jq -r --arg provider "$provider" --arg account "$account" '.providers[$provider].accounts[$account].available // true' <<<"$agent_json")"; else available="$(jq -r --arg provider "$provider" '.providers[$provider].available' <<<"$agent_json")"; fi
   if [[ "$available" != true ]]; then
-    if [[ -x "$DETECTOR" ]] && "$STATE" probe-due "$provider" >/dev/null 2>&1; then "$DETECTOR" "$provider" >/dev/null 2>&1 || :; fi
-    available="$("$STATE" state | jq -r --arg provider "$provider" '.providers[$provider].available')"
+    if [[ -z "$account" && -x "$DETECTOR" ]] && "$STATE" probe-due "$provider" >/dev/null 2>&1; then "$DETECTOR" "$provider" >/dev/null 2>&1 || :; fi
+    if [[ -n "$account" ]]; then available="$("$STATE" state | jq -r --arg provider "$provider" --arg account "$account" '.providers[$provider].accounts[$account].available // true')"; else available="$("$STATE" state | jq -r --arg provider "$provider" '.providers[$provider].available')"; fi
   fi
   [[ "$available" = true ]] || continue
   selected_any=true
@@ -75,7 +76,7 @@ for ((index=0; index<count; index++)); do
   workspace_before="$(fingerprint "$workspace_root")"; repo_before="$(fingerprint "$repository_root")"; head_before="$(git -C "$repository_root" rev-parse HEAD)"; started="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   adapter="$SCRIPT_DIR/run-$provider-phase.sh"; [[ -x "$adapter" ]] || die "adapter unavailable: $adapter"
   set +e
-  PHASE_AGENT_MODEL="$model" PHASE_AGENT_EFFORT="$effort" PHASE_AGENT_ATTEMPT_ID="$attempt_id" \
+  PHASE_AGENT_MODEL="$model" PHASE_AGENT_EFFORT="$effort" PHASE_AGENT_ACCOUNT="$account" PHASE_AGENT_ATTEMPT_ID="$attempt_id" \
     PHASE_AGENT_CONTINUATION="$continuation" PHASE_AGENT_EVIDENCE_BASE="$base" \
     "$adapter" "$change" "$repository_root" "$phase"
   status=$?
@@ -99,11 +100,11 @@ for ((index=0; index<count; index++)); do
   [[ "$workspace_before" = "$workspace_after" && "$repo_before" = "$repo_after" && "$head_before" = "$head_after" ]] || changed=true
   evidence_relative="${base#"$RUNTIME_ROOT/"}"
   record="$base.attempt.json"
-  jq -n --argjson attempt "$attempt" --arg phase "$phase" --argjson round "$round" --arg provider "$provider" --arg model "$model" --arg effort "$effort" \
+  jq -n --argjson attempt "$attempt" --arg phase "$phase" --argjson round "$round" --arg provider "$provider" --arg model "$model" --arg effort "$effort" --arg account "$account" \
     --argjson continuation "$continuation" --arg result_class "$result" --argjson exit_status "$status" --argjson changed "$changed" --argjson process_id "$$" \
     --argjson objective_gates_passed "$objective_gates_passed" \
     --arg started_at "$started" --arg completed_at "$completed" --arg head_before "$head_before" --arg head_after "$head_after" --arg evidence_base "$evidence_relative" \
-    '{attempt:$attempt,phase:$phase,round:$round,provider:$provider,model:$model,effort:$effort,continuation:$continuation,
+    '{attempt:$attempt,phase:$phase,round:$round,provider:$provider,model:$model,effort:$effort} + (if $account == "" then {} else {account:$account} end) + {continuation:$continuation,
       result_class:$result_class,exit_status:$exit_status,worktree_changed:$changed,process_id:$process_id,objective_gates_passed:$objective_gates_passed,
       started_at:$started_at,completed_at:$completed_at,head_before:$head_before,head_after:$head_after,evidence_base:$evidence_base}' >"$record"
   "$RUNTIME" record-attempt "$change" "$session_id" "$record"

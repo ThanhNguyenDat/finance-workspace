@@ -7,7 +7,6 @@ RUNTIME_ROOT="${OPS_ROOT:-$WORKSPACE_ROOT}"
 RUNTIME="$SCRIPT_DIR/ops-runtime.sh"
 CLASSIFIER="${CODEX_RESULT_CLASSIFIER:-$SCRIPT_DIR/classify-codex-result.sh}"
 AGENT_STATE="${PHASE_AGENT_STATE_HELPER:-$SCRIPT_DIR/phase-agent-state.sh}"
-
 die() { printf 'run-codex-phase: %s\n' "$1" >&2; exit 1; }
 usage() { printf 'usage: run-codex-phase.sh <change> <repository> <PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY>\n' >&2; }
 [[ $# -eq 3 ]] || { usage; exit 2; }
@@ -36,8 +35,24 @@ round="$(jq -r '.round//0' "$state_file")"; [[ "$round" =~ ^[0-9]+$ ]] || die 'i
 model="${PHASE_AGENT_MODEL:-}"; effort="${PHASE_AGENT_EFFORT:-}"
 if [[ -z "$model" || -z "$effort" ]]; then
   [[ -x "$AGENT_STATE" ]] || die 'phase-agent state unavailable'
-  IFS=$'\t' read -r provider model effort < <("$AGENT_STATE" resolve "${phase,,}")
+  IFS=$'\t' read -r provider model effort account < <("$AGENT_STATE" resolve "${phase,,}")
   [[ "$provider" = codex ]] || die 'resolved candidate is not Codex'
+fi
+account="${PHASE_AGENT_ACCOUNT:-${account:-}}"
+if [[ -n "$account" ]]; then
+  account_dir="$("$AGENT_STATE" account-dir codex "$account")"
+  "$RUNTIME" lock-account codex "$account" "$$" "$change" "$session_id"
+  account_lock_held=true
+  release_account_lock() {
+    if [[ "$account_lock_held" = true ]]; then
+      "$RUNTIME" unlock-account codex "$account" "$$" "$change" "$session_id" >/dev/null 2>&1 || :
+      account_lock_held=false
+    fi
+  }
+  trap release_account_lock EXIT
+  export CODEX_HOME="$account_dir"
+else
+  account_lock_held=false
 fi
 [[ "$model" =~ ^[A-Za-z0-9._:-]+$ ]] || die 'unsafe model'
 case "$effort" in none|minimal|low|medium|high|xhigh) ;; *) die 'unsupported Codex effort' ;; esac
@@ -95,6 +110,8 @@ if [[ "$phase" = VERIFY || "$phase" = FINAL_VERIFY ]]; then
   fi
 fi
 printf '%s\n' "$result" >"$result_file"
-if [[ -x "$AGENT_STATE" && ( "$result" = global-quota-exhausted || "$result" = auth-error || "$result" = success ) ]]; then "$AGENT_STATE" provider-result codex "$result" >/dev/null; fi
+if [[ -x "$AGENT_STATE" && ( "$result" = global-quota-exhausted || "$result" = auth-error || "$result" = success ) ]]; then
+  if [[ -n "$account" ]]; then "$AGENT_STATE" provider-result codex "$result" "$account" >/dev/null; else "$AGENT_STATE" provider-result codex "$result" >/dev/null; fi
+fi
 [[ "$status" -eq 0 ]] || { printf 'Codex phase %s failed: %s\n' "$phase" "$result" >&2; exit "$status"; }
 printf 'Codex phase %s completed: %s\n' "$phase" "$base"

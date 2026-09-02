@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from .common import atomic_write_json, die, json_text, pid_is_alive, run_cli, utc_now
+from .common import atomic_write_json, die, json_text, normalize_account, pid_is_alive, resolve_account_dir, run_cli, utc_now
 
 PREFIX = "ops-runtime"
 SAFE_CHANGE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -38,6 +38,10 @@ def repo_locks_dir() -> Path:
     return ops_dir() / "runtime/repo-locks"
 
 
+def account_locks_dir() -> Path:
+    return ops_dir() / "runtime/account-locks"
+
+
 def usage() -> None:
     print(
         """usage:
@@ -46,6 +50,8 @@ def usage() -> None:
   ops-runtime.sh unlock <change> <session-id>
   ops-runtime.sh lock-repos <change> <session-id> <repository>...
   ops-runtime.sh unlock-repos <change> <session-id>
+  ops-runtime.sh lock-account <provider> <account> <owner-pid> [change] [session-id]
+  ops-runtime.sh unlock-account <provider> <account> <owner-pid> [change] [session-id]
   ops-runtime.sh cleanup <change> <session-id> <FAILED|BLOCKED>
   ops-runtime.sh assert-repo-lock <change> <session-id> <repository>
   ops-runtime.sh phase <change> <session-id> <next-phase>
@@ -141,6 +147,62 @@ def lock_anchor_pid() -> str:
     return os.environ.get("CLAUDE_PID") or os.environ.get("CODEX_PID") or ""
 
 
+def account_lock_dir(provider: str, account: str) -> Path:
+    normalized = normalize_account(account, PREFIX)
+    if provider not in {"codex", "claude"}:
+        die(PREFIX, f"unsupported provider: {provider}")
+    return account_locks_dir() / f"{provider}-{normalized}"
+
+
+def lock_account(provider: str, account: str, owner_pid: str, change: str = "", session_id: str = "") -> None:
+    normalized, _ = resolve_account_dir(provider, account, PREFIX)
+    if not re.fullmatch(r"[0-9]+", owner_pid):
+        die(PREFIX, "account lock owner pid must be numeric")
+    lock = account_lock_dir(provider, normalized)
+    owner = lock / "owner.json"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    change_path = change_dir(change) if change else None
+    try:
+        lock.mkdir()
+    except FileExistsError:
+        if owner_is_live(owner, change_path):
+            print(f"ops-runtime: account lock exists for {provider}/{normalized}", file=sys.stderr)
+            value = read_json(owner, tolerate_failure=True)
+            if isinstance(value, dict):
+                print(json_text({key: value.get(key) for key in ("provider", "account", "change", "session_id", "pid", "hostname", "started_at")}), file=sys.stderr)
+            raise _ReturnStatus(1)
+        print(f"ops-runtime: releasing stale account lock (owning process is dead): {lock}", file=sys.stderr)
+        shutil.rmtree(lock, ignore_errors=True)
+        try:
+            lock.mkdir()
+        except FileExistsError:
+            print(f"ops-runtime: cannot acquire account lock after stale release: {lock}", file=sys.stderr)
+            raise _ReturnStatus(1)
+    atomic_write_json(owner, {"provider": provider, "account": normalized, "change": change or None, "session_id": session_id or None, "pid": owner_pid, "hostname": socket.gethostname(), "started_at": utc_now()})
+
+
+def unlock_account(provider: str, account: str, owner_pid: str, change: str = "", session_id: str = "") -> None:
+    normalized = normalize_account(account, PREFIX)
+    lock = account_lock_dir(provider, normalized)
+    owner = lock / "owner.json"
+    if not owner.is_file():
+        return
+    value = read_json(owner, tolerate_failure=True)
+    if not isinstance(value, dict):
+        return
+    if value.get("provider") != provider or value.get("account") != normalized or value.get("pid") != owner_pid:
+        return
+    if change and value.get("change") != change:
+        return
+    if session_id and value.get("session_id") != session_id:
+        return
+    owner.unlink(missing_ok=True)
+    try:
+        lock.rmdir()
+    except OSError:
+        pass
+
+
 def phase_attempt_lease_is_dead(change_path: Path) -> bool:
     pid_file = change_path / "runtime/.phase-attempt-lock/pid"
     if not pid_file.is_file():
@@ -152,7 +214,7 @@ def phase_attempt_lease_is_dead(change_path: Path) -> bool:
     return value.isdigit() and not pid_is_alive(int(value), socket.gethostname())
 
 
-def owner_is_live(owner: Path, change_path: Path | None) -> bool:
+def owner_is_live(owner: Path, change_path: Path | None = None) -> bool:
     if not owner.is_file():
         return False
     value = read_json(owner, tolerate_failure=True)
@@ -162,6 +224,13 @@ def owner_is_live(owner: Path, change_path: Path | None) -> bool:
     if isinstance(pid, str) and pid.isdigit() and hostname == socket.gethostname():
         if not pid_is_alive(int(pid), hostname):
             return False
+        recorded_change = value.get("change")
+        if isinstance(recorded_change, str) and recorded_change:
+            try:
+                change_path = change_dir(recorded_change)
+            except CLIError:
+                # An unverifiable owner must remain live so lock recovery fails closed.
+                change_path = None
         if change_path is not None and phase_attempt_lease_is_dead(change_path):
             return False
         return True
@@ -563,6 +632,10 @@ def main() -> int:
             if not args[2]:
                 die(PREFIX, "session id is required")
             release_repo_locks(args[1], args[2])
+        elif command == "lock-account" and 4 <= len(args) <= 6:
+            lock_account(args[1], args[2], args[3], args[4] if len(args) >= 5 else "", args[5] if len(args) == 6 else "")
+        elif command == "unlock-account" and 4 <= len(args) <= 6:
+            unlock_account(args[1], args[2], args[3], args[4] if len(args) >= 5 else "", args[5] if len(args) == 6 else "")
         elif command == "cleanup" and len(args) == 4:
             cleanup(args[1], args[2], args[3])
         elif command == "assert-repo-lock" and len(args) == 4:

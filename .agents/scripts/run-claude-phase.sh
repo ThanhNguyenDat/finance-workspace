@@ -32,8 +32,24 @@ round="$(jq -r '.round//0' "$state_file")"; [[ "$round" =~ ^[0-9]+$ ]] || die 'i
 model="${PHASE_AGENT_MODEL:-}"; effort="${PHASE_AGENT_EFFORT:-}"
 if [[ -z "$model" || -z "$effort" ]]; then
   [[ -x "$AGENT_STATE" ]] || die 'phase-agent state unavailable'
-  IFS=$'\t' read -r provider model effort < <("$AGENT_STATE" resolve "${phase,,}")
+  IFS=$'\t' read -r provider model effort account < <("$AGENT_STATE" resolve "${phase,,}")
   [[ "$provider" = claude ]] || die 'resolved candidate is not Claude'
+fi
+account="${PHASE_AGENT_ACCOUNT:-${account:-}}"
+if [[ -n "$account" ]]; then
+  account_dir="$("$AGENT_STATE" account-dir claude "$account")"
+  "$RUNTIME" lock-account claude "$account" "$$" "$change" "$session_id"
+  account_lock_held=true
+  release_account_lock() {
+    if [[ "$account_lock_held" = true ]]; then
+      "$RUNTIME" unlock-account claude "$account" "$$" "$change" "$session_id" >/dev/null 2>&1 || :
+      account_lock_held=false
+    fi
+  }
+  trap release_account_lock EXIT
+  export CLAUDE_CONFIG_DIR="$account_dir"
+else
+  account_lock_held=false
 fi
 [[ "$model" =~ ^[A-Za-z0-9._:-]+$ ]] || die 'unsafe model'
 case "$effort" in low|medium|high|xhigh|max) ;; *) die 'unsupported Claude effort' ;; esac
@@ -78,6 +94,8 @@ if [[ "$phase" = VERIFY || "$phase" = FINAL_VERIFY ]]; then
   if [[ "$workspace_before" != "$(fingerprint "$workspace_root")" || "$repo_before" != "$(fingerprint "$repository_root")" ]]; then printf '%s\n' 'read-only verifier mutated a Git worktree' >>"$stderr"; status=1; result=implementation-error; printf '%s\n' "$status" >"$exit_file"; fi
 fi
 printf '%s\n' "$result" >"$result_file"
-if [[ -x "$AGENT_STATE" && ( "$result" = global-quota-exhausted || "$result" = auth-error || "$result" = success ) ]]; then "$AGENT_STATE" provider-result claude "$result" >/dev/null; fi
+if [[ -x "$AGENT_STATE" && ( "$result" = global-quota-exhausted || "$result" = auth-error || "$result" = success ) ]]; then
+  if [[ -n "$account" ]]; then "$AGENT_STATE" provider-result claude "$result" "$account" >/dev/null; else "$AGENT_STATE" provider-result claude "$result" >/dev/null; fi
+fi
 [[ "$status" -eq 0 ]] || { printf 'Claude phase %s failed: %s\n' "$phase" "$result" >&2; exit "$status"; }
 printf 'Claude phase %s completed: %s\n' "$phase" "$base"
