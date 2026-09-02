@@ -47,3 +47,6 @@
   were preserved and not repaired here.
 - The live quant smoke check and push/CI verification were not run because
   the user explicitly prohibited launching another model process and pushing.
+- Local implementation commit: `45d107e065735c12fb003293e4264bae8f4d38d4`.
+  No remote workflow URL exists because the commit was intentionally not
+  pushed.
