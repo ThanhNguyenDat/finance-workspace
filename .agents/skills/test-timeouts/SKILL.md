@@ -19,6 +19,12 @@ Apply layered timeouts to every non-interactive test run.
 6. Keep interactive watch mode out of CI; watch mode is the only unbounded
    exception.
 
+For model-owned verification runners, keep the check plan small and
+sequential so the agent can emit its final gate before the phase deadline.
+Do not ask the agent to clean temporary files with `rm`/`rm -f`; shell-tool
+routers may reject those commands. Prefer repository test scripts that own
+their bounded cleanup, or leave transient evidence under the runtime log root.
+
 Use a short timeout for deterministic unit and shell tests, and a larger
 explicit timeout for integration, image, or end-to-end suites. A timeout must
 fail the run visibly; never convert it to success.

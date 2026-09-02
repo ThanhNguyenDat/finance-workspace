@@ -3,13 +3,14 @@
 See `proposal.md - Why`. Verified current-state facts (2026-09-02, at this
 change's base commit):
 
-- The package is 20 tracked files (`git ls-files .agents/orchestrator`), plus
+- The package is 20 tracked files in the former hidden project, plus
   two untracked local artifacts: `accounts.yaml` (git-ignored via `.gitignore`
   line 14) and `.venv` (561 MB, self-ignored by uv's `.venv/.gitignore`).
-- An empty leftover directory `.agents/orchestrator/src/orchestrator/` exists
+- An empty leftover directory `tools/phase-agent-orchestrator/src/orchestrator/`
+  exists
   from the original `uv init --package` scaffold; it is untracked and holds no
   files.
-- Exactly seven non-OpenSpec files reference the string `agents/orchestrator`:
+- Exactly seven non-OpenSpec files reference the former hidden-project path:
   `.agents/scripts/ops-runtime.sh`, `.agents/scripts/phase-agent-state.sh`,
   `.agents/scripts/quant-research-state.sh`,
   `.agents/scripts/tests/hermetic-env.sh`,
@@ -69,10 +70,9 @@ The directory name matches the distribution name already in
 top-level directory per tool, and it reads correctly against `CLAUDE.md`'s
 rule that `finance-workspace` hosts orchestration, not runtime, code.
 
-Critically, this target sits at **the same depth as the current location**
-(`tools/phase-agent-orchestrator/src/<pkg>/<subpkg>/x.py` and
-`.agents/orchestrator/src/<pkg>/<subpkg>/x.py` are both six levels below the
-repository root), so every `parents[5]` derivation continues to resolve to the
+Critically, this target sits at **the same depth as the former location**:
+`tools/phase-agent-orchestrator/src/<pkg>/<subpkg>/x.py` is six levels below
+the repository root, so every `parents[5]` derivation continues to resolve to the
 repository root with no source edit.
 
 **Alternatives rejected:**
@@ -142,7 +142,8 @@ best-effort helper.
 - **A missed reference breaks every phase attempt.** The shims are on the hot
   path of `/ops:run` and `quant-research`; a stale `PROJECT_DIR` fails closed
   with `orchestrator project not found` (exit 1), which is loud rather than
-  silent. Mitigation: a repository-wide `grep` for `agents/orchestrator` is an
+  silent. Mitigation: a repository-wide search for the former hidden-project
+  path is an
   explicit verification step, and the full bash suite plus a live smoke check
   must pass before the push.
 - **`accounts.yaml` left behind.** Failure mode is an account registry that
@@ -152,7 +153,7 @@ best-effort helper.
   column values.
 - **In-flight changes referencing the old path.** `phase-agent-python-spawn-layer`
   (tasks 3.0, 6.2 and its design/proposal) and
-  `phase-agent-account-registry-config` cite `.agents/orchestrator/...` in
+  `phase-agent-account-registry-config` cite the former hidden project in
   commands a future implementer would paste verbatim. Mitigation: reconciling
   those two changes' text is in scope here (Task 4); their behavior and task
   ordering are untouched.
@@ -165,7 +166,8 @@ best-effort helper.
 
 ## Migration Plan
 
-1. Create `tools/`, `git mv .agents/orchestrator tools/phase-agent-orchestrator`.
+1. Create `tools/` and move the former hidden project with `git mv` to
+   `tools/phase-agent-orchestrator`.
 2. Remove the empty leftover `src/orchestrator/` scaffold directory.
 3. Update the three shims, `hermetic-env.sh`, `pytest.ini`, and `.gitignore`.
 4. Update `.agents/rules/coding-and-verification.md` and
@@ -182,5 +184,5 @@ best-effort helper.
    either path — the strongest available evidence that no stale path survives).
 
 **Rollback**: revert the single commit, move `accounts.yaml` back, re-run
-`uv sync --project .agents/orchestrator`. No deployed artifact and no
+`uv sync --project tools/phase-agent-orchestrator`. No deployed artifact and no
 production surface is involved, so rollback is local plus one push.

@@ -9,8 +9,9 @@ after Task 1.
 
 ## 1. Move the project
 
-- [x] 1.1 `git mv .agents/orchestrator tools/phase-agent-orchestrator`
-  (creating `tools/` as needed). Verify: `git status` shows the 20 tracked
+- [x] 1.1 Move the former hidden orchestrator project with `git mv` to
+  `tools/phase-agent-orchestrator` (creating `tools/` as needed). Verify:
+  `git status` shows the 20 tracked
   files as renames (`R`), not as deletes plus adds, and
   `git log --follow tools/phase-agent-orchestrator/src/phase_agent_orchestrator/state/ops_transaction.py`
   still reaches the commits that predate this change.
@@ -22,8 +23,9 @@ after Task 1.
   `tools/phase-agent-orchestrator/accounts.yaml` and run
   `uv sync --project tools/phase-agent-orchestrator` (design.md Decision 5).
   Verify: `uv run --project tools/phase-agent-orchestrator python -c "import phase_agent_orchestrator, yaml"`
-  exits 0, and `test -f tools/phase-agent-orchestrator/accounts.yaml` succeeds
-  while `test -e .agents/orchestrator` fails. Do not print the file's contents.
+  exits 0, and `test -f tools/phase-agent-orchestrator/accounts.yaml` succeeds;
+  also assert that the former hidden project directory is absent. Do not print
+  the file's contents.
 
 ## 2. Update every path reference
 
@@ -58,7 +60,7 @@ after Task 1.
   `./.agents/scripts/sync-agent-links.sh` then
   `./.agents/scripts/sync-agent-links.sh --check` both succeed.
 - [x] 2.6 Verify no reference survives:
-  `grep -rn "agents/orchestrator" --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ .`
+  `grep -rn "agents[/]orchestrator" --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ .`
   returns hits only under `openspec/changes/archive/` (historical records,
   deliberately untouched per design.md Non-Goals) and under
   `.ops/**/runtime/logs/` (transient, git-ignored).
@@ -77,7 +79,7 @@ after Task 1.
 
 ## 4. Reconcile in-flight OpenSpec changes
 
-- [x] 4.1 Update every `.agents/orchestrator` path in
+- [x] 4.1 Update every former hidden-project path in
   `openspec/changes/phase-agent-python-spawn-layer/{proposal,design,tasks}.md`
   and `openspec/changes/phase-agent-account-registry-config/{proposal,design,tasks}.md`
   to `tools/phase-agent-orchestrator`, changing paths only — no task, decision,

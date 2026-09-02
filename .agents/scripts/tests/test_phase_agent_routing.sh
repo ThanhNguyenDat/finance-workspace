@@ -42,6 +42,9 @@ if FAKE_CODEX_MODE=no-gate "$RUNNER" "$change" "$repo" FINAL_VERIFY >/dev/null 2
 if "$OPS" phase "$change" "$session" RELEASE >/dev/null 2>&1; then fail 'release accepted failed objective gates'; fi
 "$RUNNER" "$change" "$repo" FINAL_VERIFY >/dev/null
 grep -Fq 'resolver appends this attempt' "$trace/codex.prompt" || fail 'FINAL_VERIFY current-attempt guidance missing'
+grep -Fq 'Do not issue shell commands containing rm, rm -f, git reset, or git checkout' "$trace/codex.prompt" || fail 'FINAL_VERIFY destructive-command guard missing'
+grep -Fq 'sequentially; do not launch exploratory scans' "$trace/codex.prompt" || fail 'FINAL_VERIFY bounded-check guidance missing'
+grep -Fq 'This is the pre-push gate' "$trace/codex.prompt" || fail 'FINAL_VERIFY pre-push gate guidance missing'
 jq -e '.verification_evidence.separation=="provider-independent" and .verification_evidence.mutator_provider=="claude" and .verification_evidence.verifier_provider=="codex" and .verification_evidence.final_result=="success" and .verification_evidence.objective_gates_passed' "$state_file" >/dev/null || fail 'verification derivation invalid'
 "$OPS" phase "$change" "$session" RELEASE
 

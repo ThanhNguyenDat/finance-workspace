@@ -60,7 +60,7 @@
   `.github/workflows/agent-contracts.yml`. It runs the relocated project's
   pytest suite with a one-minute TERM/kill-after boundary, so Task 3.1's
   default-root regression test is now an automated CI gate.
-- Reconciled every remaining `agents/orchestrator` path in the active
+- Reconciled every remaining former hidden-project path in the active
   `phase-agent-python-orchestrator` planning artifacts. Therefore Task 2.6's
   existing acceptance criterion is now met without an exception for that
   unarchived change.
@@ -112,3 +112,15 @@
 - Both FINAL_VERIFY attempts recorded `worktree_changed=false`, but neither
   produced the required objective-gate attestation. Therefore FINAL_VERIFY is
   not PASS and the exact-SHA push/CI handoff must remain pending.
+
+## TIMEOUT FIX evidence (2026-09-02)
+
+- Root-cause mitigation is implemented in both phase adapters' FINAL_VERIFY
+  prompts: checks are sequential and bounded, exploratory/duplicate retries
+  are prohibited, destructive cleanup commands are prohibited, and the agent
+  must emit the objective-gate attestation immediately after checks finish.
+- The routing regression asserts these prompt guards; the targeted routing and
+  Codex policy suites pass. The shared `test-timeouts` skill now records the
+  shell-router limitation discovered during verification.
+- The live provider retry remains required for release evidence; the prompt
+  fix itself has only local regression evidence so far.

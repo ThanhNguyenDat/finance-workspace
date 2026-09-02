@@ -3,7 +3,8 @@
 `.agents/` is declared by `CLAUDE.md`, `AGENTS.md`, and `openspec/config.yaml`
 as the **shared instruction source of truth** for both agents: rules, skills,
 and the launcher scripts that read them. `phase-agent-python-orchestrator`
-placed a full `uv`-managed Python distribution at `.agents/orchestrator/`
+placed a full `uv`-managed Python distribution in the hidden orchestrator
+project directory under `.agents/`
 because that was the shortest path from the three bash scripts it replaced
 (`.agents/scripts/*.sh` shims resolve their project as `$SCRIPT_DIR/../orchestrator`).
 The result is that an instruction directory now also contains a build system,
@@ -24,7 +25,7 @@ Two concrete costs today:
   skipped by default by tools that ignore dot-directories, and its
   `pyproject.toml`/`uv.lock`/`pytest.ini` triple is split across a visible
   root file (`pytest.ini`, whose only content is
-  `testpaths = .agents/orchestrator/tests`) and a hidden project directory.
+  `testpaths` entry and a hidden project directory.
 
 `phase-agent-python-spawn-layer` will move the *remaining* ~700 lines of bash
 into this same package, making it the primary home of the orchestration
@@ -33,13 +34,14 @@ files, is materially cheaper than relocating after that change lands.
 
 ## What Changes
 
-- Move the `uv` project from `.agents/orchestrator/` to
+- Move the `uv` project from the former hidden orchestrator project directory
+  to
   `tools/phase-agent-orchestrator/` with **no source-code behavior change**:
   `git mv` of every tracked file, preserving the internal
   `src/phase_agent_orchestrator/...` layout, the distribution name
   (`phase-agent-orchestrator`), and every module path used by
   `python -m phase_agent_orchestrator.cli.<module>`.
-- Update every path reference to the old location:
+- Update every path reference to the former hidden project location:
   - the three bash shims' `PROJECT_DIR` default (`.agents/scripts/ops-runtime.sh`,
     `phase-agent-state.sh`, `quant-research-state.sh`);
   - `.agents/scripts/tests/hermetic-env.sh`'s
@@ -83,14 +85,14 @@ the package's filesystem location, and every external CLI contract
 - **Affected repository**: `finance-workspace` only. This is orchestration
   tooling, not production runtime code, so `finance-mw`, `finance-web`,
   `finance-live-action`, `finance-broker`, and `mt5` are unaffected.
-- **Affected files**: 20 tracked files under `.agents/orchestrator/` move;
+- **Affected files**: 20 tracked files under the former hidden project move;
   three shims, `hermetic-env.sh`, `pytest.ini`, `.gitignore`, one rule file,
   one skill file, and two in-flight OpenSpec changes are edited in place.
   `.github/workflows/agent-contracts.yml` needs no path edit (it references
   only `.agents/scripts/**` and sets up `uv` generically) — this must be
   confirmed, not assumed, by a green run on the cutover commit.
-- **Operator action required**: the existing `.agents/orchestrator/.venv` and
-  the local, git-ignored `.agents/orchestrator/accounts.yaml` are untracked
+- **Operator action required**: the existing hidden-project `.venv` and the
+  local, git-ignored `accounts.yaml` are untracked
   and do **not** move with `git mv`. `accounts.yaml` must be moved by hand
   before the first post-cutover run or every account-scoped phase attempt
   loses its account directories; the `.venv` is re-created by `uv sync` at the
