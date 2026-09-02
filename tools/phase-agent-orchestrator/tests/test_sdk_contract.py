@@ -20,6 +20,9 @@ from phase_agent_orchestrator.phase_adapter import _run_claude_sdk
 from phase_agent_orchestrator.state import candidates
 from phase_agent_orchestrator import run_phase_agent_command
 from phase_agent_orchestrator.run_phase_agent_command import _codex
+from phase_agent_orchestrator import run_phase_agent
+from phase_agent_orchestrator.locks import change_lock
+from phase_agent_orchestrator.state import ops_transaction
 from phase_agent_orchestrator import configure_phase_agents, detect_codex_availability, detect_provider_availability
 
 
@@ -223,3 +226,36 @@ def test_legacy_codex_detector_uses_sdk_probe_result(tmp_path: Path, monkeypatch
     monkeypatch.setattr(detect_codex_availability, "probe", lambda *args: "global-quota-exhausted")
     assert detect_codex_availability.main([]) == 0
     assert capsys.readouterr().out == "unavailable\n"
+
+
+def test_generic_resolver_calls_claude_sdk_adapter_in_process(tmp_path: Path, monkeypatch) -> None:
+    cli = Path(__file__).parent / "fixtures/fake_claude_sdk_cli.py"
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_cli = fake_bin / "claude"
+    shutil.copy2(cli, fake_cli)
+    fake_cli.chmod(fake_cli.stat().st_mode | stat.S_IXUSR)
+    root = tmp_path / "workspace"
+    root.mkdir()
+    subprocess.run(["git", "-C", str(root), "init", "-q"], check=True)
+    subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.invalid"], check=True)
+    subprocess.run(["git", "-C", str(root), "config", "user.name", "Test"], check=True)
+    (root / "README.md").write_text("root\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(root), "add", "README.md"], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-qm", "init"], check=True)
+    monkeypatch.setenv("OPS_ROOT", str(root))
+    monkeypatch.setenv("OPS_WORKSPACE_ROOT", str(root))
+    monkeypatch.setenv("PHASE_AGENT_ROOT", str(root))
+    monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(root / ".ops/runtime/phase-agents"))
+    monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(tmp_path / "missing.yaml"))
+    monkeypatch.setenv("PATH", f"{fake_bin}:{os.environ['PATH']}")
+    monkeypatch.setenv("FAKE_SDK_MODE", "complete")
+    candidates.ensure_state()
+    change, session = "sdk-plan", "sdk-session"
+    change_lock.lock_change(change, session)
+    ops_transaction.init_change(change, session, None, None)
+    change_lock.lock_repositories(change, session, [str(root)])
+    assert run_phase_agent.run([change, str(root), "PLAN"]) == 0
+    state = ops_transaction.read_state(change)
+    assert state["attempts"][0]["provider"] == "claude"
+    assert state["attempts"][0]["result_class"] == "success"
