@@ -38,7 +38,7 @@ All tasks are in the `finance-workspace` repository only.
 
 ## 3. FIX round — Claude VERIFY finding
 
-- [ ] 3.1 **P1 (scope/data-loss risk, out of scope for this change).**
+- [x] 3.1 **P1 (scope/data-loss risk, out of scope for this change).**
   Commit `9a7d7bd` added a bare `raw` line to the repo-root `.gitignore`
   (currently line 20), directly underneath the existing comment "# Do not
   ignore raw/: handoff and research history are workspace artifacts."
@@ -61,5 +61,5 @@ All tasks are in the `finance-workspace` repository only.
   scratch path, confirm `git status` reports it, then remove the scratch
   directory) — or simply confirm the line is gone and the adjacent comment
   is no longer contradicted.
-- [ ] 3.2 Verify: re-run the full bash + pytest suite (Task 2.1's list)
+- [x] 3.2 Verify: re-run the full bash + pytest suite (Task 2.1's list)
   after 3.1, confirming no regression from removing the `raw` line.
