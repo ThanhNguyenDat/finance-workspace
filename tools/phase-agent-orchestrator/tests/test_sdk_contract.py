@@ -150,6 +150,7 @@ def test_quant_claude_rotates_from_personal_02_to_personal(tmp_path: Path, monke
     monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(registry))
     monkeypatch.setenv("PATH", f"{fake_bin}:{os.environ['PATH']}")
     monkeypatch.setenv("FAKE_SDK_MODE", "quota-first")
+    monkeypatch.setenv("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK", "1")
     monkeypatch.setenv("PHASE_AGENT_QUANT_TIMEOUT_SECONDS", "2")
     candidates.ensure_state()
     assert run_phase_agent_command.run(["quant-research"]) == 0

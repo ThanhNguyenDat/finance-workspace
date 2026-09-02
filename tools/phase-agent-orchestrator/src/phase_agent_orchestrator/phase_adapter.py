@@ -10,16 +10,16 @@ from pathlib import Path
 from typing import Any
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
-from openai_codex import ApprovalMode, Codex, CodexConfig, Sandbox
+from openai_codex import ApprovalMode, CodexConfig, Sandbox
 
 from .accounts.registry import resolve_account_dir
 from .classify_result import classify_sdk_result
 from .fingerprint import fingerprint
 from .io import CLIError
 from .locks import account_lock, change_lock
-from .provider_sdk import append_jsonl, child_environment, executable, jsonable
+from .provider_sdk import append_jsonl, child_environment, executable, jsonable, start_codex
 from .state import candidates, ops_transaction
-from .subprocess_supervision import supervise_claude_turn, supervise_codex_turn
+from .subprocess_supervision import hard_kill_claude_client, supervise_claude_turn, supervise_codex_turn
 
 PREFIXES = {"claude": "run-claude-phase", "codex": "run-codex-phase"}
 PHASES = {"PLAN", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
@@ -148,7 +148,11 @@ async def _run_claude_sdk(prompt: str, model: str, effort: str, workspace: Path,
     )
     client = ClaudeSDKClient(options)
     try:
-        await client.connect()
+        try:
+            await asyncio.wait_for(client.connect(), timeout=max(1, timeout_seconds))
+        except TimeoutError:
+            hard_kill_claude_client(client)
+            return 1, "timeout", None
         outcome = await supervise_claude_turn(
             client,
             prompt,
@@ -164,7 +168,10 @@ async def _run_claude_sdk(prompt: str, model: str, effort: str, workspace: Path,
         append_text.write_text(f"{type(error).__name__}: {error}\n", encoding="utf-8")
         return 1, classify_sdk_result(provider="claude", error=error), error
     finally:
-        await client.disconnect()
+        try:
+            await asyncio.wait_for(client.disconnect(), timeout=2)
+        except (TimeoutError, asyncio.CancelledError):
+            hard_kill_claude_client(client)
 
 
 def _run_codex_sdk(prompt: str, model: str, effort: str, workspace: Path, stdout: Path, timeout_seconds: float, account_dir: Path | None) -> tuple[int, str, Any]:
@@ -174,7 +181,7 @@ def _run_codex_sdk(prompt: str, model: str, effort: str, workspace: Path, stdout
     config = CodexConfig(codex_bin=executable("codex", "run-codex-phase"), cwd=str(workspace), env=environment)
     codex = None
     try:
-        codex = Codex(config)
+        codex = start_codex(config, max(1, timeout_seconds))
         thread = codex.thread_start(approval_mode=ApprovalMode.deny_all, cwd=str(workspace), ephemeral=True, model=model, sandbox=Sandbox.full_access)
         handle = thread.turn(prompt, effort=effort, model=model, sandbox=Sandbox.full_access)
         outcome = supervise_codex_turn(handle, timeout_seconds=timeout_seconds, kill_after_seconds=30)

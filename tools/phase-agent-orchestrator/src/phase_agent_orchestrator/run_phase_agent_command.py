@@ -8,16 +8,16 @@ import sys
 from pathlib import Path
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
-from openai_codex import ApprovalMode, Codex, CodexConfig, Sandbox
+from openai_codex import ApprovalMode, CodexConfig, Sandbox
 
 from .classify_result import classify_sdk_result
 from .detect_provider_availability import probe
 from .io import CLIError, atomic_write_json, run_cli
 from .locks import account_lock
 from .locks.directory_lock import PidDirectoryLock
-from .provider_sdk import append_jsonl, child_environment, executable
+from .provider_sdk import append_jsonl, child_environment, executable, start_codex
 from .state import candidates, quant_research
-from .subprocess_supervision import supervise_claude_turn, supervise_codex_turn
+from .subprocess_supervision import hard_kill_claude_client, supervise_claude_turn, supervise_codex_turn
 
 PREFIX = "run-phase-agent-command"
 
@@ -28,7 +28,11 @@ async def _claude(prompt: str, model: str, effort: str, cwd: Path, account_dir: 
         env["CLAUDE_CONFIG_DIR"] = str(account_dir)
     client = ClaudeSDKClient(ClaudeAgentOptions(cli_path=executable("claude", PREFIX), cwd=cwd, env=env, model=model, effort=effort, permission_mode="bypassPermissions"))
     try:
-        await client.connect()
+        try:
+            await asyncio.wait_for(client.connect(), timeout=max(1, timeout_seconds))
+        except TimeoutError:
+            hard_kill_claude_client(client)
+            return 1, "timeout", None
         outcome = await supervise_claude_turn(client, prompt, timeout_seconds=timeout_seconds, kill_after_seconds=30, on_message=lambda value: append_jsonl(stdout, value))
         result = outcome.result
         result_class = classify_sdk_result(result, provider="claude", timed_out=outcome.timed_out, hard_killed=outcome.hard_killed)
@@ -36,7 +40,10 @@ async def _claude(prompt: str, model: str, effort: str, cwd: Path, account_dir: 
     except BaseException as error:
         return 1, classify_sdk_result(provider="claude", error=error), error
     finally:
-        await client.disconnect()
+        try:
+            await asyncio.wait_for(client.disconnect(), timeout=2)
+        except (TimeoutError, asyncio.CancelledError):
+            hard_kill_claude_client(client)
 
 
 def _codex(prompt: str, model: str, effort: str, cwd: Path, account_dir: Path | None, stdout: Path, timeout_seconds: int) -> tuple[int, str, object]:
@@ -45,7 +52,7 @@ def _codex(prompt: str, model: str, effort: str, cwd: Path, account_dir: Path | 
         env["CODEX_HOME"] = str(account_dir)
     codex = None
     try:
-        codex = Codex(CodexConfig(codex_bin=executable("codex", PREFIX), cwd=str(cwd), env=env))
+        codex = start_codex(CodexConfig(codex_bin=executable("codex", PREFIX), cwd=str(cwd), env=env), max(1, timeout_seconds))
         thread = codex.thread_start(approval_mode=ApprovalMode.deny_all, cwd=str(cwd), ephemeral=True, model=model, sandbox=Sandbox.full_access)
         outcome = supervise_codex_turn(thread.turn(prompt, effort=effort, model=model, sandbox=Sandbox.full_access), timeout_seconds=timeout_seconds, kill_after_seconds=30)
         result = outcome.result

@@ -6,6 +6,7 @@ import dataclasses
 import json
 import os
 import shutil
+import threading
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable
@@ -62,3 +63,43 @@ def run_async(coro_factory: Callable[[], Any]) -> Any:
     import asyncio
 
     return asyncio.run(coro_factory())
+
+
+def start_codex(config: Any, timeout_seconds: float) -> Any:
+    """Create the public Codex facade with a bounded app-server handshake."""
+
+    from openai_codex import Codex
+    from openai_codex.client import CodexClient
+
+    client = CodexClient(config)
+    outcome: list[Any] = []
+
+    def initialize() -> None:
+        try:
+            client.start()
+            outcome.append(("result", client.initialize()))
+        except BaseException as error:
+            outcome.append(("error", error))
+
+    worker = threading.Thread(target=initialize, name="phase-agent-codex-connect")
+    worker.daemon = True
+    worker.start()
+    worker.join(timeout_seconds)
+    if worker.is_alive():
+        process = getattr(client, "_proc", None)
+        if process is not None and process.poll() is None:
+            process.kill()
+        worker.join(2)
+        client.close()
+        raise TimeoutError("Codex SDK app-server handshake timed out")
+    if not outcome:
+        client.close()
+        raise RuntimeError("Codex SDK app-server handshake returned no result")
+    kind, value = outcome[0]
+    if kind == "error":
+        client.close()
+        raise value
+    facade = Codex.__new__(Codex)
+    facade._client = client
+    facade._init = value
+    return facade
