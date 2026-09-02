@@ -88,6 +88,7 @@ def test_claude_helper_hard_kills_after_ignored_interrupt(tmp_path: Path) -> Non
     cli = FIXTURES / "fake_claude_sdk_cli.py"
     _make_executable(cli)
     os.environ["CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK"] = "1"
+    os.environ["FAKE_SDK_MODE"] = "hang"
     os.environ["FAKE_SDK_STARTED_MARKER"] = str(tmp_path / "started")
     os.environ["FAKE_SDK_INTERRUPT_MARKER"] = str(tmp_path / "interrupted")
     client = ClaudeSDKClient(
@@ -111,6 +112,7 @@ def test_claude_helper_hard_kills_after_ignored_interrupt(tmp_path: Path) -> Non
         asyncio.run(client.disconnect())
         for name in (
             "CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK",
+            "FAKE_SDK_MODE",
             "FAKE_SDK_STARTED_MARKER",
             "FAKE_SDK_INTERRUPT_MARKER",
         ):

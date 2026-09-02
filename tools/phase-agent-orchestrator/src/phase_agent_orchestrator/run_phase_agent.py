@@ -11,7 +11,7 @@ from typing import Iterator
 from .classify_result import RESULT_CLASSES
 from .detect_provider_availability import probe
 from .fingerprint import fingerprint
-from .io import CLIError, atomic_write_json, run_cli
+from .io import CLIError, atomic_write_json, run_cli, utc_now
 from .locks.directory_lock import PidDirectoryLock
 from .state import candidates, ops_transaction
 
@@ -102,8 +102,10 @@ def _run_attempt(change: str, repository: str, phase: str, item: dict, continuat
     round_value = state.get("round", 0)
     attempt_id = f"{phase.lower()}-r{round_value}-a{attempt}-{os.getpid()}"
     base = runtime_dir / "logs" / f"agent-{attempt_id}"
-    before = (fingerprint(workspace), fingerprint(Path(repository)))
-    head_before = _git_head(Path(repository))
+    repository_root = Path(_git_root(repository))
+    before = (fingerprint(workspace), fingerprint(repository_root))
+    head_before = _git_head(repository_root)
+    started_at = utc_now()
     env = {
         "PHASE_AGENT_MODEL": item["model"],
         "PHASE_AGENT_EFFORT": item["effort"],
@@ -126,8 +128,9 @@ def _run_attempt(change: str, repository: str, phase: str, item: dict, continuat
         base.with_suffix(".stderr.log").open("a", encoding="utf-8").write("FINAL_VERIFY did not provide a passing objective-gate attestation\n")
         base.with_suffix(".exit").write_text("1\n", encoding="utf-8")
         result_file.write_text("implementation-error\n", encoding="utf-8")
-    after = (fingerprint(workspace), fingerprint(Path(repository)))
-    changed = before != after or head_before != _git_head(Path(repository))
+    after = (fingerprint(workspace), fingerprint(repository_root))
+    head_after = _git_head(repository_root)
+    changed = before != after or head_before != head_after
     record = {
         "attempt": attempt,
         "phase": phase,
@@ -142,10 +145,10 @@ def _run_attempt(change: str, repository: str, phase: str, item: dict, continuat
         "worktree_changed": changed,
         "process_id": os.getpid(),
         "objective_gates_passed": phase == "FINAL_VERIFY" and status == 0,
-        "started_at": "",
-        "completed_at": "",
+        "started_at": started_at,
+        "completed_at": utc_now(),
         "head_before": head_before,
-        "head_after": _git_head(Path(repository)),
+        "head_after": head_after,
         "evidence_base": str(base.relative_to(Path(os.environ.get("OPS_ROOT", workspace)))) if base.is_relative_to(Path(os.environ.get("OPS_ROOT", workspace))) else str(base),
     }
     attempt_path = base.with_suffix(".attempt.json")
@@ -189,6 +192,7 @@ def run(argv: list[str]) -> int:
                 continue
             selected = True
             status, result, changed = _run_attempt(change, repository, phase, item, continuation, runtime_state, state_file, runtime_dir, workspace)
+            runtime_state = ops_transaction.read_state(change)
             last_status = status
             if status == 0:
                 print(f"Phase agent {phase} completed with {item['provider']}")

@@ -16,6 +16,12 @@ Apply layered timeouts to every non-interactive test run.
 3. Give subprocesses created inside tests an API-level timeout.
 4. Set `timeout-minutes` on every GitHub Actions job as the final boundary.
 5. Clean up containers and child processes with traps after timeout or failure.
+
+For provider SDK integrations, bound both the SDK connection handshake and the
+turn itself. Exercise cancellation with a protocol-speaking fake provider that
+ignores the native interrupt, then assert the SDK-owned process is hard-killed;
+a raw one-line CLI mock can make a healthy SDK integration appear hung because
+it never completes the SDK handshake.
 6. Keep interactive watch mode out of CI; watch mode is the only unbounded
    exception.
 

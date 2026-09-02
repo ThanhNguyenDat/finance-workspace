@@ -6,6 +6,7 @@ import argparse
 import contextlib
 import os
 import io
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -19,6 +20,9 @@ PREFIX = "detect-codex-availability"
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="detect-codex-availability.sh")
     parser.parse_args(argv)
+    if shutil.which("codex") is None:
+        print("inconclusive:missing-codex")
+        return 3
     timeout_text = os.environ.get("CODEX_PROBE_TIMEOUT_SECONDS", "30")
     if not timeout_text.isdigit() or int(timeout_text) < 1:
         raise CLIError(f"{PREFIX}: invalid-timeout")

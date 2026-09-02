@@ -27,20 +27,12 @@ printf '%s\n' app >"$repo/app.txt"
 git -C "$repo" add app.txt
 git -C "$repo" commit -qm init
 
-cat >"$bin/claude" <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' "$CLAUDE_CONFIG_DIR" >>"$FAKE_TRACE/claude.config-dir"
-if [[ "${FAKE_CLAUDE_MODE:-success}" = sleep ]]; then sleep 3; fi
-if [[ "${FAKE_CLAUDE_MODE:-success}" = quota-work && "$CLAUDE_CONFIG_DIR" = "${FAKE_CLAUDE_QUOTA_DIR:-}" ]]; then
-  printf '%s\n' '{"error":{"code":"global_quota_exhausted"}}' >&2
-  exit 1
-fi
-printf '%s\n' '{"type":"result","result":"OK"}'
-EOF
+cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_claude_sdk_cli.py" "$bin/claude"
 chmod +x "$bin/claude"
 
-export PATH="$bin:$PATH"
+export PATH="$bin:$PATH" CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1 FAKE_SDK_ACCOUNT_TRACE="$trace/claude.config-dir" FAKE_SDK_RESULT_TEXT="OK"
 export OPS_ROOT="$workspace" OPS_WORKSPACE_ROOT="$workspace"
+export QUANT_RESEARCH_ROOT="$workspace"
 export PHASE_AGENT_STATE_DIR="$workspace/.ops/runtime/phase-agents"
 export PHASE_AGENT_LEGACY_QUANT_STATE="$tmp/no-quant"
 export PHASE_AGENT_LEGACY_CLAUDE_STATE="$tmp/no-claude"
@@ -63,11 +55,11 @@ fail() { printf 'test_multi_account_routing: %s\n' "$1" >&2; exit 1; }
 "$OPS" lock-repos account-lock-test session-test "$repo"
 
 set +e
-FAKE_CLAUDE_MODE=sleep "$RUNNER" account-lock-test "$repo" PLAN >/dev/null 2>&1 & first_pid=$!
+FAKE_SDK_MODE=delay "$RUNNER" account-lock-test "$repo" PLAN >"$trace/first.out" 2>"$trace/first.err" & first_pid=$!
 set -e
 lock_owner="$workspace/.ops/runtime/account-locks/claude-work/owner.json"
 for _ in $(seq 1 50); do [[ -f "$lock_owner" ]] && break; sleep 0.1; done
-[[ -f "$lock_owner" ]] || fail 'account lock was not acquired before the subprocess ran'
+[[ -f "$lock_owner" ]] || { cat "$trace/first.err" >&2; fail 'account lock was not acquired before the subprocess ran'; }
 
 set +e
 "$RUNNER" account-lock-test "$repo" PLAN >/dev/null 2>&1
@@ -87,7 +79,7 @@ printf '%s\n' 'CANONICAL QUANT PROMPT' >"$workspace/.claude/commands/quant-resea
 "$STATE" set quant_research claude sonnet high work >/dev/null
 "$STATE" candidate-set quant_research 1 claude sonnet high personal >/dev/null
 export QUANT_RESEARCH_STATE_DIR="$workspace/.ops/runtime/quant-research"
-export FAKE_CLAUDE_MODE=quota-work FAKE_CLAUDE_QUOTA_DIR="$tmp/claude-work"
+export FAKE_SDK_MODE=quota-work FAKE_CLAUDE_QUOTA_DIR="$tmp/claude-work"
 (cd "$workspace" && ./.agents/scripts/run-phase-agent-command.sh quant-research) >/dev/null
 
 quant_state="$QUANT_RESEARCH_STATE_DIR/state.json"

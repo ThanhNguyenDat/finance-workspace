@@ -9,13 +9,13 @@ import tempfile
 from pathlib import Path
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
-from openai_codex import ApprovalMode, Codex, CodexConfig, Sandbox
+from openai_codex import ApprovalMode, CodexConfig, Sandbox
 
 from .classify_result import classify_sdk_result
 from .io import CLIError, run_cli
-from .provider_sdk import child_environment, executable
+from .provider_sdk import child_environment, executable, start_codex
 from .state import candidates
-from .subprocess_supervision import supervise_claude_turn, supervise_codex_turn
+from .subprocess_supervision import hard_kill_claude_client, supervise_claude_turn, supervise_codex_turn
 
 PREFIX = "detect-provider-availability"
 
@@ -32,7 +32,11 @@ async def _probe_claude(model: str, effort: str, timeout_seconds: float, cwd: Pa
         )
     )
     try:
-        await client.connect()
+        try:
+            await asyncio.wait_for(client.connect(), timeout=max(1, timeout_seconds))
+        except TimeoutError:
+            hard_kill_claude_client(client)
+            return "timeout"
         outcome = await supervise_claude_turn(
             client,
             "Reply with exactly OK.",
@@ -48,7 +52,10 @@ async def _probe_claude(model: str, effort: str, timeout_seconds: float, cwd: Pa
     except BaseException as error:
         return classify_sdk_result(provider="claude", error=error)
     finally:
-        await client.disconnect()
+        try:
+            await asyncio.wait_for(client.disconnect(), timeout=2)
+        except (TimeoutError, asyncio.CancelledError):
+            hard_kill_claude_client(client)
 
 
 def _probe_codex(model: str, effort: str, timeout_seconds: float, cwd: Path) -> str:
@@ -59,7 +66,7 @@ def _probe_codex(model: str, effort: str, timeout_seconds: float, cwd: Path) -> 
     )
     codex = None
     try:
-        codex = Codex(config)
+        codex = start_codex(config, max(1, timeout_seconds))
         thread = codex.thread_start(
             approval_mode=ApprovalMode.deny_all,
             cwd=str(cwd),

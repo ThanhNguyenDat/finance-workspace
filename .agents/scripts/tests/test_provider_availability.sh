@@ -5,11 +5,11 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
 DETECT="$ROOT_DIR/.agents/scripts/detect-provider-availability.sh"
 STATE="$ROOT_DIR/.agents/scripts/phase-agent-state.sh"
 tmp="$(mktemp -d)"; trap 'rm -rf -- "$tmp"' EXIT
-mkdir -p "$tmp/bin"; export PATH="$tmp/bin:$PATH" PHASE_AGENT_STATE_DIR="$tmp/state" PHASE_AGENT_LEGACY_QUANT_STATE="$tmp/no-quant" PHASE_AGENT_LEGACY_CLAUDE_STATE="$tmp/no-claude"
+mkdir -p "$tmp/bin"; export PATH="$tmp/bin:$PATH" CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1 PHASE_AGENT_STATE_DIR="$tmp/state" PHASE_AGENT_LEGACY_QUANT_STATE="$tmp/no-quant" PHASE_AGENT_LEGACY_CLAUDE_STATE="$tmp/no-claude"
 fail() { printf 'test_provider_availability: %s\n' "$1" >&2; exit 1; }
 make_fake() {
   local name="$1"
-  printf '%s\n' '#!/usr/bin/env bash' 'if [[ "${0##*/}" = claude ]]; then case " $* " in *" --verbose "*) ;; *) exit 64 ;; esac; fi' 'case "${FAKE_RESULT:-success}" in success) printf '\''{"type":"result","result":"OK"}\n'\'';; quota) printf '\''{"error":{"code":"global_quota_exhausted"}}\n'\'' >&2; exit 1;; rate) printf '\''rate limit 429\n'\'' >&2; exit 1;; auth) printf '\''{"error":{"code":"authentication_error"}}\n'\'' >&2; exit 1;; esac' >"$tmp/bin/$name"
+  cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_${name}_sdk_cli.py" "$tmp/bin/$name"
   chmod +x "$tmp/bin/$name"
 }
 make_fake codex; make_fake claude; "$STATE" init >/dev/null

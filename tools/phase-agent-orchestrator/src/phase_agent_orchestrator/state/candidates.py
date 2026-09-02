@@ -40,7 +40,7 @@ def valid_phase(value: str) -> bool:
 
 
 def normalize_phase(value: str) -> str:
-    normalized = value.replace("-", "_")
+    normalized = value.replace("-", "_").lower()
     if not valid_phase(normalized):
         die(PREFIX, f"unsupported phase agent: {value}")
     return normalized

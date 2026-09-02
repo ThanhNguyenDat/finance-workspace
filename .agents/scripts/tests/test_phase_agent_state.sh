@@ -9,6 +9,7 @@ trap 'rm -rf -- "$tmp"' EXIT
 export PHASE_AGENT_STATE_DIR="$tmp/state"
 export PHASE_AGENT_LEGACY_QUANT_STATE="$tmp/quant.json"
 export PHASE_AGENT_LEGACY_CLAUDE_STATE="$tmp/claude.json"
+export PHASE_AGENT_ACCOUNTS_FILE="$tmp/missing-accounts.yaml"
 fail() { printf 'test_phase_agent_state: %s\n' "$1" >&2; exit 1; }
 
 printf '%s\n' '{"schema_version":2,"codex_available":false,"codex_profiles":{"implement":{"model":"codex-i","effort":"high"},"fix":{"model":"codex-f","effort":"high"},"fix_fallback":{"model":"codex-ff","effort":"medium"}}}' >"$PHASE_AGENT_LEGACY_QUANT_STATE"

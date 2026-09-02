@@ -34,6 +34,7 @@ async def _kill_claude_after_ignored_interrupt(tmp_path: Path) -> None:
     interrupted = tmp_path / "claude-interrupted"
     old_skip = os.environ.get("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK")
     os.environ["CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK"] = "1"
+    os.environ["FAKE_SDK_MODE"] = "hang"
     os.environ["FAKE_SDK_STARTED_MARKER"] = str(started)
     os.environ["FAKE_SDK_INTERRUPT_MARKER"] = str(interrupted)
     client = ClaudeSDKClient(
@@ -61,6 +62,7 @@ async def _kill_claude_after_ignored_interrupt(tmp_path: Path) -> None:
         await client.disconnect()
         for name in (
             "CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK",
+            "FAKE_SDK_MODE",
             "FAKE_SDK_STARTED_MARKER",
             "FAKE_SDK_INTERRUPT_MARKER",
         ):

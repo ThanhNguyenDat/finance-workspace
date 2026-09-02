@@ -29,6 +29,8 @@ def _text(value: Any) -> str:
         return _text(value.value)
     if isinstance(value, str):
         return value.lower()
+    if isinstance(value, BaseException):
+        return str(value).lower()
     if isinstance(value, Iterable) and not isinstance(value, (bytes, dict)):
         return " ".join(_text(item) for item in value)
     if isinstance(value, dict):

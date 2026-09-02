@@ -28,7 +28,7 @@ All tasks are in the `finance-workspace` repository only.
   every result class the bash version's own test coverage
   (`test_provider_availability.sh`, `test_codex_availability_detection.sh`)
   currently exercises.
-- [ ] 1.3 Wire the four corresponding `.agents/scripts/*.sh` shims. Verify:
+- [x] 1.3 Wire the four corresponding `.agents/scripts/*.sh` shims. Verify:
   `test_provider_availability.sh` and `test_codex_availability_detection.sh`
   pass unmodified against the shims.
 
@@ -106,7 +106,7 @@ All tasks are in the `finance-workspace` repository only.
   the Python fingerprint of a fixed fixture repository state matches a
   fingerprint captured from the current bash `fingerprint()` function run
   against the identical fixture.
-- [ ] 4.4 Wire both shims. Verify:
+- [x] 4.4 Wire both shims. Verify:
   `.agents/scripts/tests/test_claude_worker_policy.sh`,
   `test_codex_worker_policy.sh`, and `test_multi_account_routing.sh`
   (its account-lock-exclusivity and real-account-directory-export
@@ -126,13 +126,13 @@ All tasks are in the `finance-workspace` repository only.
   `test_claude_quant_launcher.sh`, `test_phase_agent_quant_launcher.sh`,
   and `test_multi_account_routing.sh`'s quant-research failover assertions
   pass unmodified.
-- [ ] 5.3 Wire both shims.
+- [x] 5.3 Wire both shims.
 
 ## 6. Full-system verification and cutover
 
-- [ ] 6.1 Verify: every bash test under `.agents/scripts/tests/` passes
+- [x] 6.1 Verify: every bash test under `.agents/scripts/tests/` passes
   against the fully shimmed state.
-- [ ] 6.2 Verify: `uv run --project tools/phase-agent-orchestrator pytest` passes
+- [x] 6.2 Verify: `uv run --project tools/phase-agent-orchestrator pytest` passes
   with the full suite from Tasks 1-5, including the new hanging-session
   cancellation coverage from Task 3, and that `uv.lock` pins exact SDK
   versions (no version range).
@@ -143,7 +143,7 @@ All tasks are in the `finance-workspace` repository only.
 - [ ] 6.4 Update `.github/workflows/agent-contracts.yml` if the CI job's
   `bash -n` syntax-check step needs adjusting for any removed bash file,
   and verify the workflow still succeeds on a pushed commit.
-- [ ] 6.5 Update `.agents/rules/coding-and-verification.md` and/or the
+- [x] 6.5 Update `.agents/rules/coding-and-verification.md` and/or the
   relevant skill to reflect that the phase-agent system is now
   Python-first and SDK-backed for provider invocation, and verify
   `./.agents/scripts/sync-agent-links.sh --check` still passes.

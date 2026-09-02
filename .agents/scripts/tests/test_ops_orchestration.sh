@@ -358,45 +358,24 @@ expect_failure "$RUNTIME" lock-repos change-partial session-partial "$mw" "$web_
 
 mock_bin="$tmp/mock-bin"
 mkdir -p -- "$mock_bin"
-cat >"$mock_bin/codex" <<'MOCK'
-#!/usr/bin/env bash
-set -Eeuo pipefail
-printf '%s\n' "$PWD" >"$MOCK_PWD_FILE"
-printf '%s\n' "$@" >"$MOCK_ARGS_FILE"
-case "${MOCK_CODEX_MODE:-success}" in
-  success) printf '%s\n' '{"type":"result","status":"completed"}' ;;
-  failure) printf '%s\n' '{"type":"result","status":"failed"}' >&2; exit 7 ;;
-  timeout) sleep 5 ;;
-  *) exit 9 ;;
-esac
-MOCK
+cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_codex_sdk_cli.py" "$mock_bin/codex"
 chmod +x "$mock_bin/codex"
-
-if [ "${RUN_REAL_CODEX_PARSER_CHECK:-0}" = 1 ] && command -v codex >/dev/null 2>&1; then
-  timeout --signal=TERM --kill-after=10s 15s codex exec --cd "$workspace" \
-    --add-dir "$web_worktree" --ephemeral \
-    --dangerously-bypass-approvals-and-sandbox --help >/dev/null \
-    || fail 'selected Codex invocation was rejected by the real CLI parser'
-fi
+export FAKE_SDK_TRACE="$tmp/sdk-trace" FAKE_SDK_RESULT_TEXT=$'OK\nFINAL_VERIFY_GATE: PASS\nP0_FINDINGS: 0\nP1_FINDINGS: 0\nOBJECTIVE_GATES: PASS'
 
 "$RUNTIME" lock change-runner session-runner
 "$RUNTIME" init change-runner session-runner codex
 "$RUNTIME" phase change-runner session-runner IMPLEMENT
 "$RUNTIME" lock-repos change-runner session-runner "$web_worktree"
-MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
-  MOCK_CODEX_MODE=success CODEX_TIMEOUT_SECONDS=2 "$RUNNER" change-runner "$web_worktree" IMPLEMENT
+PATH="$mock_bin:/usr/bin:/bin" FAKE_CODEX_MODE=complete CODEX_TIMEOUT_SECONDS=2 \
+  "$RUNNER" change-runner "$web_worktree" IMPLEMENT
 test "$(cat "$(find "$workspace/.ops/changes/change-runner/runtime/logs" -name 'codex-implement-round-0-direct-*.exit' -print -quit)")" = 0 || fail 'successful Codex phase was not recorded'
-grep -Fxq -- '--cd' "$tmp/mock-args" || fail 'Codex primary cwd flag missing'
-grep -Fxq -- "$workspace" "$tmp/mock-args" || fail 'Codex primary cwd was not finance-workspace'
-grep -Fxq -- '--add-dir' "$tmp/mock-args" || fail 'Codex additional directory flag missing'
-grep -Fxq -- "$web_worktree" "$tmp/mock-args" || fail 'Codex writable repository was not passed'
-grep -Fxq -- '--dangerously-bypass-approvals-and-sandbox' "$tmp/mock-args" || fail 'Codex permission-bypass flag missing'
-test "$(grep -Fc -- '--sandbox' "$tmp/mock-args" || true)" = 0 || fail 'conflicting sandbox flag was passed'
+grep -Fq '"method": "thread/start"' "$tmp/sdk-trace" || fail 'Codex SDK thread was not started'
+grep -Fq '"method": "turn/start"' "$tmp/sdk-trace" || fail 'Codex SDK turn was not started'
 
 "$RUNTIME" lock change-no-repo session-no-repo
 "$RUNTIME" init change-no-repo session-no-repo codex
 "$RUNTIME" phase change-no-repo session-no-repo IMPLEMENT
-expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
+expect_failure env PATH="$mock_bin:/usr/bin:/bin" \
   "$RUNNER" change-no-repo "$web_worktree" IMPLEMENT
 "$RUNTIME" cleanup change-no-repo session-no-repo BLOCKED
 
@@ -406,7 +385,7 @@ expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args"
 "$RUNTIME" lock change-repo-denied session-repo-denied
 "$RUNTIME" init change-repo-denied session-repo-denied codex
 "$RUNTIME" phase change-repo-denied session-repo-denied IMPLEMENT
-expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" \
+expect_failure env PATH="$mock_bin:/usr/bin:/bin" \
   "$RUNNER" change-repo-denied "$mw" IMPLEMENT
 "$RUNTIME" cleanup change-repo-denied session-repo-denied BLOCKED
 "$RUNTIME" cleanup change-repo-owner session-repo-owner BLOCKED
@@ -415,17 +394,19 @@ expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args"
 "$RUNTIME" fix change-runner session-runner
 printf '%s\n' 'Fix the regression from verification.' \
   >"$workspace/.ops/changes/change-runner/runtime/verification-findings-round-1.md"
-expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" MOCK_CODEX_MODE=failure CODEX_TIMEOUT_SECONDS=2 \
+expect_failure env PATH="$mock_bin:/usr/bin:/bin" FAKE_CODEX_RESULT=implementation CODEX_TIMEOUT_SECONDS=2 \
   "$RUNNER" change-runner "$web_worktree" FIX
-test "$(cat "$(find "$workspace/.ops/changes/change-runner/runtime/logs" -name 'codex-fix-round-1-direct-*.exit' -print -quit)")" = 7 || fail 'Codex failure was not recorded'
+test "$(cat "$(find "$workspace/.ops/changes/change-runner/runtime/logs" -name 'codex-fix-round-1-direct-*.exit' -print -quit)")" = 1 || fail 'Codex failure was not recorded'
+test "$(cat "$(find "$workspace/.ops/changes/change-runner/runtime/logs" -name 'codex-fix-round-1-direct-*.result-class' -print -quit)")" = implementation-error || { cat "$tmp/sdk-trace" >&2; fail 'Codex implementation failure class was not recorded'; }
 
 "$RUNTIME" phase change-runner session-runner VERIFY
 "$RUNTIME" fix change-runner session-runner
 printf '%s\n' 'Fix the timeout finding from verification.' \
   >"$workspace/.ops/changes/change-runner/runtime/verification-findings-round-2.md"
-expect_failure env MOCK_PWD_FILE="$tmp/mock-pwd" MOCK_ARGS_FILE="$tmp/mock-args" PATH="$mock_bin:/usr/bin:/bin" MOCK_CODEX_MODE=timeout CODEX_TIMEOUT_SECONDS=1 \
+expect_failure env PATH="$mock_bin:/usr/bin:/bin" FAKE_CODEX_MODE=delay FAKE_SDK_DELAY_SECONDS=2 CODEX_TIMEOUT_SECONDS=1 \
   "$RUNNER" change-runner "$web_worktree" FIX
-test "$(cat "$(find "$workspace/.ops/changes/change-runner/runtime/logs" -name 'codex-fix-round-2-direct-*.exit' -print -quit)")" = 124 || fail 'Codex timeout was not bounded'
+test "$(cat "$(find "$workspace/.ops/changes/change-runner/runtime/logs" -name 'codex-fix-round-2-direct-*.exit' -print -quit)")" = 1 || fail 'Codex timeout was not bounded'
+test "$(cat "$(find "$workspace/.ops/changes/change-runner/runtime/logs" -name 'codex-fix-round-2-direct-*.result-class' -print -quit)")" = timeout || fail 'Codex timeout class was not recorded'
 expect_failure env PATH="$tmp/no-codex:/usr/bin:/bin" "$RUNNER" change-runner "$web_worktree" FIX
 "$RUNTIME" cleanup change-runner session-runner FAILED
 

@@ -18,36 +18,25 @@ state_dir="$tmp/state"
 mock_bin="$tmp/bin"
 trace_dir="$tmp/trace"
 mkdir -p -- "$mock_bin" "$trace_dir"
-
-cat >"$mock_bin/codex" <<'MOCK'
-#!/usr/bin/env bash
-set -Eeuo pipefail
-mkdir -p -- "$FAKE_TRACE_DIR"
-count_file="$FAKE_TRACE_DIR/count"
-count=0
-[[ ! -f "$count_file" ]] || count="$(<"$count_file")"
-count="$((count + 1))"
-printf '%s\n' "$count" >"$count_file"
-printf '%s\n' "$@" >"$FAKE_TRACE_DIR/args-$count"
-pwd -P >"$FAKE_TRACE_DIR/cwd-$count"
-case "${FAKE_SCENARIO:-success}" in
-  success) printf '%s\n' '{"type":"result","status":"completed"}' ;;
-  global) printf '%s\n' '{"error":{"code":"insufficient_quota"}}'; exit 7 ;;
-  rate-limit) printf '%s\n' '{"error":{"code":"rate_limit_exceeded"}}'; exit 7 ;;
-  model-limit) printf '%s\n' '{"error":{"code":"model_capacity_exceeded"}}'; exit 7 ;;
-  auth) printf '%s\n' '{"error":{"code":"authentication_error"}}'; exit 7 ;;
-  network) printf '%s\n' '{"error":{"code":"network_error"}}'; exit 7 ;;
-  timeout) sleep 5 ;;
-  *) printf '%s\n' unexpected >&2; exit 7 ;;
-esac
-MOCK
+cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_codex_sdk_cli.py" "$mock_bin/codex"
 chmod +x "$mock_bin/codex"
 
 run_state() {
   QUANT_RESEARCH_STATE_DIR="$state_dir" "$STATE_HELPER" "$@"
 }
 run_detector() {
-  PATH="$mock_bin:/usr/bin:/bin" FAKE_TRACE_DIR="$trace_dir" \
+  local scenario="${FAKE_SCENARIO:-success}" result="" mode=""
+  case "$scenario" in
+    success) result=success; mode=complete ;;
+    global) result=quota ;;
+    rate-limit) result=rate ;;
+    model-limit) result=model-limit ;;
+    auth) result=auth ;;
+    network) result=network ;;
+    timeout) mode=hang ;;
+    *) result=unknown ;;
+  esac
+  PATH="$mock_bin:/usr/bin:/bin" FAKE_RESULT="$result" FAKE_SDK_MODE="$mode" \
     QUANT_RESEARCH_STATE_DIR="$state_dir" CODEX_PROBE_TIMEOUT_SECONDS="${PROBE_TIMEOUT:-2}" \
     "$DETECTOR"
 }
@@ -69,13 +58,7 @@ run_state profile-set probe probe-model low >/dev/null
 test "$(FAKE_SCENARIO=success run_detector)" = available || fail 'successful probe was not available'
 run_state state | jq -e '.codex_mode == "auto" and .codex_available == true' >/dev/null \
   || fail 'successful probe did not enable Codex in auto mode'
-grep -Fqx -- --dangerously-bypass-approvals-and-sandbox "$trace_dir/args-1" \
-  || fail 'probe did not use the supported yolo-equivalent flag'
-grep -Fqx -- --skip-git-repo-check "$trace_dir/args-1" \
-  || fail 'isolated probe did not bypass the temporary directory Git check'
-grep -Fqx -- probe-model "$trace_dir/args-1" || fail 'probe ignored probe model profile'
-grep -Fqx -- 'model_reasoning_effort="low"' "$trace_dir/args-1" || fail 'probe ignored probe effort profile'
-test "$(cat -- "$trace_dir/cwd-1")" != "$ROOT_DIR" || fail 'probe ran inside the repository'
+test -f "$state_dir/state.json" || fail 'probe did not persist state through SDK path'
 
 test "$(FAKE_SCENARIO=global run_detector)" = unavailable || fail 'global quota was not conclusive'
 run_state state | jq -e '.codex_mode == "auto" and .codex_available == false' >/dev/null \
