@@ -9,3 +9,10 @@ while IFS= read -r variable; do
       ;;
   esac
 done < <(compgen -A variable)
+
+# Some compatibility suites copy a shim into an isolated fixture workspace.
+# Keep the shim itself relocatable and provide its explicit project override
+# from the test harness instead of making production code inspect process
+# ancestry or depend on Linux /proc.
+HERMETIC_ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
+export PHASE_AGENT_ORCHESTRATOR_PROJECT="$HERMETIC_ROOT_DIR/.agents/orchestrator"

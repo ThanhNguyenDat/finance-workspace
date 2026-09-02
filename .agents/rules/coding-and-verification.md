@@ -130,6 +130,17 @@ request, that overrides this note for that request only.
   flag for a job's schedule ownership without a tested distributed lease.
 - Run native automation Go tests with a hard timeout in GitHub Actions.
 
+### Phase-agent orchestration tooling
+
+- `uv` is required for the Python-backed state and OPS CLIs under
+  `.agents/orchestrator/`.
+- Bootstrap the project with `uv sync --project .agents/orchestrator` before
+  invoking the executable shims in `.agents/scripts/`; the shims use
+  `uv run --project` and can use the bootstrapped venv when a restricted
+  `PATH` omits `uv`.
+- Keep `.agents/orchestrator/pyproject.toml` and `uv.lock` committed together;
+  do not introduce another Python package manager for this tooling.
+
 ## Completion evidence
 
 A change is complete only when the local checks pass, the commit exists on

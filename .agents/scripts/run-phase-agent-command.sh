@@ -9,7 +9,7 @@ CLAUDE_CLASSIFIER="${CLAUDE_RESULT_CLASSIFIER:-$SCRIPT_DIR/classify-claude-resul
 DETECTOR="${PHASE_AGENT_DETECTOR:-$SCRIPT_DIR/detect-provider-availability.sh}"
 die() { printf 'run-phase-agent-command: %s\n' "$1" >&2; exit 1; }
 [[ $# -eq 1 && "$1" = quant-research ]] || die 'usage: run-phase-agent-command.sh quant-research'
-for command in jq timeout git; do command -v "$command" >/dev/null 2>&1 || die "$command is required"; done
+for command in jq timeout git uv; do command -v "$command" >/dev/null 2>&1 || die "$command is required"; done
 [[ -x "$STATE" && -x "$QUANT_STATE" ]] || die 'state helper unavailable'
 prompt_file="$ROOT_DIR/.claude/commands/quant-research.md"; [[ -s "$prompt_file" ]] || die 'canonical quant prompt missing'
 timeout_seconds="${PHASE_AGENT_QUANT_TIMEOUT_SECONDS:-3600}"; [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || die 'invalid timeout'
