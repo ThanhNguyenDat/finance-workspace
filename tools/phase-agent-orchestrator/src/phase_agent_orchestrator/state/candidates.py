@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ..accounts.registry import normalize_account, resolve_account_dir
+from ..accounts.registry import configured_accounts, normalize_account, resolve_account_dir
 from ..io import CLIError, atomic_write_json, die, json_text, utc_after, utc_now
 from ..locks.directory_lock import PidDirectoryLock
 
@@ -218,12 +218,40 @@ def ensure_state() -> dict[str, Any]:
         if not state_valid(state):
             die(PREFIX, "refusing invalid state")
         atomic_write_json(path, state)
-        return state
+        return rotate_claude_accounts(state)
     if not path.is_file():
         die(PREFIX, f"state is not a regular file: {path}")
     state = load_json(path)
     if not state_valid(state):
         die(PREFIX, f"state failed validation: {path}")
+    return rotate_claude_accounts(state)
+
+
+def rotate_claude_accounts(state: dict[str, Any]) -> dict[str, Any]:
+    """Add the configured two-account Claude fallback in registry order.
+
+    Existing explicit account candidates are left untouched. This migration is
+    intentionally limited to the operator's conventional ``personal`` and
+    ``personal-02`` pair so unrelated account layouts remain user-controlled.
+    """
+
+    accounts = configured_accounts("claude")
+    if not {"personal", "personal-02"}.issubset(accounts):
+        return state
+    changed = False
+    for phase in PHASES:
+        options = state["phases"][phase]["candidates"]
+        claude_index = next((index for index, item in enumerate(options) if item["provider"] == "claude" and "account" not in item), None)
+        if claude_index is None or any(item.get("account") in {"personal", "personal-02"} for item in options if item["provider"] == "claude"):
+            continue
+        original = options[claude_index]
+        preferred = {**original, "account": "personal-02"}
+        fallback = {**original, "account": "personal"}
+        options[claude_index:claude_index + 1] = [preferred, fallback]
+        changed = True
+    if changed:
+        state["updated_at"] = utc_now()
+        save(state)
     return state
 
 

@@ -8,7 +8,7 @@ All tasks are in the `finance-workspace` repository only.
 
 ## 1. Classifiers and detectors
 
-- [ ] 1.1 Port `classify-claude-result.sh` and `classify-codex-result.sh`
+- [x] 1.1 Port `classify-claude-result.sh` and `classify-codex-result.sh`
   to `phase_agent_orchestrator.classify_claude_result`/
   `classify_codex_result`, reading their current bash logic line by line
   (design.md Decision 5) and building an explicit mapping table from each
@@ -34,14 +34,14 @@ All tasks are in the `finance-workspace` repository only.
 
 ## 2. Operator CLI
 
-- [ ] 2.1 Port `configure-phase-agents.sh` to a Python module, preserving
+- [x] 2.1 Port `configure-phase-agents.sh` to a Python module, preserving
   its exact `show`/`set`/`candidate-set`/`reset`/`reset-all`/`pin`/`auto`/
   `provider-on`/`provider-off`/`provider-manual`/`provider-auto` subcommands
   and table-formatted `show` output byte-for-byte (including the `ACCOUNT`
   column added by `phase-agent-multi-account-routing`). Unaffected by the
   SDK pivot. Verify: a unit test diffs the formatted `show` output against
   a fixed fixture state.
-- [ ] 2.2 Wire the shim. Verify: a manual invocation of every subcommand
+- [x] 2.2 Wire the shim. Verify: a manual invocation of every subcommand
   against a temp state produces output identical to the current bash
   version run against the same starting state.
 

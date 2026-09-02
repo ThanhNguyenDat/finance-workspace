@@ -8,7 +8,7 @@ from pathlib import Path
 
 import yaml
 
-from ..io import die
+from ..io import CLIError, die
 
 ACCOUNT_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 PROVIDERS = {"codex", "claude"}
@@ -51,3 +51,31 @@ def resolve_account_dir(provider: str, account: str, prefix: str) -> tuple[str, 
     if not directory.is_dir():
         die(prefix, f"account '{normalized}' for {provider} directory does not exist: {directory}")
     return normalized, directory.resolve()
+
+
+def configured_accounts(provider: str) -> list[str]:
+    """Return usable account names in the local registry, in YAML order."""
+
+    if provider not in PROVIDERS:
+        return []
+    configured = os.environ.get(ACCOUNTS_FILE_ENV)
+    accounts_file = Path(configured).expanduser() if configured else Path(__file__).resolve().parents[3] / "accounts.yaml"
+    try:
+        with accounts_file.open(encoding="utf-8") as handle:
+            registry = yaml.safe_load(handle)
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+        return []
+    values = registry.get(provider) if isinstance(registry, dict) else None
+    if not isinstance(values, dict):
+        return []
+    result: list[str] = []
+    for name, directory in values.items():
+        if not isinstance(name, str) or not isinstance(directory, str):
+            continue
+        try:
+            normalized = normalize_account(name, "phase-agent-state")
+        except CLIError:
+            continue
+        if Path(directory).expanduser().is_dir():
+            result.append(normalized)
+    return result
