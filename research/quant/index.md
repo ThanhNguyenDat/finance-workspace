@@ -6226,6 +6226,50 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 427 — REJECTED: "góc có lãi" Round 365/366 (band 0,02/0,04 + hold 288) nhận điểm holdout thật đầu tiên, sau khi xung đột `--daily-profit-gate`/`--portfolio-minimum-hold-decisions` đã được gỡ — và nó **thua ngay trước cả chi phí**
+
+Không lặp lại status-check 15 round liên tiếp (r411-r426) về ba hướng bị
+chặn ngoài phạm vi (quyết định sản phẩm Target 2, chờ lịch forward-time, môi
+trường Task 6.4) — prompt vòng này yêu cầu rõ không lấp đầy vòng bằng việc
+đó. Thay vào đó tìm đúng một câu hỏi Portfolio-layer còn thật sự mở:
+Round419 (2026-09-02) đã xác nhận `--daily-profit-gate` và
+`--portfolio-minimum-hold-decisions` **không còn xung đột** (unified path,
+`origin/main` `7d579cf`, vẫn đúng ở `ca23b05` hiện tại) — đây chính là
+"bước gỡ chặn cụ thể: sửa code" mà Round365 đã nêu tên cho "góc có lãi"
+(band 0,02/0,04 + hold 288, `exness XAU` +1,17395 full-window `one_target`,
+Round366 transfer sang `binance BTC` +0,37527) nhưng **chưa ai thật sự chạy
+qua gate**. Round này chạy nó lần đầu.
+
+Hai container Docker (`--cpus=2 --memory=4g --memory-swap=6g`), một SSH
+tunnel read-only, cùng route/cửa sổ `binance BTC perpetual_future 5m --days
+500` để so trực tiếp với transfer test Round366: **corner** (hold=288, band
+0,02/0,04) và **control cùng cửa sổ** (hold=36, band 0,01/0,02 — đúng giá trị
+production `trading_modes.rs:113`/`deployment_rules.rs:58-59`). Cả hai xác
+nhận `candle_count=143998`, `holdout_candle_count=28799` (holdout
+2026-05-26→2026-09-03, 101 ngày quan sát) — cùng cửa sổ, không suy đoán.
+
+**Kết quả — corner thua holdout thật**: `gross_pnl_before_costs` **−1,86562**
+(âm ngay cả trước phí, cùng kiểu thất bại r336-337 đã ghi cho band deployed
+trên chính route này), net −0,74235, 3,64 lệnh/tuần — **trượt luôn cả
+`minimum_trades_per_week`** (deployed ở cùng cửa sổ vẫn đạt 13,79/tuần). Gate
+FAILED 7/12 check. Điểm dương full-window Round366 (+0,37527) **không sống
+sót** qua 101 ngày holdout thật — đúng rủi ro overfitting mà Round365 tự nêu
+("~16-cell search trên một cửa sổ"). Corner vẫn giảm net loss 71,8% so với
+deployed (đúng mẫu hình "lãi bằng cách giao dịch ít hơn" Round366 đã tổng kết
+cho toàn bộ 6 cấu hình có lãi của arc) nhưng gross lại **tệ hơn** deployed
+26,5% (−1,86562 so với −1,47495) — "wider is better per trade" không tổng
+quát hoá sang `binance BTC` (r367 đã ghi).
+
+**REJECTED** cho `binance BTC`: điều kiện promotion 1 (holdout defensible)
+giờ đo được thật, và bằng chứng là âm. Chưa test `exness XAU` (nơi corner
+xuất phát, nhưng không gate-eligible ở bất kỳ cửa sổ nào — r335-336) hay
+`bybit XAUT` qua unified path — để dành cho vòng sau nếu cần bức tranh đầy đủ
+ba route; hướng đo được (corner thua trước chi phí) khớp mẫu hình 6/6 đã có
+của Round366 nên không kỳ vọng đảo chiều. Không đổi production, không
+implement gì. Hai container đã dọn sạch (`docker ps -a` rỗng), tunnel đã đóng
+(`ss -tlnp` xác nhận). File:
+`round427-REJECTED-round365-366-corner-fails-its-first-real-holdout-score-now-that-the-gate-hold-conflict-is-resolved.md`.
+
 ## Round 426 — NO-CHANGE: kiểm tra trạng thái 1 ngày sau Round 425, cả ba hướng vẫn bị chặn không đổi — phía OPS của `portfolio-measurement-integrity` đã được archive (nội dung không đổi), phía OpenSpec vẫn vắng mặt
 
 Zero container, zero SSH nghiên cứu, zero backtest compute — chỉ một probe
