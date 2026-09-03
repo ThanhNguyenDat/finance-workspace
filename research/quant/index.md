@@ -6226,6 +6226,28 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 423 — NO-CHANGE: kiểm tra trạng thái ~9h sau Round 422 — cả ba hướng vẫn bị chặn không đổi, repo giờ đã đồng bộ hoàn toàn với `origin/main`
+
+Zero container, zero backtest compute, zero SSH tunnel research (chỉ 1 probe
+SSH liveness read-only `echo ssh-ok`, không mở port-forward). Kiểm lại: `git
+status --short` ở `finance-workspace` sạch đầu phiên, `HEAD` == `origin/main`
+tại `1c9531a` — khác round422's end-state (local lead 17 commit chưa push);
+giữa round422 và round này, một phiên khác đã push cả commit `3f40f88`/
+`b98746c` của round422 lẫn phase-agent-orchestrator work không liên quan —
+ghi nhận làm bối cảnh, không phải phát hiện của round này.
+`finance-live-action` `HEAD` vẫn `ca23b05` = `origin/main`, hai CI run cũ
+không đổi. `openspec/changes/portfolio-measurement-integrity/tasks.md` 6.4
+vẫn chưa tick (lifecycle decision ngoài phạm vi, bằng chứng đã có từ r419).
+`.ops/changes/` chỉ có phase-agent-orchestrator work không liên quan. Target
+2 vẫn không có metric trong tool (r401, không có ADR mới, không có commit
+liên quan kể từ 2026-09-01). Forward-time vẫn ~4 ngày kể từ baseline
+2026-08-30 (round422 chạy cùng ngày, sớm hơn ~9 giờ) — ~26 ngày nữa mới tới
+ngưỡng ~30 ngày. Rà lại mục 4/6 của tài liệu này: không có hạng mục nào chưa
+nằm trong 1 trong 3 hướng đang theo dõi hoặc trong các round đã đóng
+(330-401, 165-167) — không có hướng backtest mới nào đủ căn cứ để mở trong
+ngân sách round này mà không lặp lại một hướng đã đóng. File:
+`round423-NO-CHANGE-status-check-9h-after-round422-all-three-threads-still-blocked-repo-now-fully-synced.md`.
+
 ## Round 422 — DATA-ISSUE: 11 round nghiên cứu (411-421) nằm chưa commit, và CSV metric đã trôi sang CRLF
 
 Zero compute, zero container, zero SSH. Kiểm lại trạng thái y hệt r421 trước
