@@ -45,7 +45,15 @@ shipped fix — never a no-op round.
    Codex-down mode" below.
 7. **Document** research evidence (see "Research evidence and promotion").
 8. **Clean up**: remove temp files under `/tmp`, close the SSH tunnel, confirm
-   `git status --short` is clean in both repos before ending the round.
+   `git status --short` is clean in both repos before ending the round. A
+   clean local working tree is not sufficient proof of a synced evidence
+   trail: round422/424/425 each caught a different local-vs-committed-vs-pushed
+   drift mode (uncommitted rounds, a commit that vanished from the working
+   tree, a commit that never reached the remote) on three consecutive rounds,
+   each missed by a `git status --short`-only check. Before ending the round,
+   `git fetch origin main -q && git rev-parse HEAD origin/main` and confirm
+   both SHAs match; if they diverge, diagnose which side is stale (do not
+   assume local is authoritative) before pushing or resetting.
 
 ## Backtest tooling
 
