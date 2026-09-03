@@ -496,36 +496,60 @@ def append_event(
     payload_json = _json(safe_payload, "safe payload")
     coordinator = _db(db)
     with coordinator.transaction() as connection:
-        if (
-            connection.execute(
-                "SELECT 1 FROM sessions WHERE id = ?", (session_id,)
-            ).fetchone()
-            is None
-        ):
-            raise CoordinatorError(f"session not found: {session_id}")
-        if (
-            attempt_id is not None
-            and connection.execute(
-                "SELECT 1 FROM attempts WHERE id = ? AND session_id = ?",
-                (attempt_id, session_id),
-            ).fetchone()
-            is None
-        ):
-            raise CoordinatorError("event attempt does not belong to session")
-        latest = connection.execute(
-            "SELECT COALESCE(MAX(sequence), 0) FROM events WHERE session_id = ?",
-            (session_id,),
-        ).fetchone()[0]
-        sequence = int(latest) + 1
-        now = utc_now()
-        connection.execute(
-            "INSERT INTO events(session_id, sequence, phase, attempt_id, event_type, safe_payload, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (session_id, sequence, phase, attempt_id, event_type, payload_json, now),
+        return _append_event_in_transaction(
+            connection,
+            session_id,
+            phase=phase,
+            event_type=event_type,
+            safe_payload=safe_payload,
+            attempt_id=attempt_id,
+            payload_json=payload_json,
         )
-        row = connection.execute(
-            "SELECT * FROM events WHERE session_id = ? AND sequence = ?",
-            (session_id, sequence),
+
+
+def _append_event_in_transaction(
+    connection: Any,
+    session_id: str,
+    *,
+    phase: str,
+    event_type: str,
+    safe_payload: dict[str, Any],
+    attempt_id: str | None = None,
+    payload_json: str | None = None,
+) -> dict[str, Any]:
+    """Append an event while an owning coordinator transaction is open."""
+
+    payload_json = payload_json or _json(safe_payload, "safe payload")
+    if (
+        connection.execute(
+            "SELECT 1 FROM sessions WHERE id = ?", (session_id,)
         ).fetchone()
+        is None
+    ):
+        raise CoordinatorError(f"session not found: {session_id}")
+    if (
+        attempt_id is not None
+        and connection.execute(
+            "SELECT 1 FROM attempts WHERE id = ? AND session_id = ?",
+            (attempt_id, session_id),
+        ).fetchone()
+        is None
+    ):
+        raise CoordinatorError("event attempt does not belong to session")
+    latest = connection.execute(
+        "SELECT COALESCE(MAX(sequence), 0) FROM events WHERE session_id = ?",
+        (session_id,),
+    ).fetchone()[0]
+    sequence = int(latest) + 1
+    now = utc_now()
+    connection.execute(
+        "INSERT INTO events(session_id, sequence, phase, attempt_id, event_type, safe_payload, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (session_id, sequence, phase, attempt_id, event_type, payload_json, now),
+    )
+    row = connection.execute(
+        "SELECT * FROM events WHERE session_id = ? AND sequence = ?",
+        (session_id, sequence),
+    ).fetchone()
     assert row is not None
     return _row(row) or {}
 
@@ -564,16 +588,25 @@ def record_question(
     coordinator = _db(db)
     try:
         with coordinator.transaction() as connection:
-            if (
-                connection.execute(
-                    "SELECT 1 FROM sessions WHERE id = ?", (session_id,)
-                ).fetchone()
-                is None
-            ):
+            session = connection.execute(
+                "SELECT phase FROM sessions WHERE id = ?", (session_id,)
+            ).fetchone()
+            if session is None:
                 raise CoordinatorError(f"session not found: {session_id}")
             connection.execute(
                 "INSERT INTO operator_questions(session_id, question_id, status, safe_payload, response, expires_at) VALUES (?, ?, ?, ?, NULL, ?)",
                 (session_id, question_id, status, payload_json, expires_at),
+            )
+            _append_event_in_transaction(
+                connection,
+                session_id,
+                phase=session["phase"],
+                event_type="operator.question",
+                safe_payload={
+                    "question_id": question_id,
+                    "status": status,
+                    "payload": safe_payload,
+                },
             )
             row = connection.execute(
                 "SELECT * FROM operator_questions WHERE session_id = ? AND question_id = ?",
@@ -774,7 +807,7 @@ def answer_question(
     expiry_error: str | None = None
     with coordinator.transaction() as connection:
         session = connection.execute(
-            "SELECT fencing_token FROM sessions WHERE id = ?", (session_id,)
+            "SELECT fencing_token, phase FROM sessions WHERE id = ?", (session_id,)
         ).fetchone()
         if session is None:
             raise CoordinatorError(f"session not found: {session_id}")
@@ -795,12 +828,26 @@ def answer_question(
                 "UPDATE operator_questions SET status = 'EXPIRED' WHERE session_id = ? AND question_id = ? AND status = 'PENDING'",
                 (session_id, question_id),
             )
+            _append_event_in_transaction(
+                connection,
+                session_id,
+                phase=session["phase"],
+                event_type="operator.timeout",
+                safe_payload={"question_id": question_id, "reason": "invalid_expiry"},
+            )
             expiry_error = "question expiry is invalid"
         else:
             if expires_at <= datetime.now(timezone.utc):
                 connection.execute(
                     "UPDATE operator_questions SET status = 'EXPIRED' WHERE session_id = ? AND question_id = ? AND status = 'PENDING'",
                     (session_id, question_id),
+                )
+                _append_event_in_transaction(
+                    connection,
+                    session_id,
+                    phase=session["phase"],
+                    event_type="operator.timeout",
+                    safe_payload={"question_id": question_id, "reason": "expired"},
                 )
                 expiry_error = "question has expired"
             else:
@@ -812,6 +859,16 @@ def answer_question(
                     raise CoordinatorError(
                         "question is stale, missing or already answered"
                     )
+                _append_event_in_transaction(
+                    connection,
+                    session_id,
+                    phase=session["phase"],
+                    event_type="operator.answer",
+                    safe_payload={
+                        "question_id": question_id,
+                        "response": response,
+                    },
+                )
                 row = connection.execute(
                     "SELECT * FROM operator_questions WHERE session_id = ? AND question_id = ?",
                     (session_id, question_id),

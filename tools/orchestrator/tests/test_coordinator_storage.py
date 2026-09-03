@@ -406,8 +406,9 @@ def test_question_and_event_records_are_session_isolated(tmp_path: Path):
         db.read("SELECT COUNT(*) FROM events WHERE session_id = ?", (first["id"],))[0][
             0
         ]
-        == 0
+        == 1
     )
+    assert events_since(first["id"], db=db)[0]["event_type"] == "operator.question"
     assert (
         db.read(
             "SELECT COUNT(*) FROM operator_questions WHERE session_id = ?",
@@ -791,6 +792,10 @@ def test_operator_question_response_is_session_and_token_scoped(tmp_path: Path):
         )["status"]
         == "ANSWERED"
     )
+    assert [event["event_type"] for event in events_since(first["id"], db=db)] == [
+        "operator.question",
+        "operator.answer",
+    ]
 
 
 def test_operator_question_expiry_is_enforced_atomically(tmp_path: Path):
@@ -814,3 +819,7 @@ def test_operator_question_expiry_is_enforced_atomically(tmp_path: Path):
         (session["id"], "q1"),
     )[0]
     assert question["status"] == "EXPIRED" and question["response"] is None
+    assert [event["event_type"] for event in events_since(session["id"], db=db)] == [
+        "operator.question",
+        "operator.timeout",
+    ]
