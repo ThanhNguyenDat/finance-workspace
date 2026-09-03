@@ -41,8 +41,8 @@
 
 - [x] 6.1 Add bounded unit tests for schema migration, iteration allocation, transitions, optimistic versions, fencing and lease recovery; verify the focused Python suite passes.
 - [ ] 6.2 Add fake-provider tests for quota exhaustion, account rotation, partial worktree continuation, interruption, duplicate invocation and session-local state.
-- [ ] 6.3 Add bounded concurrency tests for independent prompts, capacity backpressure, same-worktree protection, two Claude accounts, coordinator restart and no duplicate provider process.
-- [ ] 6.4 Add bounded interactive tests for event ordering, attach offsets, operator responses, timeout, redaction and per-session channel isolation.
+- [x] 6.3 Add bounded concurrency tests for independent prompts, capacity backpressure, same-worktree protection, two Claude accounts, coordinator restart and no duplicate provider process.
+- [x] 6.4 Add bounded interactive tests for event ordering, attach offsets, operator responses, timeout, redaction and per-session channel isolation.
 - [x] 6.5 Run the existing Python and shell contract suites with hard timeouts and verify no legacy routing regression.
 
 ## 7. Documentation and delivery

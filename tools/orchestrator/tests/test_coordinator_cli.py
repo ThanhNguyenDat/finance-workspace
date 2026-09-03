@@ -66,3 +66,18 @@ def test_coordinator_cli_monitor_is_redacted_and_session_scoped(tmp_path: Path, 
     assert "phase=PLAN" in output and "provider=claude" in output and "model=opus" in output
     assert "current_action=provider.tool" in output and "quota_failover=-" in output and "tests=-" in output
     assert "hidden" not in output and "<REDACTED>" in output
+
+
+def test_coordinator_cli_follow_replays_only_events_after_offset(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    monkeypatch.setenv("OPS_ROOT", str(tmp_path))
+    db = CoordinatorDB(root=tmp_path)
+    from orchestrator.coordinator import create_session
+
+    session = create_session("change-follow", {"request": "follow"}, db=db)
+    append_event(session["id"], phase="PLAN", event_type="old", safe_payload={"value": 1}, db=db)
+    append_event(session["id"], phase="PLAN", event_type="new", safe_payload={"value": 2}, db=db)
+
+    assert invoke(monkeypatch, ["follow", session["id"], "1", "1"]) == 0
+    output = capsys.readouterr().out
+    assert "[2] new" in output
+    assert "[1] old" not in output
