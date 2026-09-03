@@ -26,6 +26,26 @@ a Codex profile.
 - **WHEN** Codex completes IMPLEMENT or FIX successfully
 - **THEN** the next required VERIFY or FINAL_VERIFY phase is executed by Claude rather than by any configured Codex profile
 
+#### Scenario: IMPLEMENT uses Luna high
+
+- **WHEN** the default IMPLEMENT policy selects Codex
+- **THEN** argv explicitly selects `gpt-5.6-luna`, `high`, and the supported Codex permission bypass
+
+#### Scenario: FIX uses Terra high
+
+- **WHEN** the default FIX policy selects its first Codex candidate
+- **THEN** argv explicitly selects `gpt-5.6-terra`, `high`, and the supported Codex permission bypass
+
+#### Scenario: Configured FIX fallback is isolated
+
+- **WHEN** an operator changes a later FIX candidate
+- **THEN** no primary FIX, IMPLEMENT, or other phase candidate is changed
+
+#### Scenario: Claude worker bypass is explicit
+
+- **WHEN** orchestration selects a Claude candidate
+- **THEN** its argv contains `--dangerously-skip-permissions`
+
 ### Requirement: Global quota disables only future Codex selection
 
 On `global-quota-exhausted`, the worker SHALL atomically invoke the quant state
