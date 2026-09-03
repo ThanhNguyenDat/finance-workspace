@@ -1247,7 +1247,7 @@ partial PLAN/IMPLEMENT/FIX work, the next eligible candidate continues the
 actual diff/commits under the same phase, round and repository lock.
 
 1. Route actionable implementation only through `/ops:run` and
-   `uv run --project tools/phase-agent-orchestrator run-phase-agent`; do not modify runtime code outside that lifecycle or
+   `uv run --project tools/orchestrator run-phase-agent`; do not modify runtime code outside that lifecycle or
    invoke Codex/Claude directly. Read a sibling implementation first — e.g. an
    existing `Strategy` impl or `StrategyKind` variant — before writing a new
    one. Verification labels come from actual mutator/verifier providers.

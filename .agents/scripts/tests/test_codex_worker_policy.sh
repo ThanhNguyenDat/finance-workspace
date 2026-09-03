@@ -10,5 +10,5 @@ check 7 '{"error":{"code":"model_unavailable"}}' model-unavailable
 check 7 '{"error":{"code":"model_capacity_exceeded"}}' model-specific-limit
 check 7 '{"error":{"code":"rate_limit_exceeded"}}' transient-rate-limit
 check 7 '{"error":{"code":"implementation_error"}}' implementation-error
-grep -Fq 'ApprovalMode.deny_all' "$ROOT_DIR/tools/phase-agent-orchestrator/src/phase_agent_orchestrator/phase_adapter.py" || { printf 'test_codex_worker_policy: SDK approval policy missing\n' >&2; exit 1; }
+grep -Fq 'ApprovalMode.deny_all' "$ROOT_DIR/tools/orchestrator/src/orchestrator/runners/phase_adapter.py" || { printf 'test_codex_worker_policy: SDK approval policy missing\n' >&2; exit 1; }
 printf '%s\n' 'test_codex_worker_policy: all checks passed'

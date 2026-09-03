@@ -7,7 +7,7 @@ mkdir -p "$tmp/bin"; export PATH="$tmp/bin:$PATH" CLAUDE_AGENT_SDK_SKIP_VERSION_
 fail() { printf 'test_provider_availability: %s\n' "$1" >&2; exit 1; }
 make_fake() {
   local name="$1"
-  cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_${name}_sdk_cli.py" "$tmp/bin/$name"
+  cp "$ROOT_DIR/tools/orchestrator/tests/fixtures/fake_${name}_sdk_cli.py" "$tmp/bin/$name"
   chmod +x "$tmp/bin/$name"
 }
 make_fake codex; make_fake claude; orchestrator phase-agent-state init >/dev/null

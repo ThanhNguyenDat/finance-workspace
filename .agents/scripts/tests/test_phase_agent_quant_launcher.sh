@@ -2,15 +2,15 @@
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-RUNNER="$ROOT_DIR/tools/phase-agent-orchestrator/bin/run-phase-agent-command.sh"; STATE="$ROOT_DIR/tools/phase-agent-orchestrator/bin/phase-agent-state.sh"
+RUNNER="$ROOT_DIR/tools/orchestrator/bin/run-phase-agent-command.sh"; STATE="$ROOT_DIR/tools/orchestrator/bin/phase-agent-state.sh"
 tmp="$(mktemp -d)"; trap 'rm -rf -- "$tmp"' EXIT
 workspace="$tmp/workspace"; bin="$tmp/bin"; trace="$tmp/trace"; mkdir -p "$workspace/.agents/scripts" "$workspace/.claude/commands" "$bin" "$trace"
-cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/run-phase-agent-command.sh" "$workspace/.agents/scripts/run-phase-agent-command.sh"; cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/quant-research-state.sh" "$workspace/.agents/scripts/quant-research-state.sh"; cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/phase-agent-state.sh" "$workspace/.agents/scripts/phase-agent-state.sh"; cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/classify-codex-result.sh" "$workspace/.agents/scripts/classify-codex-result.sh"; cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/classify-claude-result.sh" "$workspace/.agents/scripts/classify-claude-result.sh"
+cp "$ROOT_DIR/tools/orchestrator/bin/run-phase-agent-command.sh" "$workspace/.agents/scripts/run-phase-agent-command.sh"; cp "$ROOT_DIR/tools/orchestrator/bin/quant-research-state.sh" "$workspace/.agents/scripts/quant-research-state.sh"; cp "$ROOT_DIR/tools/orchestrator/bin/phase-agent-state.sh" "$workspace/.agents/scripts/phase-agent-state.sh"; cp "$ROOT_DIR/tools/orchestrator/bin/classify-codex-result.sh" "$workspace/.agents/scripts/classify-codex-result.sh"; cp "$ROOT_DIR/tools/orchestrator/bin/classify-claude-result.sh" "$workspace/.agents/scripts/classify-claude-result.sh"
 chmod +x "$workspace/.agents/scripts/"*.sh
 printf '%s\n' 'CANONICAL QUANT PROMPT' >"$workspace/.claude/commands/quant-research.md"
 git -C "$workspace" init -q; git -C "$workspace" config user.email test@example.invalid; git -C "$workspace" config user.name Test; git -C "$workspace" add .; git -C "$workspace" commit -qm init
-cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_claude_sdk_cli.py" "$bin/claude"
-cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_codex_sdk_cli.py" "$bin/codex"
+cp "$ROOT_DIR/tools/orchestrator/tests/fixtures/fake_claude_sdk_cli.py" "$bin/claude"
+cp "$ROOT_DIR/tools/orchestrator/tests/fixtures/fake_codex_sdk_cli.py" "$bin/codex"
 chmod +x "$bin/claude" "$bin/codex"
 export PATH="$bin:$PATH" TRACE="$trace" FAKE_SDK_TRACE="$trace/sdk.jsonl" CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1 FAKE_CLAUDE_MODE=quota-always FAKE_CODEX_MODE=complete FAKE_SDK_RESULT_TEXT=$'OK\nFINAL_VERIFY_GATE: PASS\nP0_FINDINGS: 0\nP1_FINDINGS: 0\nOBJECTIVE_GATES: PASS' PHASE_AGENT_ROOT="$workspace" QUANT_RESEARCH_ROOT="$workspace" OPS_ROOT="$workspace" OPS_WORKSPACE_ROOT="$workspace" PHASE_AGENT_ACCOUNTS_FILE="$tmp/missing-accounts.yaml" PHASE_AGENT_STATE_DIR="$workspace/.ops/runtime/phase-agents" QUANT_RESEARCH_STATE_DIR="$workspace/.ops/runtime/quant-research" PHASE_AGENT_LEGACY_QUANT_STATE="$tmp/no-quant" PHASE_AGENT_LEGACY_CLAUDE_STATE="$tmp/no-claude"
 fail() { printf 'test_phase_agent_quant_launcher: %s\n' "$1" >&2; exit 1; }

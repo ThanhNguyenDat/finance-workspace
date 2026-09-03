@@ -1,8 +1,8 @@
 ## Context
 
 Implementation status: the canonical Python implementation is under
-`tools/phase-agent-orchestrator/`; operational wrappers live beside it under
-`tools/phase-agent-orchestrator/bin/` and only dispatch through `uv run`.
+`tools/orchestrator/`; operational wrappers live beside it under
+`tools/orchestrator/bin/` and only dispatch through `uv run`.
 Shell tests and the native Claude stop hook also remain shell.
 
 See `proposal.md - Why`. Relevant current-state facts:
@@ -10,7 +10,7 @@ See `proposal.md - Why`. Relevant current-state facts:
 - `phase-agent-python-orchestrator` already ported the state/lock layer and
   left three thin bash shims (`ops-runtime.sh`, `phase-agent-state.sh`,
   `quant-research-state.sh`) that each `exec uv run --project
-  tools/phase-agent-orchestrator python -m phase_agent_orchestrator.<module> "$@"`.
+  tools/orchestrator python -m orchestrator.<module> "$@"`.
   Every remaining bash script calls these *as subprocesses* (by path), not
   as Python imports, so today a single phase attempt pays for several
   separate `uv run` startups (one per state/lock call).
@@ -102,7 +102,7 @@ See `proposal.md - Why`. Relevant current-state facts:
 **1. One Python module per operational entrypoint, called directly (no
 subprocess) when the caller is itself already-ported Python. The canonical
 Python code and operational wrappers live under
-`tools/phase-agent-orchestrator/`; wrappers in `bin/` are thin `uv run`
+`tools/orchestrator/`; wrappers in `bin/` are thin `uv run`
 entrypoints. Shell tests remain under `.agents/scripts/tests/` because they
 are contract tests, not production orchestration logic.** [updated at implementation]
 Concretely: `run_phase_agent.py`'s candidate loop imports
@@ -112,7 +112,7 @@ calls their `main()`-equivalent directly, rather than spawning
 `run-claude-phase.sh` as a child process. Each of those modules keeps its
 own `if __name__ == "__main__":` entry point and its own
 `bin/run-claude-phase.sh` compatibility wrapper, while the preferred operator
-command is `uv run --project tools/phase-agent-orchestrator run-claude-phase
+command is `uv run --project tools/orchestrator run-claude-phase
 <change> <repo> PLAN`.
 *Alternative considered*: merge everything into one CLI with subcommands
 — rejected for the same reason `phase-agent-python-orchestrator` rejected
@@ -271,7 +271,7 @@ attempt when personal-02 returns HTTP 429/session-limit evidence.
   change cancellation or result-classification behavior underneath this
   code.
   → **Mitigation**: pin exact versions in `uv.lock` (same discipline
-  `coding-and-verification.md` already requires for `tools/phase-agent-orchestrator`);
+  `coding-and-verification.md` already requires for `tools/orchestrator`);
   do not use a version range. A future SDK upgrade is a separate, reviewed
   change, not an incidental side effect of an unrelated commit.
 - **[Trade-off]** This is the largest of the three phase-agent Python

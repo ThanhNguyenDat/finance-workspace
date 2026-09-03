@@ -15,7 +15,7 @@ state_dir="$tmp/state"
 mock_bin="$tmp/bin"
 trace_dir="$tmp/trace"
 mkdir -p -- "$mock_bin" "$trace_dir"
-cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_codex_sdk_cli.py" "$mock_bin/codex"
+cp "$ROOT_DIR/tools/orchestrator/tests/fixtures/fake_codex_sdk_cli.py" "$mock_bin/codex"
 chmod +x "$mock_bin/codex"
 
 run_state() {

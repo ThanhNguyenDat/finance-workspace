@@ -6,7 +6,7 @@
   (`.openspec.yaml` with `skip_specs: true`, `proposal.md`, `design.md`,
   `tasks.md`). No runtime code touched in this phase.
 - Scope: `finance-workspace` only. Move the `uv` project
-  `tools/phase-agent-orchestrator/` with no
+  `tools/orchestrator/` with no
   source-logic change, plus path updates in three shims, `hermetic-env.sh`,
   `pytest.ini`, `.gitignore`, one rule, one skill, and two in-flight
   OpenSpec changes.
@@ -25,7 +25,7 @@
 
 ## IMPLEMENT evidence (2026-09-02)
 
-- Relocated the tracked project to `tools/phase-agent-orchestrator/`, removed
+- Relocated the tracked project to `tools/orchestrator/`, removed
   the empty scaffold directory, moved the ignored account artifact, and
   recreated the target virtual environment with `uv sync`.
 - Added the independent default-root regression test. Pytest collects 29
@@ -86,7 +86,7 @@
   worktree use the relocated project with a virtualenv-Python fallback; those
   unrelated classifier changes remain outside this relocation commit.
 - `timeout --signal=TERM --kill-after=30s 5m uv run --project
-  tools/phase-agent-orchestrator pytest` passes 29/29.
+  tools/orchestrator pytest` passes 29/29.
 - The account-resolution command completes after the artifact move without
   exposing account paths or credentials.
 - Live smoke was attempted independently with Claude (iteration 219,

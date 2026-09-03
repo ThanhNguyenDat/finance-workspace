@@ -6,7 +6,7 @@ fail() { printf 'test_quant_research_contract: %s\n' "$1" >&2; exit 1; }
 files=(.claude/commands/quant-research.md .claude/commands/quant/codex-off.md .claude/commands/quant/codex-on.md .claude/commands/quant/codex-auto.md .claude/commands/quant/codex-manual.md .claude/commands/quant/codex-config.md .claude/commands/quant/agent-config.md)
 for relative in "${files[@]}"; do file="$ROOT_DIR/$relative"; [[ -s "$file" ]] || fail "missing $relative"; [[ "$(head -n 1 "$file")" = --- ]] || fail "frontmatter missing: $relative"; done
 quant="$ROOT_DIR/.claude/commands/quant-research.md"; ops="$ROOT_DIR/.claude/commands/ops/run.md"
-grep -Fq 'uv run --project tools/phase-agent-orchestrator run-phase-agent-command quant-research' "$quant" || fail 'manual terminal entrypoint missing'
+grep -Fq 'uv run --project tools/orchestrator run-phase-agent-command quant-research' "$quant" || fail 'manual terminal entrypoint missing'
 grep -Fq 'Không gọi' "$quant" && grep -Fq '`begin-iteration`' "$quant" || fail 'double-iteration guard missing'
 grep -Fq 'phase-agent-state state' "$quant" || fail 'phase state read missing'
 grep -Fq 'research_enabled=false' "$quant" || fail 'research gate missing'

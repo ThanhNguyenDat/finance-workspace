@@ -78,7 +78,7 @@ allocation, provider health and shared research paths are not session-scoped.
 - **Affected repository:** `finance-workspace` only; runtime application code
   remains in its owning Finance repositories.
 - **Affected components:** the Python orchestrator under
-  `tools/phase-agent-orchestrator/`, SQLite coordinator state under the
+  `tools/orchestrator/`, SQLite coordinator state under the
   gitignored `.ops/runtime/` namespace, phase-agent routing, quant-research
   launcher, worktree/admission management, handoff/archive records and bounded
   contract tests.

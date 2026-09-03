@@ -133,12 +133,12 @@ request, that overrides this note for that request only.
 ### Phase-agent orchestration tooling
 
 - `uv` is required for the Python-backed state and OPS CLIs under
-  `tools/phase-agent-orchestrator/`.
-- Bootstrap the project with `uv sync --project tools/phase-agent-orchestrator`
+  `tools/orchestrator/`.
+- Bootstrap the project with `uv sync --project tools/orchestrator`
   before invoking the executable wrappers in
-  `tools/phase-agent-orchestrator/bin/`; the wrappers use `uv run --project`
+  `tools/orchestrator/bin/`; the wrappers use `uv run --project`
   and can use the bootstrapped venv when a restricted `PATH` omits `uv`.
-- Keep `tools/phase-agent-orchestrator/pyproject.toml` and `uv.lock` committed together;
+- Keep `tools/orchestrator/pyproject.toml` and `uv.lock` committed together;
   do not introduce another Python package manager for this tooling.
 
 ## Completion evidence

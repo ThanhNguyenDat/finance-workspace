@@ -2,15 +2,15 @@
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-RUNNER="$ROOT_DIR/tools/phase-agent-orchestrator/bin/run-claude-phase.sh"
-OPS="$ROOT_DIR/tools/phase-agent-orchestrator/bin/ops-runtime.sh"
-STATE="$ROOT_DIR/tools/phase-agent-orchestrator/bin/phase-agent-state.sh"
+RUNNER="$ROOT_DIR/tools/orchestrator/bin/run-claude-phase.sh"
+OPS="$ROOT_DIR/tools/orchestrator/bin/ops-runtime.sh"
+STATE="$ROOT_DIR/tools/orchestrator/bin/phase-agent-state.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 workspace="$tmp/workspace"; repo="$tmp/repo"; bin="$tmp/bin"; trace="$tmp/trace"
 mkdir -p "$workspace" "$repo" "$bin" "$trace" "$tmp/claude-work" "$workspace/.agents/scripts"
 for helper in ops-runtime.sh phase-agent-state.sh quant-research-state.sh run-phase-agent-command.sh classify-claude-result.sh classify-codex-result.sh; do
-  cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/$helper" "$workspace/.agents/scripts/$helper"
+  cp "$ROOT_DIR/tools/orchestrator/bin/$helper" "$workspace/.agents/scripts/$helper"
 done
 chmod +x "$workspace/.agents/scripts/"*.sh
 
@@ -27,7 +27,7 @@ printf '%s\n' app >"$repo/app.txt"
 git -C "$repo" add app.txt
 git -C "$repo" commit -qm init
 
-cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_claude_sdk_cli.py" "$bin/claude"
+cp "$ROOT_DIR/tools/orchestrator/tests/fixtures/fake_claude_sdk_cli.py" "$bin/claude"
 chmod +x "$bin/claude"
 
 export PATH="$bin:$PATH" CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1 FAKE_SDK_ACCOUNT_TRACE="$trace/claude.config-dir" FAKE_SDK_RESULT_TEXT="OK"

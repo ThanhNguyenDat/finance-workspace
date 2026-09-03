@@ -23,16 +23,17 @@ prompt admission and session identity.
   release its account lease, then acquire the next account; never rotate a
   different session's candidate.
 - Use the Python project through `uv run --project
-  tools/phase-agent-orchestrator ...`. Bound every non-interactive test with a
+  tools/orchestrator ...`. Bound every non-interactive test with a
   hard timeout and leave transient evidence under `.ops/runtime/`.
 
 Package boundaries:
 
 - Keep process-facing parsers and `project.scripts` targets under
-  `phase_agent_orchestrator.cli`.
+  `orchestrator.cli`.
 - Keep reusable provider SDK, availability, and result-classification code
-  under `phase_agent_orchestrator.providers`.
+  under `orchestrator.providers`.
 - Keep reusable lifecycle and quant orchestration runners under
-  `phase_agent_orchestrator.runners`; they must not parse CLI arguments.
-- Keep lifecycle/state services in their domain packages; legacy top-level
-  modules may remain only as small compatibility facades.
+  `orchestrator.runners`; they must not parse CLI arguments.
+- Keep lifecycle/state services in their domain packages. The package root
+  should contain only package metadata; do not add implementation modules
+  there.

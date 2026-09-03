@@ -1,0 +1,44 @@
+[project]
+name = "phase-agent-orchestrator"
+version = "0.1.0"
+description = "Python implementation of the Finance phase-agent orchestration state CLIs"
+readme = "README.md"
+authors = [
+    { name = "thanhnd13", email = "thanhnd13@vng.com.vn" }
+]
+requires-python = ">=3.14"
+dependencies = [
+  "claude-agent-sdk==0.2.151",
+  "openai-codex==0.147.0",
+    "pyyaml>=6.0.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "orchestrator"
+
+[project.scripts]
+classify-claude-result = "orchestrator.cli.classify_claude_result:cli"
+classify-codex-result = "orchestrator.cli.classify_codex_result:cli"
+configure-phase-agents = "orchestrator.cli.configure_phase_agents:cli"
+detect-codex-availability = "orchestrator.cli.detect_codex_availability:cli"
+detect-provider-availability = "orchestrator.cli.detect_provider_availability:cli"
+ops-runtime = "orchestrator.cli.ops_runtime:cli"
+coordinator = "orchestrator.cli.coordinator:cli"
+phase-agent-state = "orchestrator.cli.phase_agent_state:cli"
+quant-research-state = "orchestrator.cli.quant_research_state:cli"
+run-claude-phase = "orchestrator.cli.run_claude_phase:cli"
+run-codex-phase = "orchestrator.cli.run_codex_phase:cli"
+run-phase-agent = "orchestrator.cli.run_phase_agent:cli"
+run-phase-agent-command = "orchestrator.cli.run_phase_agent_command:cli"
+sync-agent-links = "orchestrator.cli.sync_agent_links:cli"
+wait-for-phase-attempt = "orchestrator.cli.wait_for_phase_attempt:cli"
+watch-phase-attempt-log = "orchestrator.cli.watch_phase_attempt_log:cli"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

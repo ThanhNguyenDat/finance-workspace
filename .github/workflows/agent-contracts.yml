@@ -26,22 +26,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n tools/phase-agent-orchestrator/bin/ops-runtime.sh
-          bash -n tools/phase-agent-orchestrator/bin/quant-research-state.sh
-          bash -n tools/phase-agent-orchestrator/bin/detect-codex-availability.sh
-          bash -n tools/phase-agent-orchestrator/bin/classify-codex-result.sh
-          bash -n tools/phase-agent-orchestrator/bin/run-codex-phase.sh
-          bash -n tools/phase-agent-orchestrator/bin/phase-agent-state.sh
-          bash -n tools/phase-agent-orchestrator/bin/configure-phase-agents.sh
-          bash -n tools/phase-agent-orchestrator/bin/classify-claude-result.sh
-          bash -n tools/phase-agent-orchestrator/bin/detect-provider-availability.sh
-          bash -n tools/phase-agent-orchestrator/bin/run-claude-phase.sh
-          bash -n tools/phase-agent-orchestrator/bin/run-phase-agent.sh
-          bash -n tools/phase-agent-orchestrator/bin/run-phase-agent-command.sh
-          bash -n tools/phase-agent-orchestrator/bin/run-claude-command.sh
-          bash -n tools/phase-agent-orchestrator/bin/sync-agent-links.sh
-          bash -n tools/phase-agent-orchestrator/bin/wait-for-phase-attempt.sh
-          bash -n tools/phase-agent-orchestrator/bin/watch-phase-attempt-log.sh
+          bash -n tools/orchestrator/bin/ops-runtime.sh
+          bash -n tools/orchestrator/bin/quant-research-state.sh
+          bash -n tools/orchestrator/bin/detect-codex-availability.sh
+          bash -n tools/orchestrator/bin/classify-codex-result.sh
+          bash -n tools/orchestrator/bin/run-codex-phase.sh
+          bash -n tools/orchestrator/bin/phase-agent-state.sh
+          bash -n tools/orchestrator/bin/configure-phase-agents.sh
+          bash -n tools/orchestrator/bin/classify-claude-result.sh
+          bash -n tools/orchestrator/bin/detect-provider-availability.sh
+          bash -n tools/orchestrator/bin/run-claude-phase.sh
+          bash -n tools/orchestrator/bin/run-phase-agent.sh
+          bash -n tools/orchestrator/bin/run-phase-agent-command.sh
+          bash -n tools/orchestrator/bin/run-claude-command.sh
+          bash -n tools/orchestrator/bin/sync-agent-links.sh
+          bash -n tools/orchestrator/bin/wait-for-phase-attempt.sh
+          bash -n tools/orchestrator/bin/watch-phase-attempt-log.sh
           bash -n .agents/scripts/tests/hermetic-env.sh
           bash -n .claude/hooks/ops-stop-hook.sh
           bash -n .agents/scripts/tests/test_ops_orchestration.sh
@@ -101,12 +101,12 @@ jobs:
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=10s 1m \
-            uv run --project tools/phase-agent-orchestrator pytest
+            uv run --project tools/orchestrator pytest
 
       - name: Verify managed links and diff
         shell: bash
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=10s 1m \
-            uv run --project tools/phase-agent-orchestrator sync-agent-links --check
+            uv run --project tools/orchestrator sync-agent-links --check
           git diff --check

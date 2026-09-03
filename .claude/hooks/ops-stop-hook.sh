@@ -16,7 +16,7 @@ set -Eeuo pipefail
 # actively supervising each transaction via Monitor/uv run wait-for-phase-attempt
 # per .claude/commands/ops/run.md, not this hook.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-PROJECT_DIR="$SCRIPT_DIR/../../tools/phase-agent-orchestrator"
+PROJECT_DIR="$SCRIPT_DIR/../../tools/orchestrator"
 payload="$(cat || true)"
 cwd="$(jq -r '.cwd // empty' <<<"$payload" 2>/dev/null || true)"
 session_id="$(jq -r '.session_id // empty' <<<"$payload" 2>/dev/null || true)"

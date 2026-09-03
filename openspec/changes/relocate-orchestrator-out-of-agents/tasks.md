@@ -10,20 +10,20 @@ after Task 1.
 ## 1. Move the project
 
 - [x] 1.1 Move the former hidden orchestrator project with `git mv` to
-  `tools/phase-agent-orchestrator` (creating `tools/` as needed). Verify:
+  `tools/orchestrator` (creating `tools/` as needed). Verify:
   `git status` shows the 20 tracked
   files as renames (`R`), not as deletes plus adds, and
-  `git log --follow tools/phase-agent-orchestrator/src/phase_agent_orchestrator/state/ops_transaction.py`
+  `git log --follow tools/orchestrator/src/orchestrator/state/ops_transaction.py`
   still reaches the commits that predate this change.
 - [x] 1.2 Remove the empty leftover `uv init` scaffold directory
-  `tools/phase-agent-orchestrator/src/orchestrator/` (design.md Context —
-  untracked and empty). Verify: `find tools/phase-agent-orchestrator/src -maxdepth 1 -type d`
-  lists only `src` and `src/phase_agent_orchestrator`.
+  `tools/orchestrator/src/orchestrator/` (design.md Context —
+  untracked and empty). Verify: `find tools/orchestrator/src -maxdepth 1 -type d`
+  lists only `src` and `src/orchestrator`.
 - [x] 1.3 Move the local, git-ignored `accounts.yaml` to
-  `tools/phase-agent-orchestrator/accounts.yaml` and run
-  `uv sync --project tools/phase-agent-orchestrator` (design.md Decision 5).
-  Verify: `uv run --project tools/phase-agent-orchestrator python -c "import phase_agent_orchestrator, yaml"`
-  exits 0, and `test -f tools/phase-agent-orchestrator/accounts.yaml` succeeds;
+  `tools/orchestrator/accounts.yaml` and run
+  `uv sync --project tools/orchestrator` (design.md Decision 5).
+  Verify: `uv run --project tools/orchestrator python -c "import orchestrator, yaml"`
+  exits 0, and `test -f tools/orchestrator/accounts.yaml` succeeds;
   also assert that the former hidden project directory is absent. Do not print
   the file's contents.
 
@@ -42,15 +42,15 @@ after Task 1.
   `orchestrator project not found`.
 - [x] 2.2 Update `PHASE_AGENT_ORCHESTRATOR_PROJECT` in
   `.agents/scripts/tests/hermetic-env.sh` to
-  `"$HERMETIC_ROOT_DIR/tools/phase-agent-orchestrator"`. Verify:
+  `"$HERMETIC_ROOT_DIR/tools/orchestrator"`. Verify:
   `./.agents/scripts/tests/test_hermetic_agent_contracts.sh` passes unmodified.
 - [x] 2.3 Update `pytest.ini`'s `testpaths` to
-  `tools/phase-agent-orchestrator/tests`. Verify: `uv run --project
-  tools/phase-agent-orchestrator pytest --collect-only` collects the same
+  `tools/orchestrator/tests`. Verify: `uv run --project
+  tools/orchestrator pytest --collect-only` collects the same
   number of tests as it collected before the move.
 - [x] 2.4 Update `.gitignore` line 14 to
-  `tools/phase-agent-orchestrator/accounts.yaml`. Verify:
-  `git check-ignore -v tools/phase-agent-orchestrator/accounts.yaml` reports
+  `tools/orchestrator/accounts.yaml`. Verify:
+  `git check-ignore -v tools/orchestrator/accounts.yaml` reports
   that rule, and `git status --porcelain` does not list `accounts.yaml` as an
   untracked file. This check is mandatory — the file holds the operator's real
   account directory paths and must never become tracked.
@@ -82,7 +82,7 @@ after Task 1.
 - [x] 4.1 Update every former hidden-project path in
   `openspec/changes/phase-agent-python-spawn-layer/{proposal,design,tasks}.md`
   and `openspec/changes/phase-agent-account-registry-config/{proposal,design,tasks}.md`
-  to `tools/phase-agent-orchestrator`, changing paths only — no task, decision,
+  to `tools/orchestrator`, changing paths only — no task, decision,
   or sequencing text. Verify: `openspec validate --strict` (or the repository's
   configured equivalent) passes for both changes, and a `git diff` of the two
   directories shows only path substitutions.
@@ -103,7 +103,7 @@ after Task 1.
   `test_phase_agent_routing.sh`, `test_phase_agent_quant_launcher.sh`,
   `test_multi_account_routing.sh`, `test_claude_quant_launcher.sh`,
   `test_claude_worker_policy.sh`, `test_hermetic_agent_contracts.sh`).
-- [x] 5.2 Verify: `uv run --project tools/phase-agent-orchestrator pytest`
+- [x] 5.2 Verify: `uv run --project tools/orchestrator pytest`
   passes with the same test count as before the move plus the one added in
   Task 3.1.
 - [x] 5.3 Verify account resolution survived the local-artifact move

@@ -155,7 +155,7 @@ are admitted in creation order subject to scope conflicts and capacity.
 ### 8. Compatibility and cutover
 
 The canonical implementation remains under
-`tools/phase-agent-orchestrator/`. Existing shell entry points, where retained,
+`tools/orchestrator/`. Existing shell entry points, where retained,
 are thin `uv` wrappers only. The coordinator adds `submit`, `resume`, `status`,
 `attach`, `answer`, `cancel` and `recover` operations; existing commands map to
 these operations without creating provider-specific lifecycle state.

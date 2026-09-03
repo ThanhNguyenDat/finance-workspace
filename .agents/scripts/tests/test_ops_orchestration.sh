@@ -4,8 +4,8 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/../../.." && pwd -P)"
-RUNTIME="$ROOT_DIR/tools/phase-agent-orchestrator/bin/ops-runtime.sh"
-RUNNER="$ROOT_DIR/tools/phase-agent-orchestrator/bin/run-codex-phase.sh"
+RUNTIME="$ROOT_DIR/tools/orchestrator/bin/ops-runtime.sh"
+RUNNER="$ROOT_DIR/tools/orchestrator/bin/run-codex-phase.sh"
 HOOK="$ROOT_DIR/.claude/hooks/ops-stop-hook.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
@@ -358,7 +358,7 @@ expect_failure "$RUNTIME" lock-repos change-partial session-partial "$mw" "$web_
 
 mock_bin="$tmp/mock-bin"
 mkdir -p -- "$mock_bin"
-cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_codex_sdk_cli.py" "$mock_bin/codex"
+cp "$ROOT_DIR/tools/orchestrator/tests/fixtures/fake_codex_sdk_cli.py" "$mock_bin/codex"
 chmod +x "$mock_bin/codex"
 export FAKE_SDK_TRACE="$tmp/sdk-trace" FAKE_SDK_RESULT_TEXT=$'OK\nFINAL_VERIFY_GATE: PASS\nP0_FINDINGS: 0\nP1_FINDINGS: 0\nOBJECTIVE_GATES: PASS'
 

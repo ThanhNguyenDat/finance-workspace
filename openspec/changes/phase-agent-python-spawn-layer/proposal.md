@@ -43,7 +43,7 @@ open verification items this pivot introduces.
   official `claude-agent-sdk` and `openai_codex` Python SDKs instead of
   spawning the raw `claude`/`codex` CLI binaries directly, while preserving
   every *externally observable* behavior (same CLI invocation for the
-  `tools/phase-agent-orchestrator/bin/*.sh` entry points, same effective model/effort/timeout/
+  `tools/orchestrator/bin/*.sh` entry points, same effective model/effort/timeout/
   kill-after values, same lease/lock acquisition order, same log file
   layout under `.ops/changes/<change>/runtime/logs/`, same
   `result_class` vocabulary consumed by `phase_agent_state`):
@@ -57,12 +57,12 @@ open verification items this pivot introduces.
   - `configure-phase-agents.sh` (operator-facing config CLI)
 - Add `claude-agent-sdk` and `openai_codex` (exact PyPI distribution names
   to be confirmed at implementation time — Task 3.0) as dependencies of
-  `tools/phase-agent-orchestrator/pyproject.toml`, pinned in `uv.lock`.
+  `tools/orchestrator/pyproject.toml`, pinned in `uv.lock`.
 - The three files ported by `phase-agent-python-orchestrator`
   (`ops-runtime.sh`, `phase-agent-state.sh`, `quant-research-state.sh`) are
   Python implementations exposed through clean `uv run` console commands;
-  compatibility wrappers live in `tools/phase-agent-orchestrator/bin/`, while
-  all Python code remains in `tools/phase-agent-orchestrator/`.
+  compatibility wrappers live in `tools/orchestrator/bin/`, while
+  all Python code remains in `tools/orchestrator/`.
 - Subprocess supervision (spawn `claude`/`codex` via its SDK, enforce a
   timeout via the SDK's native cancellation call, then a hard-kill fallback
   if the process is still alive after a grace period, always release the
@@ -76,7 +76,7 @@ open verification items this pivot introduces.
   each SDK's own documented-but-not-fully-verified cancellation contract).
 - Port the remaining operational helpers (`sync-agent-links.py`,
   `wait-for-phase-attempt.py`, and `watch-phase-attempt-log.py`) into
-  `tools/phase-agent-orchestrator/`, exposing them through console commands and
+  `tools/orchestrator/`, exposing them through console commands and
   optional thin `bin/*.sh` wrappers. Shell contract tests remain shell because they exercise the
   public process/CLI contracts.
 
@@ -96,10 +96,10 @@ remains set)
 
 - **Affected repository**: `finance-workspace` only.
 - **Affected files**: every bash script listed above is replaced by Python
-  modules under `tools/phase-agent-orchestrator/src/phase_agent_orchestrator/`, with
+modules under `tools/orchestrator/src/orchestrator/`, with
   each bash file's path either removed (once all callers are ported) or
   kept as a thin shim during a transition window (design.md must decide
-  which); `tools/phase-agent-orchestrator/pyproject.toml` and `uv.lock` gain two new
+  which); `tools/orchestrator/pyproject.toml` and `uv.lock` gain two new
   third-party dependencies.
 - **Trading safety**: none directly (orchestration tooling). Safety-
   relevant to the OPS workflow the same way the rest of this system is:

@@ -9,7 +9,7 @@ All tasks are in the `finance-workspace` repository only.
 ## 1. Classifiers and detectors
 
 - [x] 1.1 Port `classify-claude-result.sh` and `classify-codex-result.sh`
-  to `phase_agent_orchestrator.classify_claude_result`/
+  to `orchestrator.cli.classify_claude_result`/
   `classify_codex_result`, reading their current bash logic line by line
   (design.md Decision 5) and building an explicit mapping table from each
   existing `result_class` string to the `claude-agent-sdk`/`openai_codex`
@@ -49,8 +49,8 @@ All tasks are in the `finance-workspace` repository only.
 
 - [x] 3.0 **Spike, before any other Task 3-5 work**: confirm the exact
   PyPI distribution names for the Claude and Codex Python SDKs, add them
-  to `tools/phase-agent-orchestrator/pyproject.toml` pinned to exact versions, run
-  `uv sync --project tools/phase-agent-orchestrator`, and resolve design.md's open
+  to `tools/orchestrator/pyproject.toml` pinned to exact versions, run
+  `uv sync --project tools/orchestrator`, and resolve design.md's open
   hard-kill-fallback risk: build a fake `claude`/`codex` CLI binary that
   speaks enough of each SDK's stdio protocol to be recognized as a live
   session, make it ignore the SDK's `interrupt()`/`turn/interrupt` call,
@@ -81,7 +81,7 @@ All tasks are in the `finance-workspace` repository only.
 ## 4. Phase adapters
 
 - [x] 4.1 Port `run-claude-phase.sh` to
-  `phase_agent_orchestrator.run_claude_phase`, constructing a
+  `orchestrator.cli.run_claude_phase`, constructing a
   `ClaudeSDKClient` (design.md Decision 2 requires the streaming client,
   not the one-shot `query()` function, since only the streaming client
   documents `interrupt()`), using the Task 3 helper for timeout/
@@ -115,14 +115,14 @@ All tasks are in the `finance-workspace` repository only.
 ## 5. Resolver and quant launcher
 
 - [x] 5.1 Port `run-phase-agent.sh` to
-  `phase_agent_orchestrator.run_phase_agent`, calling the Task 1/2/4
+  `orchestrator.cli.run_phase_agent`, calling the Task 1/2/4
   modules directly as Python functions rather than as subprocesses
   (design.md Decision 1), while keeping its own standalone shim/CLI entry
   point. Verify: `test_ops_orchestration.sh`, `test_phase_agent_routing.sh`,
   `test_quant_backend_routing.sh`, and `test_hermetic_agent_contracts.sh`
   pass unmodified.
 - [x] 5.2 Port `run-phase-agent-command.sh` to
-  `phase_agent_orchestrator.run_phase_agent_command`. Verify:
+  `orchestrator.cli.run_phase_agent_command`. Verify:
   `test_claude_quant_launcher.sh`, `test_phase_agent_quant_launcher.sh`,
   and `test_multi_account_routing.sh`'s quant-research failover assertions
   pass unmodified.
@@ -132,12 +132,12 @@ All tasks are in the `finance-workspace` repository only.
 
 - [x] 6.1 Verify: every bash test under `.agents/scripts/tests/` passes
   against the fully shimmed state.
-- [x] 6.2 Verify: `uv run --project tools/phase-agent-orchestrator pytest` passes
+- [x] 6.2 Verify: `uv run --project tools/orchestrator pytest` passes
   with the full suite from Tasks 1-5, including the new hanging-session
   cancellation coverage from Task 3, and that `uv.lock` pins exact SDK
   versions (no version range).
 - [ ] 6.3 Run one live end-to-end smoke check:
-  `uv run --project tools/phase-agent-orchestrator run-phase-agent-command quant-research` against the
+  `uv run --project tools/orchestrator run-phase-agent-command quant-research` against the
   fully SDK-backed chain, and verify it completes with the same
   `Quant iteration <n> completed with <provider>` success line.
 - [x] 6.4 Update `.github/workflows/agent-contracts.yml` to keep `bash -n`
@@ -146,13 +146,13 @@ All tasks are in the `finance-workspace` repository only.
 - [x] 6.5 Update `.agents/rules/coding-and-verification.md` and/or the
   relevant skill to reflect that the phase-agent system is now
   Python-first and SDK-backed for provider invocation, and verify
-  `uv run --project tools/phase-agent-orchestrator sync-agent-links --check` still passes.
+  `uv run --project tools/orchestrator sync-agent-links --check` still passes.
 
 - [x] 6.6 Port `sync-agent-links.sh`, `wait-for-phase-attempt.sh`, and
   `watch-phase-attempt-log.sh` implementations into the Python package,
   preserving stale-link protection, bounded waiting, JSONL progress
   rendering, and stdout/stderr behavior.
 - [x] 6.7 Keep operational `.sh` wrappers beside the Python package under
-  `tools/phase-agent-orchestrator/bin/`, expose clean `uv run` console
+  `tools/orchestrator/bin/`, expose clean `uv run` console
   commands, and update current commands, hooks, tests, README, AGENTS/CLAUDE
   guidance, and CI accordingly. Keep all Python implementation under `tools/`.

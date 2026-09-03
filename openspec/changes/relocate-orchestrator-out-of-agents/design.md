@@ -6,7 +6,7 @@ change's base commit):
 - The package is 20 tracked files in the former hidden project, plus
   two untracked local artifacts: `accounts.yaml` (git-ignored via `.gitignore`
   line 14) and `.venv` (561 MB, self-ignored by uv's `.venv/.gitignore`).
-- An empty leftover directory `tools/phase-agent-orchestrator/src/orchestrator/`
+- An empty leftover directory `tools/orchestrator/src/orchestrator/`
   exists
   from the original `uv init --package` scaffold; it is untracked and holds no
   files.
@@ -28,7 +28,7 @@ change's base commit):
   `state/ops_transaction.py:30`, `state/quant_research.py:21`, and
   `locks/change_lock.py:31` each use
   `Path(os.environ.get("<VAR>", Path(__file__).resolve().parents[5]))`, where
-  the five ancestors are `<subpkg>/`, `phase_agent_orchestrator/`, `src/`,
+  the five ancestors are `<subpkg>/`, `orchestrator/`, `src/`,
   `orchestrator/`, `.agents/`. `state/candidates.py:23` does the same with
   `PHASE_AGENT_ROOT`. No test asserts the resulting value.
 - `accounts/registry.py:29` uses `parents[3]` to find `accounts.yaml`, which
@@ -61,17 +61,17 @@ change's base commit):
 
 ## Decisions
 
-### Decision 1: target path is `tools/phase-agent-orchestrator/`
+### Decision 1: target path is `tools/orchestrator/`
 
 The directory name matches the distribution name already in
 `pyproject.toml` (`phase-agent-orchestrator`) and the importable package
-(`phase_agent_orchestrator`), so all three agree for the first time. A
+(`orchestrator`), so all three agree for the first time. A
 `tools/` parent leaves room for future workspace tooling without another
 top-level directory per tool, and it reads correctly against `CLAUDE.md`'s
 rule that `finance-workspace` hosts orchestration, not runtime, code.
 
 Critically, this target sits at **the same depth as the former location**:
-`tools/phase-agent-orchestrator/src/<pkg>/<subpkg>/x.py` is six levels below
+`tools/orchestrator/src/<pkg>/<subpkg>/x.py` is six levels below
 the repository root, so every `parents[5]` derivation continues to resolve to the
 repository root with no source edit.
 
@@ -131,7 +131,7 @@ existing seam that makes the shims testable from a copied fixture workspace.
 directory paths; `.venv` is a 561 MB build artifact. Neither is moved by
 `git mv`, and this change does **not** add a migration script for them.
 Instead the cutover task requires the operator to move `accounts.yaml` and run
-`uv sync --project tools/phase-agent-orchestrator`, and requires positive
+`uv sync --project tools/orchestrator`, and requires positive
 verification that account-scoped routing still resolves real account
 directories afterward. Silent fallback here is the most likely
 post-relocation failure, so it gets a named verification step rather than a
@@ -167,7 +167,7 @@ best-effort helper.
 ## Migration Plan
 
 1. Create `tools/` and move the former hidden project with `git mv` to
-   `tools/phase-agent-orchestrator`.
+   `tools/orchestrator`.
 2. Remove the empty leftover `src/orchestrator/` scaffold directory.
 3. Update the three shims, `hermetic-env.sh`, `pytest.ini`, and `.gitignore`.
 4. Update `.agents/rules/coding-and-verification.md` and
@@ -175,8 +175,8 @@ best-effort helper.
    `./.agents/scripts/sync-agent-links.sh` and its `--check`.
 5. Add the Decision 3 regression test.
 6. Operator moves local `accounts.yaml`; run
-   `uv sync --project tools/phase-agent-orchestrator`.
-7. Run the full bash suite, `uv run --project tools/phase-agent-orchestrator pytest`,
+   `uv sync --project tools/orchestrator`.
+7. Run the full bash suite, `uv run --project tools/orchestrator pytest`,
    and one live `run-phase-agent-command.sh quant-research` smoke check.
 8. Reconcile the two in-flight OpenSpec changes.
 9. One commit, push to `main`, verify the `Agent contracts` run for that exact
@@ -184,5 +184,5 @@ best-effort helper.
    either path — the strongest available evidence that no stale path survives).
 
 **Rollback**: revert the single commit, move `accounts.yaml` back, re-run
-`uv sync --project tools/phase-agent-orchestrator`. No deployed artifact and no
+`uv sync --project tools/orchestrator`. No deployed artifact and no
 production surface is involved, so rollback is local plus one push.

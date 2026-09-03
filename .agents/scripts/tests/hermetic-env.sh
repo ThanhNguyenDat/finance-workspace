@@ -15,7 +15,7 @@ done < <(compgen -A variable)
 # from the test harness instead of making production code inspect process
 # ancestry or depend on Linux /proc.
 HERMETIC_ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-export PHASE_AGENT_ORCHESTRATOR_PROJECT="$HERMETIC_ROOT_DIR/tools/phase-agent-orchestrator"
+export PHASE_AGENT_ORCHESTRATOR_PROJECT="$HERMETIC_ROOT_DIR/tools/orchestrator"
 PHASE_AGENT_UV_BIN="$(command -v uv)"
 orchestrator() {
   "$PHASE_AGENT_UV_BIN" run --project "$PHASE_AGENT_ORCHESTRATOR_PROJECT" "$@"

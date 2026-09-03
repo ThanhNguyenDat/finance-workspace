@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
-ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"; OPS="$ROOT_DIR/tools/phase-agent-orchestrator/bin/ops-runtime.sh"; QUANT="$ROOT_DIR/tools/phase-agent-orchestrator/bin/quant-research-state.sh"
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"; OPS="$ROOT_DIR/tools/orchestrator/bin/ops-runtime.sh"; QUANT="$ROOT_DIR/tools/orchestrator/bin/quant-research-state.sh"
 tmp="$(mktemp -d)"; trap 'rm -rf -- "$tmp"' EXIT
 workspace="$tmp/workspace"; mkdir -p "$workspace"; export OPS_ROOT="$workspace" QUANT_RESEARCH_STATE_DIR="$workspace/.ops/runtime/quant-research"
 fail() { printf 'test_quant_backend_routing: %s\n' "$1" >&2; exit 1; }; expect_failure() { if "$@"; then fail "expected failure: $*"; fi; }
@@ -28,6 +28,6 @@ jq -e '.implementation_backend=="claude-fallback" and .verification_mode=="claud
 
 "$OPS" lock invalid session-invalid; expect_failure "$OPS" init invalid session-invalid unsupported; [[ ! -e "$workspace/.ops/changes/invalid/runtime/state.json" ]] || fail 'invalid backend created state'; "$OPS" unlock invalid session-invalid
 "$QUANT" codex-on >/dev/null; "$OPS" lock ungated session-ungated; expect_failure "$OPS" init ungated session-ungated claude-fallback quant-fallback; "$OPS" unlock ungated session-ungated
-grep -Fq 'routing_policy_version' "$ROOT_DIR/tools/phase-agent-orchestrator/src/phase_agent_orchestrator/state/ops_transaction.py" || fail 'routing policy contract missing'
-grep -Fq 'run-phase-agent.sh' "$ROOT_DIR/tools/phase-agent-orchestrator/bin/run-phase-agent.sh" || :
+grep -Fq 'routing_policy_version' "$ROOT_DIR/tools/orchestrator/src/orchestrator/state/ops_transaction.py" || fail 'routing policy contract missing'
+grep -Fq 'run-phase-agent.sh' "$ROOT_DIR/tools/orchestrator/bin/run-phase-agent.sh" || :
 printf '%s\n' 'test_quant_backend_routing: all checks passed'

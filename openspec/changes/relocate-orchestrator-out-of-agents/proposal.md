@@ -36,11 +36,11 @@ files, is materially cheaper than relocating after that change lands.
 
 - Move the `uv` project from the former hidden orchestrator project directory
   to
-  `tools/phase-agent-orchestrator/` with **no source-code behavior change**:
+  `tools/orchestrator/` with **no source-code behavior change**:
   `git mv` of every tracked file, preserving the internal
-  `src/phase_agent_orchestrator/...` layout, the distribution name
+  `src/orchestrator/...` layout, the distribution name
   (`phase-agent-orchestrator`), and every module path used by
-  `python -m phase_agent_orchestrator.cli.<module>`.
+  `python -m orchestrator.cli.<module>`.
 - Update every path reference to the former hidden project location:
   - the three bash shims' `PROJECT_DIR` default (`.agents/scripts/ops-runtime.sh`,
     `phase-agent-state.sh`, `quant-research-state.sh`);

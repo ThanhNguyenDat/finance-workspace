@@ -1,0 +1,126 @@
+"""CLI for the provider-neutral local coordinator."""
+
+from __future__ import annotations
+
+import json
+import sys
+import time
+from datetime import datetime, timezone
+from typing import Any, NoReturn
+
+from ..coordinator import (
+    CoordinatorDB,
+    CoordinatorError,
+    admit_session,
+    answer_question,
+    cancel_session,
+    create_session,
+    events_since,
+    recover_session,
+    resume_session,
+    session_status,
+)
+from ..core.io import CLIError, json_text, run_cli
+
+PREFIX = "coordinator"
+
+
+def usage() -> NoReturn:
+    print(
+        "Usage: coordinator <submit CHANGE [CONTEXT_JSON]|resume SESSION|status SESSION|recover SESSION|cancel SESSION VERSION FENCING_TOKEN|attach SESSION [OFFSET]|monitor SESSION [OFFSET]|follow SESSION [OFFSET] [SECONDS]|answer SESSION QUESTION_ID FENCING_TOKEN RESPONSE>",
+        file=sys.stderr,
+    )
+    raise SystemExit(2)
+
+
+def _context(value: str | None) -> dict[str, Any]:
+    if value is None:
+        return {"request": ""}
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise CLIError(f"{PREFIX}: context must be valid JSON") from exc
+    if not isinstance(parsed, dict):
+        raise CLIError(f"{PREFIX}: context must be a JSON object")
+    return parsed
+
+
+def _elapsed_seconds(started_at: str) -> int:
+    try:
+        started = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
+        return max(0, int((datetime.now(timezone.utc) - started).total_seconds()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    command = args[0] if args else ""
+    db = CoordinatorDB()
+    try:
+        if command == "submit" and 2 <= len(args) <= 3:
+            session = create_session(args[1], _context(args[2] if len(args) == 3 else None), db=db)
+            admission = admit_session(session["id"], db=db)
+            print(json_text({"session": session, "admission": admission}))
+            return 0 if admission["admitted"] else 2
+        if command == "resume" and len(args) == 2:
+            print(json_text(resume_session(args[1], db=db)))
+            return 0
+        if command == "status" and len(args) == 2:
+            print(json_text(session_status(args[1], db=db)))
+            return 0
+        if command == "recover" and len(args) == 2:
+            print(json_text(recover_session(args[1], db=db)))
+            return 0
+        if command == "cancel" and len(args) == 4:
+            print(json_text(cancel_session(args[1], expected_version=int(args[2]), fencing_token=args[3], db=db)))
+            return 0
+        if command == "attach" and 2 <= len(args) <= 3:
+            print(json_text({"session": session_status(args[1], db=db), "events": events_since(args[1], int(args[2]) if len(args) == 3 else 0, db=db)}))
+            return 0
+        if command == "monitor" and 2 <= len(args) <= 3:
+            status = session_status(args[1], db=db)
+            attempts = status["attempts"]
+            latest = attempts[-1] if attempts else {}
+            started_at = latest.get("started_at") or status["session"]["created_at"]
+            print(
+                f"session={status['session']['id']} phase={status['session']['phase']} "
+                f"status={status['session']['status']} version={status['session']['version']} "
+                f"provider={latest.get('provider', status['session'].get('selected_provider') or '-')} "
+                f"model={latest.get('model', '-')} account={latest.get('account', status['session'].get('selected_account') or '-')} "
+                f"elapsed_seconds={_elapsed_seconds(started_at)} last_result={latest.get('result_class', '-')} "
+                f"updated_at={status['session']['updated_at']} events={status['event_count']} terminal={status['session']['status']}"
+            )
+            for event in events_since(args[1], int(args[2]) if len(args) == 3 else 0, db=db):
+                payload = json_text(event["safe_payload"])
+                print(f"[{event['sequence']}] {event['event_type']} phase={event['phase']} payload={payload}")
+            return 0
+        if command == "follow" and 2 <= len(args) <= 4:
+            offset = int(args[2]) if len(args) >= 3 else 0
+            seconds = int(args[3]) if len(args) == 4 else 60
+            if offset < 0 or seconds < 1 or seconds > 3600:
+                raise CLIError(f"{PREFIX}: follow offset/seconds are out of bounds")
+            deadline = time.monotonic() + seconds
+            while time.monotonic() < deadline:
+                events = events_since(args[1], offset, db=db)
+                for event in events:
+                    print(f"[{event['sequence']}] {event['event_type']} phase={event['phase']} payload={json_text(event['safe_payload'])}", flush=True)
+                    offset = event["sequence"]
+                if session_status(args[1], db=db)["session"]["status"] in {"COMPLETED", "FAILED", "BLOCKED", "CANCELLED"} and not events:
+                    break
+                time.sleep(0.2)
+            return 0
+        if command == "answer" and len(args) == 5:
+            print(json_text(answer_question(args[1], args[2], args[4], fencing_token=args[3], db=db)))
+            return 0
+    except (ValueError, CoordinatorError) as exc:
+        raise CLIError(f"{PREFIX}: {exc}") from exc
+    usage()
+
+
+def cli() -> NoReturn:
+    run_cli(main, PREFIX)
+
+
+if __name__ == "__main__":
+    cli()
