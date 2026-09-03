@@ -1085,6 +1085,60 @@ def archive_session(
     return _row(row) or {}
 
 
+def archive_terminal_history(
+    session_id: str, *, db: CoordinatorDB | None = None
+) -> dict[str, Any]:
+    """Move FAILED/BLOCKED evidence to archive without changing terminal status."""
+
+    session_id = _id(session_id)
+    coordinator = _db(db)
+    current = get_session(session_id, db=coordinator)
+    if current is None:
+        raise CoordinatorError(f"session not found: {session_id}")
+    if current["status"] not in {"FAILED", "BLOCKED"}:
+        raise IllegalTransitionError(
+            "terminal history requires a FAILED or BLOCKED session"
+        )
+    if coordinator.read(
+        "SELECT 1 FROM admission_slots WHERE session_id = ? LIMIT 1", (session_id,)
+    ) or coordinator.read(
+        "SELECT 1 FROM resource_leases WHERE session_id = ? LIMIT 1", (session_id,)
+    ):
+        raise CoordinatorError("terminal history requires cleared session leases")
+    archive_root = (
+        coordinator.path.parents[3]
+        if len(coordinator.path.parents) > 3
+        and coordinator.path.parents[2].name == ".ops"
+        else coordinator.path.parent.parent
+    )
+    archive_name = current["change_name"].replace("/", "__")
+    evidence_path = (
+        archive_root
+        / ".ops"
+        / "archive"
+        / f"{datetime.now(timezone.utc):%Y-%m-%d}-{archive_name}"
+        / "coordinator"
+        / f"{session_id}.json"
+    )
+    snapshot = session_status(session_id, db=coordinator)
+    snapshot["terminal_history"] = True
+    atomic_write_json(evidence_path, snapshot)
+    checkpoint = dict(current["checkpoint"])
+    checkpoint["archive_evidence"] = str(evidence_path.relative_to(archive_root))
+    with coordinator.transaction() as connection:
+        updated = connection.execute(
+            "UPDATE sessions SET checkpoint = ?, version = version + 1, updated_at = datetime('now') WHERE id = ? AND status IN ('FAILED', 'BLOCKED') AND version = ?",
+            (_json(checkpoint, "checkpoint"), session_id, current["version"]),
+        )
+        if updated.rowcount != 1:
+            raise StaleVersionError("terminal session changed during evidence snapshot")
+        row = connection.execute(
+            "SELECT * FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+    assert row is not None
+    return _row(row) or {}
+
+
 def transition_session(
     session_id: str,
     next_phase: str,

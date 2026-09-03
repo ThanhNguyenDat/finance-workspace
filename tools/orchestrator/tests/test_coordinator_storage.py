@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -18,6 +19,7 @@ from orchestrator.coordinator import (
     answer_question,
     append_event,
     archive_session,
+    archive_terminal_history,
     assert_resource_lease,
     create_quant_session,
     create_session,
@@ -305,6 +307,57 @@ def test_lifecycle_transitions_are_guarded_by_version(tmp_path: Path):
     completed = archive_session(session["id"], db=db)
     assert completed["status"] == "COMPLETED"
     assert (tmp_path / completed["checkpoint"]["archive_evidence"]).is_file()
+
+
+def test_terminal_history_is_archived_without_becoming_success(tmp_path: Path):
+    db = make_db(tmp_path)
+    session = create_session(
+        "failed-history",
+        {"request": "failed"},
+        checkpoint={"failure_reason": "implementation-error"},
+        status="BLOCKED",
+        db=db,
+    )
+    record_attempt(
+        session["id"],
+        phase="PLAN",
+        round=0,
+        attempt_no=1,
+        provider="codex",
+        model="gpt-5-codex",
+        effort="high",
+        continuation=False,
+        status="FAILED",
+        result_class="implementation-error",
+        db=db,
+    )
+
+    archived = archive_terminal_history(session["id"], db=db)
+
+    assert archived["status"] == "BLOCKED"
+    assert archived["version"] == session["version"] + 1
+    evidence = tmp_path / archived["checkpoint"]["archive_evidence"]
+    assert evidence.is_file()
+    payload = json.loads(evidence.read_text(encoding="utf-8"))
+    assert payload["terminal_history"] is True
+    assert payload["session"]["status"] == "BLOCKED"
+    assert payload["attempts"][0]["status"] == "FAILED"
+
+
+def test_terminal_history_rejects_active_leases(tmp_path: Path):
+    db = make_db(tmp_path)
+    session = create_session(
+        "blocked-history", {"request": "blocked"}, status="FAILED", db=db
+    )
+    lease = acquire_resource(
+        session["id"], "worktree", "blocked-history", owner_pid=4321, db=db
+    )
+
+    with pytest.raises(CoordinatorError, match="cleared session leases"):
+        archive_terminal_history(session["id"], db=db)
+
+    assert get_session(session["id"], db=db)["status"] == "FAILED"
+    assert lease["resource_key"] == "blocked-history"
 
 
 def test_verification_findings_are_session_scoped_and_atomic(tmp_path: Path):

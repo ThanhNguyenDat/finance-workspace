@@ -14,6 +14,7 @@ from ..coordinator import (
     admit_session,
     answer_question,
     archive_session,
+    archive_terminal_history,
     cancel_session,
     create_session,
     events_since,
@@ -30,7 +31,7 @@ PREFIX = "coordinator"
 
 def usage() -> NoReturn:
     print(
-        "Usage: coordinator <submit CHANGE [CONTEXT_JSON]|resume SESSION|status SESSION|recover SESSION|cancel SESSION VERSION FENCING_TOKEN|interrupt SESSION VERSION FENCING_TOKEN SAFE_BOUNDARY [REASON]|attach SESSION [OFFSET]|monitor SESSION [OFFSET]|follow SESSION [OFFSET] [SECONDS]|findings SESSION VERSION FENCING_TOKEN FINDINGS_JSON|archive SESSION|answer SESSION QUESTION_ID FENCING_TOKEN RESPONSE>",
+        "Usage: coordinator <submit CHANGE [CONTEXT_JSON]|resume SESSION|status SESSION|recover SESSION|cancel SESSION VERSION FENCING_TOKEN|interrupt SESSION VERSION FENCING_TOKEN SAFE_BOUNDARY [REASON]|attach SESSION [OFFSET]|monitor SESSION [OFFSET]|follow SESSION [OFFSET] [SECONDS]|findings SESSION VERSION FENCING_TOKEN FINDINGS_JSON|archive SESSION|archive-history SESSION|answer SESSION QUESTION_ID FENCING_TOKEN RESPONSE>",
         file=sys.stderr,
     )
     raise SystemExit(2)
@@ -145,6 +146,9 @@ def main() -> int:
             return 0
         if command == "archive" and len(args) == 2:
             print(json_text(archive_session(args[1], db=db)))
+            return 0
+        if command == "archive-history" and len(args) == 2:
+            print(json_text(archive_terminal_history(args[1], db=db)))
             return 0
         if command == "monitor" and 2 <= len(args) <= 3:
             status = session_status(args[1], db=db)
