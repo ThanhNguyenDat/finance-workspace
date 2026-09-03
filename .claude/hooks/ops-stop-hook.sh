@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Records the active /ops:run transaction quietly instead of blocking Stop.
+# Records the active /ops:e2e transaction quietly instead of blocking Stop.
 #
 # Previous behavior (disabled 2026-09-02 at the operator's explicit request):
 # this hook returned exit 2 with a stderr message every time Stop fired while
@@ -14,7 +14,7 @@ set -Eeuo pipefail
 # commented reference in case a future session wants to restore it (e.g.
 # behind an opt-in env var), but the active safety net is now the operator
 # actively supervising each transaction via Monitor/uv run wait-for-phase-attempt
-# per .claude/commands/ops/run.md, not this hook.
+# per .claude/commands/ops/e2e.md, not this hook.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 PROJECT_DIR="$SCRIPT_DIR/../../tools/orchestrator"
 payload="$(cat || true)"
@@ -37,14 +37,14 @@ exit 0
 # --- restore point: the block below is the original blocking behavior ---
 # line_count="$(printf '%s\n' "$active" | awk 'END { print NR }')"
 # if [ "$line_count" -ne 1 ]; then
-#   printf 'Stop blocked: multiple active /ops:run changes were found. Resume the owning workflow or terminate each change explicitly.\n%s\n' "$active" >&2
+#   printf 'Stop blocked: multiple active /ops:e2e changes were found. Resume the owning workflow or terminate each change explicitly.\n%s\n' "$active" >&2
 #   exit 2
 # fi
 # IFS='|' read -r change phase round <<<"$active"
 # case "$phase" in
 #   DONE|BLOCKED|FAILED) exit 0 ;;
 #   *)
-#     printf 'Stop blocked: /ops:run change %s is in phase %s (round %s). Continue to ARCHIVE/complete or record BLOCKED/FAILED before stopping.\n' "$change" "$phase" "$round" >&2
+#     printf 'Stop blocked: /ops:e2e change %s is in phase %s (round %s). Continue to ARCHIVE/complete or record BLOCKED/FAILED before stopping.\n' "$change" "$phase" "$round" >&2
 #     exit 2
 #     ;;
 # esac

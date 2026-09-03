@@ -30,7 +30,7 @@ provider health. A fallback provider inherits the phase's complete scope,
 tests, safety and evidence obligations. Same-provider process separation must
 not be described as provider-independent verification.
 
-`/ops:run` is the project-level autonomous lifecycle. `/opsx:*` remains the
+`/ops:e2e` is the project-level autonomous lifecycle. `/opsx:*` remains the
 native OpenSpec primitive namespace. OpenSpec changes own requirements,
 design, tasks, and acceptance; `.ops/changes/<change>/handoff.md` owns only a
 concise coordination note; `.ops` runtime state is transient and gitignored.
@@ -86,7 +86,7 @@ Durable workspace artifacts use these canonical roots:
 
 Do not recreate a top-level `raw/` directory. New engineering requests enter
 through the native `/opsx:*` OpenSpec workflow and, when execution is needed,
-the `/ops:run` lifecycle.
+the `/ops:e2e` lifecycle.
 
 Repository ownership rules:
 

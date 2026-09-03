@@ -6,7 +6,7 @@ Run one stateful OPS lifecycle for:
 
 $ARGUMENTS
 
-Invoke as `/ops:run "<request>"`. The parent process orchestrates deterministic
+Invoke as `/ops:e2e "<request>"`. The parent process orchestrates deterministic
 state and never calls a model CLI directly. Every model-owned phase runs only
 through `uv run --project tools/orchestrator run-phase-agent`.
 

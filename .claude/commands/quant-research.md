@@ -98,7 +98,7 @@ Với `PROMOTE`:
    tasks/specs phải reference research iteration, instrument, research note và
    metrics CSV bằng path; không copy toàn bộ research report.
 3. Sau khi OpenSpec sẵn sàng, thực hiện canonical lifecycle tại
-   `@.claude/commands/ops/run.md`. Không copy PLAN/IMPLEMENT/VERIFY/FIX/release/
+   `@.claude/commands/ops/e2e.md`. Không copy PLAN/IMPLEMENT/VERIFY/FIX/release/
    archive state machine vào command này. Mọi model-owned phase chỉ chạy qua
    `uv run --project tools/orchestrator run-phase-agent`.
 4. Trong PLAN của OPS transaction, dùng cùng `<change>` tại

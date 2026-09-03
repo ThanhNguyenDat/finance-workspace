@@ -178,7 +178,7 @@ of lifecycle truth.
 - **WHEN** valid research produces a promoted actionable candidate and
   `codex_available=false`
 - **THEN** the command creates or reuses OpenSpec and enters the existing
-  `/ops:run` lifecycle with the explicitly gated Claude-fallback backend,
+  `/ops:e2e` lifecycle with the explicitly gated Claude-fallback backend,
   preserving locks, tests, verification, release, deployment, archive, and
   DONE gates
 

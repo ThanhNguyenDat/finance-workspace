@@ -19,7 +19,7 @@ When the resolver selects Claude after deterministic provider failure or a
 manual phase pin, Claude owns that bounded attempt and must preserve the same
 implementation/test/safety contract.
 
-`/ops:run` is the project-level autonomous lifecycle: deterministic shell state
+`/ops:e2e` is the project-level autonomous lifecycle: deterministic shell state
 orchestrates logical phase agents, with Claude/Codex selected per attempt. `/opsx:*`
 remains the native OpenSpec command namespace. OpenSpec changes hold
 requirements/design/tasks; `.ops/changes/<change>/handoff.md` holds only the

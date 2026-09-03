@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/../../.." && pwd -P)"
 RUNTIME="$ROOT_DIR/tools/orchestrator/bin/ops-runtime.sh"
 QUANT_COMMAND="$ROOT_DIR/.claude/commands/quant-research.md"
-OPS_COMMAND="$ROOT_DIR/.claude/commands/ops/run.md"
+OPS_COMMAND="$ROOT_DIR/.claude/commands/ops/e2e.md"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 
@@ -113,7 +113,7 @@ grep -Fq 'PROMOTE' "$QUANT_COMMAND" || fail 'PROMOTE classification missing'
 grep -Fq 'defensible' "$QUANT_COMMAND" || fail 'promotion evidence gate missing'
 grep -Fq 'scope rõ' "$QUANT_COMMAND" || fail 'promotion scope gate missing'
 grep -Fq 'trace-origin' "$QUANT_COMMAND" || fail 'OPS origin trace missing'
-grep -Fq '@.claude/commands/ops/run.md' "$QUANT_COMMAND" || fail 'canonical OPS reference missing'
+grep -Fq '@.claude/commands/ops/e2e.md' "$QUANT_COMMAND" || fail 'canonical OPS reference missing'
 grep -Fq 'dùng cùng `<change>`' "$QUANT_COMMAND" || fail 'same change identity contract missing'
 grep -Fq 'docs/archive/legacy-handoff-agent.md' "$QUANT_COMMAND" \
   && grep -Fq 'authoritative' "$QUANT_COMMAND" \

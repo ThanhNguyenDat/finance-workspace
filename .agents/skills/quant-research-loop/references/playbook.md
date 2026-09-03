@@ -1234,7 +1234,7 @@ timestamps; a stale, non-advancing cluster is a real bug, not normal).
 Only a result classified PROMOTE enters engineering. Derive one stable,
 meaningful kebab-case change name, create/reuse complete native OpenSpec
 artifacts that reference the research evidence, then enter the existing
-`/ops:run` lifecycle with the same change name. Attach immutable origin
+`/ops:e2e` lifecycle with the same change name. Attach immutable origin
 references with `ops-runtime.sh trace-origin` during PLAN. Never implement
 runtime code directly from a research-only result and never copy the OPS state
 machine into the research command.
@@ -1246,7 +1246,7 @@ an active attempt remains immutable until its process exits. If quota interrupts
 partial PLAN/IMPLEMENT/FIX work, the next eligible candidate continues the
 actual diff/commits under the same phase, round and repository lock.
 
-1. Route actionable implementation only through `/ops:run` and
+1. Route actionable implementation only through `/ops:e2e` and
    `uv run --project tools/orchestrator run-phase-agent`; do not modify runtime code outside that lifecycle or
    invoke Codex/Claude directly. Read a sibling implementation first — e.g. an
    existing `Strategy` impl or `StrategyKind` variant — before writing a new

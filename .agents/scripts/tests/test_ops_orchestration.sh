@@ -34,7 +34,7 @@ expect_hook_logs_active() {
 }
 
 jq -e . "$ROOT_DIR/.claude/settings.json" >/dev/null || fail 'invalid Claude settings JSON'
-grep -Fq '/ops:run' "$ROOT_DIR/.claude/commands/ops/run.md" || fail 'run command missing namespace'
+grep -Fq '/ops:e2e' "$ROOT_DIR/.claude/commands/ops/e2e.md" || fail 'run command missing namespace'
 grep -Fq 'PLAN / VERIFY / FINAL_VERIFY = Claude first, Codex fallback' "$ROOT_DIR/AGENTS.md" || fail 'AGENTS phase-agent role contract missing'
 grep -Fq '.ops/**/runtime/' "$ROOT_DIR/.gitignore" || fail 'runtime ignore rule missing'
 
@@ -59,8 +59,8 @@ test -f "$ROOT_DIR/.ops/archive/2026-08-29-route-quant-promotions-through-ops/ha
   || fail 'quant promotion OPS archive is missing'
 grep -Fq 'Status: DONE.' "$ROOT_DIR/.ops/archive/2026-08-29-route-quant-promotions-through-ops/handoff.md" \
   || fail 'quant promotion OPS archive lacks durable DONE evidence'
-lock_line="$(awk '/lock-repos <change>/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/run.md")"
-write_line="$(awk '/run-phase-agent <change> <repository> PLAN/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/run.md")"
+lock_line="$(awk '/lock-repos <change>/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/e2e.md")"
+write_line="$(awk '/run-phase-agent <change> <repository> PLAN/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/e2e.md")"
 test -n "$lock_line" && test -n "$write_line" && test "$lock_line" -lt "$write_line" \
   || fail 'planning writes appear before repository lock acquisition'
 

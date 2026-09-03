@@ -140,7 +140,7 @@ best-effort helper.
 ## Risks / Trade-offs
 
 - **A missed reference breaks every phase attempt.** The shims are on the hot
-  path of `/ops:run` and `quant-research`; a stale `PROJECT_DIR` fails closed
+  path of `/ops:e2e` and `quant-research`; a stale `PROJECT_DIR` fails closed
   with `orchestrator project not found` (exit 1), which is loud rather than
   silent. Mitigation: a repository-wide search for the former hidden-project
   path is an

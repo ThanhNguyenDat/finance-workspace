@@ -4,7 +4,7 @@ Workspace trung tâm để Claude và Codex phối hợp trên hệ sinh thái F
 Repository này giữ contract agent, rule/skill, spec, runbook, sơ đồ, research
 artifact và handoff. Nó không chứa code runtime của các service.
 
-`/ops:run` là lifecycle orchestration cấp project: Claude plan/verify/orchestrate,
+`/ops:e2e` là lifecycle orchestration cấp project: Claude plan/verify/orchestrate,
 Codex implement/test/fix. `/opsx:*` là các primitive OpenSpec-native. OpenSpec
 giữ requirements/design/tasks; `.ops/changes/<change>/handoff.md` giữ handoff
 ngắn gọn; `.ops` runtime là transient và được gitignore.
@@ -127,7 +127,7 @@ Mỗi `/quant-research` chỉ là một iteration bounded. Kết quả có thể
 Chỉ `PROMOTE` sau gate OOS/holdout/walk-forward defensible, improvement/defect
 đáng implement, scope/repository/behavior/acceptance rõ, risk/trading safety
 đã hiểu và rollback đã rõ khi áp dụng mới được tạo OpenSpec rồi enter
-canonical `/ops:run`. Một iteration research-only không tạo OPS transaction.
+canonical `/ops:e2e`. Một iteration research-only không tạo OPS transaction.
 
 Promoted change dùng cùng tên stable `<change>` tại
 `openspec/changes/<change>/` và `.ops/changes/<change>/`; origin metadata chỉ

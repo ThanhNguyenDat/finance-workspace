@@ -27,7 +27,7 @@ A promoted candidate SHALL derive one meaningful kebab-case change name and SHAL
 
 #### Scenario: Existing OPS lifecycle is reused
 - **WHEN** a promoted candidate enters implementation
-- **THEN** execution follows `.claude/commands/ops/run.md` rather than a quant-specific lifecycle copy
+- **THEN** execution follows `.claude/commands/ops/e2e.md` rather than a quant-specific lifecycle copy
 
 ### Requirement: Quant-origin OPS metadata is concise and immutable
 
