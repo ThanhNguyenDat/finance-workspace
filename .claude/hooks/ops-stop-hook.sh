@@ -13,10 +13,10 @@ set -Eeuo pipefail
 # operator found disruptive. The blocking behavior is preserved below as a
 # commented reference in case a future session wants to restore it (e.g.
 # behind an opt-in env var), but the active safety net is now the operator
-# actively supervising each transaction via Monitor/wait-for-phase-attempt.sh
+# actively supervising each transaction via Monitor/uv run wait-for-phase-attempt
 # per .claude/commands/ops/run.md, not this hook.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-RUNTIME="$SCRIPT_DIR/../../.agents/scripts/ops-runtime.sh"
+PROJECT_DIR="$SCRIPT_DIR/../../tools/phase-agent-orchestrator"
 payload="$(cat || true)"
 cwd="$(jq -r '.cwd // empty' <<<"$payload" 2>/dev/null || true)"
 session_id="$(jq -r '.session_id // empty' <<<"$payload" 2>/dev/null || true)"
@@ -24,7 +24,7 @@ session_id="${session_id:-${CLAUDE_SESSION_ID:-}}"
 [ -n "$cwd" ] || cwd="$PWD"
 [ -n "$session_id" ] || exit 0
 
-active="$("$RUNTIME" active "$cwd" "$session_id" 2>/dev/null || true)"
+active="$(uv run --project "$PROJECT_DIR" ops-runtime active "$cwd" "$session_id" 2>/dev/null || true)"
 [ -n "$active" ] || exit 0
 
 # Log under the target workspace's own .ops/runtime/, not the hook script's

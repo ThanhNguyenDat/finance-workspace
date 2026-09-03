@@ -38,7 +38,7 @@ research từ workspace, sau đó sửa đúng repository sở hữu code.
 
 ## Bắt đầu một vòng làm việc
 
-1. Chạy `./.agents/scripts/sync-agent-links.sh`.
+1. Chạy `uv run --project tools/phase-agent-orchestrator sync-agent-links`.
 2. Đọc `AGENTS.md` hoặc `CLAUDE.md`, rồi đọc shared rule phù hợp.
 3. Xác định và sử dụng shared skill liên quan; load capability/OpenSpec-native
    integration của CLI nếu cần.
@@ -48,14 +48,15 @@ research từ workspace, sau đó sửa đúng repository sở hữu code.
 5. Kiểm tra branch/status và deployed revision của repository code trước khi sửa.
 6. Thực hiện theo role: Claude plan/verify; Codex implement/test/fix.
 7. Upsert reusable skill/rule nếu có kiến thức mới, rồi chạy lại sync và
-   `./.agents/scripts/sync-agent-links.sh --check`.
+   `uv run --project tools/phase-agent-orchestrator sync-agent-links --check`.
 8. Ghi SHA, CI, Coolify và verification vào handoff; không chuyển task sang
    `Done` nếu chưa có review độc lập.
 
 ## Cấu trúc
 
 ```text
-.agents/   rule, skill và utility dùng chung
+.agents/   shared rules, skills và contract tests
+tools/     Python phase-agent orchestrator và operational entrypoints
 docs/      architecture, ADR, runbook, diagram, migration và supporting docs
 research/  durable quant research, evidence, samples và reports
 docker/    source hạ tầng dùng chung và observability/POC
@@ -72,7 +73,7 @@ OPS; quant evidence đi vào `research/quant/`; legacy-only content nằm dướ
 Operator chủ động chạy đúng một iteration, không có loop/daemon tự động:
 
 ```text
-./.agents/scripts/run-phase-agent-command.sh quant-research
+uv run --project tools/phase-agent-orchestrator run-phase-agent-command quant-research
 ```
 
 Launcher increment iteration một lần, đọc canonical
@@ -85,12 +86,12 @@ phase có ordered Codex/Claude candidates riêng tại ignored atomic state
 `.ops/runtime/phase-agents/state.json`. Xem và điều chỉnh an toàn:
 
 ```text
-./.agents/scripts/configure-phase-agents.sh show
-./.agents/scripts/configure-phase-agents.sh set implement codex gpt-5.6-luna high
-./.agents/scripts/configure-phase-agents.sh pin verify claude
-./.agents/scripts/configure-phase-agents.sh auto verify
-./.agents/scripts/configure-phase-agents.sh provider-off codex
-./.agents/scripts/configure-phase-agents.sh provider-auto codex
+uv run --project tools/phase-agent-orchestrator configure-phase-agents show
+uv run --project tools/phase-agent-orchestrator configure-phase-agents set implement codex gpt-5.6-luna high
+uv run --project tools/phase-agent-orchestrator configure-phase-agents pin verify claude
+uv run --project tools/phase-agent-orchestrator configure-phase-agents auto verify
+uv run --project tools/phase-agent-orchestrator configure-phase-agents provider-off codex
+uv run --project tools/phase-agent-orchestrator configure-phase-agents provider-auto codex
 ```
 
 Mặc định ưu tiên Claude Opus `medium` cho PLAN/VERIFY, Codex cho

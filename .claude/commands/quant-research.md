@@ -6,7 +6,7 @@ Thực hiện đúng một vòng nghiên cứu bounded bằng tiếng Việt, ti
 `UTC+7 / Asia/Ho_Chi_Minh`. Operator chạy thủ công từ terminal:
 
 ```text
-./.agents/scripts/run-phase-agent-command.sh quant-research
+uv run --project tools/phase-agent-orchestrator run-phase-agent-command quant-research
 ```
 
 Launcher đã ghi iteration đúng một lần trước khi truyền prompt này. Không gọi
@@ -15,8 +15,8 @@ lại chính mình hoặc gọi trực tiếp provider CLI.
 
 ## Bắt đầu vòng
 
-1. Đọc research state bằng `./.agents/scripts/quant-research-state.sh state`
-   và phase-agent state bằng `./.agents/scripts/phase-agent-state.sh state`.
+1. Đọc research state bằng `uv run --project tools/phase-agent-orchestrator quant-research-state state`
+   và phase-agent state bằng `uv run --project tools/phase-agent-orchestrator phase-agent-state state`.
    Iteration trong research state đã được launcher increment; dùng đúng giá trị
    đó cho mọi attempt tiếp quản. Provider health/probe/candidate selection do
    launcher xử lý, không tự chạy probe hoặc đổi provider trong prompt.
@@ -100,12 +100,12 @@ Với `PROMOTE`:
 3. Sau khi OpenSpec sẵn sàng, thực hiện canonical lifecycle tại
    `@.claude/commands/ops/run.md`. Không copy PLAN/IMPLEMENT/VERIFY/FIX/release/
    archive state machine vào command này. Mọi model-owned phase chỉ chạy qua
-   `.agents/scripts/run-phase-agent.sh`.
+   `uv run --project tools/phase-agent-orchestrator run-phase-agent`.
 4. Trong PLAN của OPS transaction, dùng cùng `<change>` tại
    `.ops/changes/<change>/` và attach origin references đúng một lần:
 
    ```text
-   ./.agents/scripts/ops-runtime.sh trace-origin <change> <session-id> <iteration> <instrument> <research-artifact>...
+   uv run --project tools/phase-agent-orchestrator ops-runtime trace-origin <change> <session-id> <iteration> <instrument> <research-artifact>...
    ```
 
    Chỉ truyền repository-relative paths dưới `research/quant/rounds/`,

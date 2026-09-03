@@ -7,7 +7,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 
 ROOT_DIR = Path(__file__).resolve().parents[4]
@@ -71,7 +71,7 @@ def latest_log(log_dir: Path) -> Path | None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="watch-phase-attempt-log.sh")
+    parser = argparse.ArgumentParser(prog="watch-phase-attempt-log")
     parser.add_argument("change")
     args = parser.parse_args(argv)
     log_dir = ROOT_DIR / ".ops/changes" / args.change / "runtime/logs"
@@ -106,5 +106,9 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":
+def cli() -> NoReturn:
     raise SystemExit(main())
+
+
+if __name__ == "__main__":
+    cli()

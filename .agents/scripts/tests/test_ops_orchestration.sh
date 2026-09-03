@@ -4,8 +4,8 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/../../.." && pwd -P)"
-RUNTIME="$ROOT_DIR/.agents/scripts/ops-runtime.sh"
-RUNNER="$ROOT_DIR/.agents/scripts/run-codex-phase.sh"
+RUNTIME="$ROOT_DIR/tools/phase-agent-orchestrator/bin/ops-runtime.sh"
+RUNNER="$ROOT_DIR/tools/phase-agent-orchestrator/bin/run-codex-phase.sh"
 HOOK="$ROOT_DIR/.claude/hooks/ops-stop-hook.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
@@ -60,7 +60,7 @@ test -f "$ROOT_DIR/.ops/archive/2026-08-29-route-quant-promotions-through-ops/ha
 grep -Fq 'Status: DONE.' "$ROOT_DIR/.ops/archive/2026-08-29-route-quant-promotions-through-ops/handoff.md" \
   || fail 'quant promotion OPS archive lacks durable DONE evidence'
 lock_line="$(awk '/lock-repos <change>/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/run.md")"
-write_line="$(awk '/run-phase-agent.sh <change> <repository> PLAN/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/run.md")"
+write_line="$(awk '/run-phase-agent <change> <repository> PLAN/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/run.md")"
 test -n "$lock_line" && test -n "$write_line" && test "$lock_line" -lt "$write_line" \
   || fail 'planning writes appear before repository lock acquisition'
 

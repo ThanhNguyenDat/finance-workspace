@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from typing import NoReturn
 
 from ..io import run_cli
 from ..locks import account_lock, change_lock
@@ -16,23 +17,23 @@ TRANSITIONS = ops_transaction.TRANSITIONS
 def usage() -> None:
     print(
         """usage:
-  ops-runtime.sh lock <change> <session-id>
-  ops-runtime.sh init <change> <session-id> [legacy-backend] [origin]
-  ops-runtime.sh unlock <change> <session-id>
-  ops-runtime.sh lock-repos <change> <session-id> <repository>...
-  ops-runtime.sh unlock-repos <change> <session-id>
-  ops-runtime.sh lock-account <provider> <account> <owner-pid> [change] [session-id]
-  ops-runtime.sh unlock-account <provider> <account> <owner-pid> [change] [session-id]
-  ops-runtime.sh cleanup <change> <session-id> <FAILED|BLOCKED>
-  ops-runtime.sh assert-repo-lock <change> <session-id> <repository>
-  ops-runtime.sh phase <change> <session-id> <next-phase>
-  ops-runtime.sh fix <change> <session-id>
-  ops-runtime.sh route <change> <session-id> <IMPLEMENT|FIX>
-  ops-runtime.sh record-attempt <change> <session-id> <attempt-json-file>
-  ops-runtime.sh trace-origin <change> <session-id> <research-iteration> <instrument> <research-artifact>...
-  ops-runtime.sh state <change>
-  ops-runtime.sh active <workspace-root> [session-id]
-  ops-runtime.sh complete <change> <session-id>""",
+  ops-runtime lock <change> <session-id>
+  ops-runtime init <change> <session-id> [legacy-backend] [origin]
+  ops-runtime unlock <change> <session-id>
+  ops-runtime lock-repos <change> <session-id> <repository>...
+  ops-runtime unlock-repos <change> <session-id>
+  ops-runtime lock-account <provider> <account> <owner-pid> [change] [session-id]
+  ops-runtime unlock-account <provider> <account> <owner-pid> [change] [session-id]
+  ops-runtime cleanup <change> <session-id> <FAILED|BLOCKED>
+  ops-runtime assert-repo-lock <change> <session-id> <repository>
+  ops-runtime phase <change> <session-id> <next-phase>
+  ops-runtime fix <change> <session-id>
+  ops-runtime route <change> <session-id> <IMPLEMENT|FIX>
+  ops-runtime record-attempt <change> <session-id> <attempt-json-file>
+  ops-runtime trace-origin <change> <session-id> <research-iteration> <instrument> <research-artifact>...
+  ops-runtime state <change>
+  ops-runtime active <workspace-root> [session-id]
+  ops-runtime complete <change> <session-id>""",
         file=sys.stderr,
     )
     raise SystemExit(2)
@@ -91,5 +92,9 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+def cli() -> NoReturn:
     run_cli(main, PREFIX)
+
+
+if __name__ == "__main__":
+    cli()

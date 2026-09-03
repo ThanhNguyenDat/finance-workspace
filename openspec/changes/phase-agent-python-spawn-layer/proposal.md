@@ -43,7 +43,7 @@ open verification items this pivot introduces.
   official `claude-agent-sdk` and `openai_codex` Python SDKs instead of
   spawning the raw `claude`/`codex` CLI binaries directly, while preserving
   every *externally observable* behavior (same CLI invocation for the
-  `.agents/scripts/*.sh` entry points, same effective model/effort/timeout/
+  `tools/phase-agent-orchestrator/bin/*.sh` entry points, same effective model/effort/timeout/
   kill-after values, same lease/lock acquisition order, same log file
   layout under `.ops/changes/<change>/runtime/logs/`, same
   `result_class` vocabulary consumed by `phase_agent_state`):
@@ -60,9 +60,9 @@ open verification items this pivot introduces.
   `tools/phase-agent-orchestrator/pyproject.toml`, pinned in `uv.lock`.
 - The three files ported by `phase-agent-python-orchestrator`
   (`ops-runtime.sh`, `phase-agent-state.sh`, `quant-research-state.sh`) are
-  Python implementations exposed through thin `uv run` wrappers; this
-  change keeps the stable `.agents/scripts/*.sh` operator paths while moving
-  all Python code into `tools/phase-agent-orchestrator/`.
+  Python implementations exposed through clean `uv run` console commands;
+  compatibility wrappers live in `tools/phase-agent-orchestrator/bin/`, while
+  all Python code remains in `tools/phase-agent-orchestrator/`.
 - Subprocess supervision (spawn `claude`/`codex` via its SDK, enforce a
   timeout via the SDK's native cancellation call, then a hard-kill fallback
   if the process is still alive after a grace period, always release the
@@ -76,8 +76,8 @@ open verification items this pivot introduces.
   each SDK's own documented-but-not-fully-verified cancellation contract).
 - Port the remaining operational helpers (`sync-agent-links.py`,
   `wait-for-phase-attempt.py`, and `watch-phase-attempt-log.py`) into
-  `tools/phase-agent-orchestrator/`, exposing them through thin `.sh`
-  wrappers. Shell contract tests remain shell because they exercise the
+  `tools/phase-agent-orchestrator/`, exposing them through console commands and
+  optional thin `bin/*.sh` wrappers. Shell contract tests remain shell because they exercise the
   public process/CLI contracts.
 
 ## Capabilities

@@ -1,9 +1,9 @@
 ## Context
 
 Implementation status: the canonical Python implementation is under
-`tools/phase-agent-orchestrator/`; `.agents/scripts/*.sh` remain thin `uv run`
-wrappers for stable operator paths. Shell tests and the native Claude stop hook
-also remain shell.
+`tools/phase-agent-orchestrator/`; operational wrappers live beside it under
+`tools/phase-agent-orchestrator/bin/` and only dispatch through `uv run`.
+Shell tests and the native Claude stop hook also remain shell.
 
 See `proposal.md - Why`. Relevant current-state facts:
 
@@ -85,8 +85,9 @@ See `proposal.md - Why`. Relevant current-state facts:
   quant-research` call, is still a fresh, short-lived Python process; the
   SDK's own internal subprocess is spawned and torn down within that
   invocation, not kept warm across invocations).
-- The agent-link synchronizer is also Python (`sync-agent-links.py`) behind a
-  operational `.agents/scripts/` surface has one runtime language.
+- The agent-link synchronizer is also Python (`sync_agent_links.py`) exposed by
+  the `sync-agent-links` console command; the optional `bin/*.sh` surface only
+  dispatches to `uv` and has no runtime logic.
 - No change to prompt wording, model/effort validation rules, or the
   candidate-resolution/failover logic itself — that behavior is owned by
   `phase-agent-python-orchestrator`/`phase-agent-multi-account-routing` and
@@ -100,19 +101,19 @@ See `proposal.md - Why`. Relevant current-state facts:
 
 **1. One Python module per operational entrypoint, called directly (no
 subprocess) when the caller is itself already-ported Python. The canonical
-Python code lives under `tools/phase-agent-orchestrator/`; stable operator
-paths under `.agents/scripts/*.sh` are thin `uv run` wrappers. Shell tests
-remain under `.agents/scripts/tests/` because they are contract tests, not
-production orchestration logic.** [updated at implementation]
+Python code and operational wrappers live under
+`tools/phase-agent-orchestrator/`; wrappers in `bin/` are thin `uv run`
+entrypoints. Shell tests remain under `.agents/scripts/tests/` because they
+are contract tests, not production orchestration logic.** [updated at implementation]
 Concretely: `run_phase_agent.py`'s candidate loop imports
 `ops_runtime.lock_account`/`phase_agent_state.resolve` and calls them as
 Python functions, and imports `run_claude_phase`/`run_codex_phase` and
 calls their `main()`-equivalent directly, rather than spawning
 `run-claude-phase.sh` as a child process. Each of those modules keeps its
 own `if __name__ == "__main__":` entry point and its own
-`.agents/scripts/run-claude-phase.sh` wrapper, so
-`./.agents/scripts/run-claude-phase.sh <change> <repo> PLAN` still works
-exactly as it does today, standalone.
+`bin/run-claude-phase.sh` compatibility wrapper, while the preferred operator
+command is `uv run --project tools/phase-agent-orchestrator run-claude-phase
+<change> <repo> PLAN`.
 *Alternative considered*: merge everything into one CLI with subcommands
 — rejected for the same reason `phase-agent-python-orchestrator` rejected
 it: it would require editing every caller (including this session's own
@@ -293,7 +294,8 @@ attempt when personal-02 returns HTTP 429/session-limit evidence.
    (smallest, and the mapping table from Decision 5 can be built and
    verified independent of the cancellation work).
 3. Port `configure-phase-agents.sh` (thin CLI wrapper, already
-   Python-backed via `phase-agent-state.sh`, unaffected by the SDK pivot).
+   Python-backed via the `configure-phase-agents` console command, unaffected
+   by the SDK pivot).
 4. Port `run-claude-phase.sh`/`run-codex-phase.sh` (the cancellation/
    hard-kill risk area — hold until Task 3.0's spike and the hanging-
    session integration test are both proven).

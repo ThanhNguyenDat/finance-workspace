@@ -6,6 +6,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[2]
@@ -65,7 +66,7 @@ def sync_entries(source_dir: Path, target_dir: Path, link_prefix: str, check_onl
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="sync-agent-links.sh")
+    parser = argparse.ArgumentParser(prog="sync-agent-links")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
     status = 0
@@ -80,5 +81,9 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":
+def cli() -> NoReturn:
     raise SystemExit(main())
+
+
+if __name__ == "__main__":
+    cli()

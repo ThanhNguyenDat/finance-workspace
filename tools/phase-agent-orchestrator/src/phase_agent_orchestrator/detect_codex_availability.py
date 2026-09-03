@@ -9,6 +9,7 @@ import io
 import shutil
 import tempfile
 from pathlib import Path
+from typing import NoReturn
 
 from .detect_provider_availability import probe
 from .io import CLIError, run_cli
@@ -18,7 +19,7 @@ PREFIX = "detect-codex-availability"
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="detect-codex-availability.sh")
+    parser = argparse.ArgumentParser(prog="detect-codex-availability")
     parser.parse_args(argv)
     if shutil.which("codex") is None:
         print("inconclusive:missing-codex")
@@ -47,5 +48,9 @@ def main(argv: list[str] | None = None) -> int:
     return 3
 
 
-if __name__ == "__main__":
+def cli() -> NoReturn:
     run_cli(lambda: main(), PREFIX)
+
+
+if __name__ == "__main__":
+    cli()

@@ -2,10 +2,10 @@
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-RUNNER="$ROOT_DIR/.agents/scripts/run-phase-agent-command.sh"; STATE="$ROOT_DIR/.agents/scripts/phase-agent-state.sh"
+RUNNER="$ROOT_DIR/tools/phase-agent-orchestrator/bin/run-phase-agent-command.sh"; STATE="$ROOT_DIR/tools/phase-agent-orchestrator/bin/phase-agent-state.sh"
 tmp="$(mktemp -d)"; trap 'rm -rf -- "$tmp"' EXIT
 workspace="$tmp/workspace"; bin="$tmp/bin"; trace="$tmp/trace"; mkdir -p "$workspace/.agents/scripts" "$workspace/.claude/commands" "$bin" "$trace"
-cp "$ROOT_DIR/.agents/scripts/run-phase-agent-command.sh" "$workspace/.agents/scripts/run-phase-agent-command.sh"; cp "$ROOT_DIR/.agents/scripts/quant-research-state.sh" "$workspace/.agents/scripts/quant-research-state.sh"; cp "$ROOT_DIR/.agents/scripts/phase-agent-state.sh" "$workspace/.agents/scripts/phase-agent-state.sh"; cp "$ROOT_DIR/.agents/scripts/classify-codex-result.sh" "$workspace/.agents/scripts/classify-codex-result.sh"; cp "$ROOT_DIR/.agents/scripts/classify-claude-result.sh" "$workspace/.agents/scripts/classify-claude-result.sh"
+cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/run-phase-agent-command.sh" "$workspace/.agents/scripts/run-phase-agent-command.sh"; cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/quant-research-state.sh" "$workspace/.agents/scripts/quant-research-state.sh"; cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/phase-agent-state.sh" "$workspace/.agents/scripts/phase-agent-state.sh"; cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/classify-codex-result.sh" "$workspace/.agents/scripts/classify-codex-result.sh"; cp "$ROOT_DIR/tools/phase-agent-orchestrator/bin/classify-claude-result.sh" "$workspace/.agents/scripts/classify-claude-result.sh"
 chmod +x "$workspace/.agents/scripts/"*.sh
 printf '%s\n' 'CANONICAL QUANT PROMPT' >"$workspace/.claude/commands/quant-research.md"
 git -C "$workspace" init -q; git -C "$workspace" config user.email test@example.invalid; git -C "$workspace" config user.name Test; git -C "$workspace" add .; git -C "$workspace" commit -qm init

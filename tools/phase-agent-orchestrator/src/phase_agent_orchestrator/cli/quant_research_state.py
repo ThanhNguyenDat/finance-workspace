@@ -1,8 +1,9 @@
-"""Argument parsing and dispatch for quant-research-state.sh."""
+"""Argument parsing and dispatch for the quant-research-state console command."""
 
 from __future__ import annotations
 
 import sys
+from typing import NoReturn
 
 from ..io import run_cli
 from ..state import quant_research
@@ -12,7 +13,7 @@ PREFIX = quant_research.PREFIX
 
 def usage() -> None:
     print(
-        "Usage: quant-research-state.sh <init|state|codex-auto|codex-manual|codex-off|codex-on|codex-worker-off|codex-detected-off|codex-detected-on|profile-get ROLE|profile-set ROLE MODEL EFFORT|profile-reset ROLE|profiles-reset|begin-iteration>",
+        "Usage: quant-research-state <init|state|codex-auto|codex-manual|codex-off|codex-on|codex-worker-off|codex-detected-off|codex-detected-on|profile-get ROLE|profile-set ROLE MODEL EFFORT|profile-reset ROLE|profiles-reset|begin-iteration>",
         file=sys.stderr,
     )
     raise SystemExit(2)
@@ -64,5 +65,9 @@ def main() -> int:
     return 2
 
 
-if __name__ == "__main__":
+def cli() -> NoReturn:
     run_cli(main, PREFIX)
+
+
+if __name__ == "__main__":
+    cli()

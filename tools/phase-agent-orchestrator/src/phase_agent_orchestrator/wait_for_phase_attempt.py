@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import time
 from pathlib import Path
+from typing import NoReturn
 
 from .state import ops_transaction
 
@@ -20,7 +21,7 @@ def fail(message: str) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="wait-for-phase-attempt.sh")
+    parser = argparse.ArgumentParser(prog="wait-for-phase-attempt")
     parser.add_argument("change")
     parser.add_argument("poll_seconds", nargs="?", type=int, default=5)
     args = parser.parse_args(argv)
@@ -46,5 +47,9 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":
+def cli() -> NoReturn:
     raise SystemExit(main())
+
+
+if __name__ == "__main__":
+    cli()

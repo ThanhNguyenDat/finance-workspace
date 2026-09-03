@@ -6,7 +6,7 @@ import contextlib
 import os
 import sys
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, NoReturn
 
 from .classify_result import RESULT_CLASSES
 from .detect_provider_availability import probe
@@ -165,7 +165,7 @@ def _git_head(repository: Path) -> str:
 
 def run(argv: list[str]) -> int:
     if len(argv) != 3:
-        raise CLIError(f"{PREFIX}: usage: run-phase-agent.sh <change> <repository> <PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY>")
+        raise CLIError(f"{PREFIX}: usage: run-phase-agent <change> <repository> <PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY>")
     change, repository, phase = argv
     if phase not in PHASES:
         raise CLIError(f"{PREFIX}: unsupported phase")
@@ -241,5 +241,9 @@ def main(argv: list[str] | None = None) -> int:
     return run(list(argv if argv is not None else sys.argv[1:]))
 
 
-if __name__ == "__main__":
+def cli() -> NoReturn:
     run_cli(lambda: main(), PREFIX)
+
+
+if __name__ == "__main__":
+    cli()

@@ -7,6 +7,7 @@ import asyncio
 import os
 import tempfile
 from pathlib import Path
+from typing import NoReturn
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from openai_codex import ApprovalMode, CodexConfig, Sandbox
@@ -112,7 +113,7 @@ def _candidate(state: dict, provider: str) -> tuple[str, str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="detect-provider-availability.sh")
+    parser = argparse.ArgumentParser(prog="detect-provider-availability")
     parser.add_argument("provider", choices=("codex", "claude"))
     args = parser.parse_args(argv)
     timeout_text = os.environ.get("PHASE_AGENT_PROBE_TIMEOUT_SECONDS", "30")
@@ -142,5 +143,9 @@ def main(argv: list[str] | None = None) -> int:
     return 3
 
 
-if __name__ == "__main__":
+def cli() -> NoReturn:
     run_cli(lambda: main(), PREFIX)
+
+
+if __name__ == "__main__":
+    cli()

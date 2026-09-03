@@ -2,10 +2,7 @@
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-ROOT_DIR="$(cd -- "$SCRIPT_DIR/../../.." && pwd -P)"
-DETECTOR="$ROOT_DIR/.agents/scripts/detect-codex-availability.sh"
-STATE_HELPER="$ROOT_DIR/.agents/scripts/quant-research-state.sh"
+ROOT_DIR="$HERMETIC_ROOT_DIR"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 
@@ -22,7 +19,7 @@ cp "$ROOT_DIR/tools/phase-agent-orchestrator/tests/fixtures/fake_codex_sdk_cli.p
 chmod +x "$mock_bin/codex"
 
 run_state() {
-  QUANT_RESEARCH_STATE_DIR="$state_dir" "$STATE_HELPER" "$@"
+  QUANT_RESEARCH_STATE_DIR="$state_dir" orchestrator quant-research-state "$@"
 }
 run_detector() {
   local scenario="${FAKE_SCENARIO:-success}" result="" mode=""
@@ -38,7 +35,7 @@ run_detector() {
   esac
   PATH="$mock_bin:/usr/bin:/bin" FAKE_RESULT="$result" FAKE_SDK_MODE="$mode" \
     QUANT_RESEARCH_STATE_DIR="$state_dir" CODEX_PROBE_TIMEOUT_SECONDS="${PROBE_TIMEOUT:-2}" \
-    "$DETECTOR"
+    orchestrator detect-codex-availability
 }
 expect_inconclusive() {
   local expected="$1" output status
@@ -50,8 +47,6 @@ expect_inconclusive() {
     || fail "expected inconclusive:$expected, got status=$status output=$output"
 }
 
-test -x "$DETECTOR" || fail 'detector is not executable'
-bash -n "$DETECTOR" || fail 'detector syntax is invalid'
 run_state codex-auto >/dev/null
 run_state profile-set probe probe-model low >/dev/null
 
@@ -81,7 +76,7 @@ run_state state | jq -e '.codex_available == false' >/dev/null \
   || fail 'timeout changed availability'
 
 set +e
-missing_output="$(PATH="/usr/bin:/bin" QUANT_RESEARCH_STATE_DIR="$state_dir" "$DETECTOR")"
+missing_output="$(PATH="/usr/bin:/bin" QUANT_RESEARCH_STATE_DIR="$state_dir" orchestrator detect-codex-availability)"
 missing_status=$?
 set -e
 [[ "$missing_status" -eq 3 && "$missing_output" = inconclusive:missing-codex ]] \

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
-ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"; CLASSIFIER="$ROOT_DIR/.agents/scripts/classify-codex-result.sh"
+ROOT_DIR="$HERMETIC_ROOT_DIR"
 tmp="$(mktemp -d)"; trap 'rm -rf -- "$tmp"' EXIT
-check() { local status="$1" body="$2" expected="$3"; printf '%s\n' "$body" >"$tmp/out"; : >"$tmp/err"; [[ "$($CLASSIFIER "$status" "$tmp/out" "$tmp/err")" = "$expected" ]] || { printf 'test_codex_worker_policy: expected %s\n' "$expected" >&2; exit 1; }; }
+check() { local status="$1" body="$2" expected="$3"; printf '%s\n' "$body" >"$tmp/out"; : >"$tmp/err"; [[ "$(orchestrator classify-codex-result "$status" "$tmp/out" "$tmp/err")" = "$expected" ]] || { printf 'test_codex_worker_policy: expected %s\n' "$expected" >&2; exit 1; }; }
 check 0 '{}' success
 check 7 '{"error":{"code":"global_quota_exhausted"}}' global-quota-exhausted
 check 7 '{"error":{"code":"model_unavailable"}}' model-unavailable

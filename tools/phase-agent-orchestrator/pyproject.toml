@@ -17,6 +17,23 @@ dependencies = [
 requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
 
+[project.scripts]
+classify-claude-result = "phase_agent_orchestrator.classify_claude_result:cli"
+classify-codex-result = "phase_agent_orchestrator.classify_codex_result:cli"
+configure-phase-agents = "phase_agent_orchestrator.configure_phase_agents:cli"
+detect-codex-availability = "phase_agent_orchestrator.detect_codex_availability:cli"
+detect-provider-availability = "phase_agent_orchestrator.detect_provider_availability:cli"
+ops-runtime = "phase_agent_orchestrator.cli.ops_runtime:cli"
+phase-agent-state = "phase_agent_orchestrator.cli.phase_agent_state:cli"
+quant-research-state = "phase_agent_orchestrator.cli.quant_research_state:cli"
+run-claude-phase = "phase_agent_orchestrator.run_claude_phase:cli"
+run-codex-phase = "phase_agent_orchestrator.run_codex_phase:cli"
+run-phase-agent = "phase_agent_orchestrator.run_phase_agent:cli"
+run-phase-agent-command = "phase_agent_orchestrator.run_phase_agent_command:cli"
+sync-agent-links = "phase_agent_orchestrator.sync_agent_links:cli"
+wait-for-phase-attempt = "phase_agent_orchestrator.wait_for_phase_attempt:cli"
+watch-phase-attempt-log = "phase_agent_orchestrator.watch_phase_attempt_log:cli"
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",

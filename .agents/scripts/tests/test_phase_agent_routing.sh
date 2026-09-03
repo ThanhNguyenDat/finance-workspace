@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-RUNNER="$ROOT_DIR/.agents/scripts/run-phase-agent.sh"; OPS="$ROOT_DIR/.agents/scripts/ops-runtime.sh"; STATE="$ROOT_DIR/.agents/scripts/phase-agent-state.sh"
+RUNNER="$ROOT_DIR/tools/phase-agent-orchestrator/bin/run-phase-agent.sh"; OPS="$ROOT_DIR/tools/phase-agent-orchestrator/bin/ops-runtime.sh"; STATE="$ROOT_DIR/tools/phase-agent-orchestrator/bin/phase-agent-state.sh"
 tmp="$(mktemp -d)"; trap 'rm -rf -- "$tmp"' EXIT
 workspace="$tmp/workspace"; repo="$tmp/repo"; bin="$tmp/bin"; trace="$tmp/trace"; mkdir -p "$workspace/.agents/scripts" "$repo" "$bin" "$trace"
 cp "$OPS" "$workspace/.agents/scripts/ops-runtime.sh"

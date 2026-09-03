@@ -25,7 +25,7 @@ IMPLEMENT / FIX              = Codex first, Claude fallback
 ORCHESTRATE                   = deterministic OPS shell state
 ```
 
-`phase-agent-state.sh` is authoritative for current candidate order and
+`uv run --project tools/phase-agent-orchestrator phase-agent-state` is authoritative for current candidate order and
 provider health. A fallback provider inherits the phase's complete scope,
 tests, safety and evidence obligations. Same-provider process separation must
 not be described as provider-independent verification.
@@ -119,7 +119,7 @@ remain authoritative in each CLI's own directory (`.claude/`, `.kimi-code/`,
 The synchronization utility is:
 
 ```bash
-./.agents/scripts/sync-agent-links.sh
+uv run --project tools/phase-agent-orchestrator sync-agent-links
 ```
 
 It links shared non-OpenSpec entries into supported agent directories without
@@ -140,7 +140,7 @@ Do not start implementation from the task description alone when an active OpenS
 
 Before starting **every task**, Codex MUST:
 
-1. run `./.agents/scripts/sync-agent-links.sh`;
+1. run `uv run --project tools/phase-agent-orchestrator sync-agent-links`;
 2. inspect `.agents/rules/` and identify the rules applicable to the task;
 3. read and follow every applicable rule;
 4. inspect `.agents/skills/` and identify the skills relevant to the task;
@@ -235,8 +235,8 @@ At the end of every task:
 4. leave a skill unchanged when no improvement is warranted;
 5. create a new skill only when reusable workflow knowledge does not fit an existing skill;
 6. keep skills reusable and project-appropriate—do not encode one-off task details;
-7. run `./.agents/scripts/sync-agent-links.sh` after changing shared rules or skills;
-8. run `./.agents/scripts/sync-agent-links.sh --check` and verify synchronization.
+7. run `uv run --project tools/phase-agent-orchestrator sync-agent-links` after changing shared rules or skills;
+8. run `uv run --project tools/phase-agent-orchestrator sync-agent-links --check` and verify synchronization.
 
 Useful skill updates include:
 

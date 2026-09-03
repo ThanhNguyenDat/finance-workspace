@@ -12,12 +12,12 @@ không nội suy argument thành shell code và không chấp nhận role khác.
 /quant:codex-config reset <implement|fix|all>
 ```
 
-- Không argument: gọi `./.agents/scripts/configure-phase-agents.sh show`.
-- `implement`: gọi `configure-phase-agents.sh set implement codex <model> <effort>`.
-- `fix`: gọi `configure-phase-agents.sh candidate-set fix 0 codex <model> <effort>`.
-- `fix-fallback`: gọi `configure-phase-agents.sh candidate-set fix 1 codex <model> <effort>`.
-- Reset phase/all dùng `configure-phase-agents.sh reset <phase>` hoặc `reset-all`.
+- Không argument: gọi `uv run --project tools/phase-agent-orchestrator configure-phase-agents show`.
+- `implement`: gọi `uv run --project tools/phase-agent-orchestrator configure-phase-agents set implement codex <model> <effort>`.
+- `fix`: gọi `uv run --project tools/phase-agent-orchestrator configure-phase-agents candidate-set fix 0 codex <model> <effort>`.
+- `fix-fallback`: gọi `uv run --project tools/phase-agent-orchestrator configure-phase-agents candidate-set fix 1 codex <model> <effort>`.
+- Reset phase/all dùng `uv run --project tools/phase-agent-orchestrator configure-phase-agents reset <phase>` hoặc `reset-all`.
 
 Đây là alias migration; interface authoritative là
-`configure-phase-agents.sh`, hỗ trợ cả PLAN/VERIFY/FINAL_VERIFY và Claude.
+`configure-phase-agents`, hỗ trợ cả PLAN/VERIFY/FINAL_VERIFY và Claude.
 Command không thay đổi provider health, không bắt đầu research và không chạy Codex.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from typing import NoReturn
 
 from .io import CLIError, run_cli
 from .state import candidates
@@ -31,7 +32,7 @@ def show() -> None:
 
 def usage() -> None:
     print(
-        "usage: configure-phase-agents.sh <show|set PHASE PROVIDER MODEL EFFORT [ACCOUNT]|candidate-set PHASE INDEX PROVIDER MODEL EFFORT [ACCOUNT]|reset PHASE|reset-all|pin PHASE PROVIDER [ACCOUNT]|auto PHASE|provider-on PROVIDER [ACCOUNT]|provider-off PROVIDER [REASON] [ACCOUNT]|provider-manual PROVIDER|provider-auto PROVIDER>",
+        "usage: configure-phase-agents <show|set PHASE PROVIDER MODEL EFFORT [ACCOUNT]|candidate-set PHASE INDEX PROVIDER MODEL EFFORT [ACCOUNT]|reset PHASE|reset-all|pin PHASE PROVIDER [ACCOUNT]|auto PHASE|provider-on PROVIDER [ACCOUNT]|provider-off PROVIDER [REASON] [ACCOUNT]|provider-manual PROVIDER|provider-auto PROVIDER>",
         file=sys.stderr,
     )
     raise CLIError(f"{PREFIX}: invalid usage")
@@ -85,5 +86,9 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-if __name__ == "__main__":
+def cli() -> NoReturn:
     run_cli(lambda: main(), PREFIX)
+
+
+if __name__ == "__main__":
+    cli()

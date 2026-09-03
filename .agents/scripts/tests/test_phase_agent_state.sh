@@ -2,8 +2,8 @@
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-STATE="$ROOT_DIR/.agents/scripts/phase-agent-state.sh"
-CONFIG="$ROOT_DIR/.agents/scripts/configure-phase-agents.sh"
+STATE="$ROOT_DIR/tools/phase-agent-orchestrator/bin/phase-agent-state.sh"
+CONFIG="$ROOT_DIR/tools/phase-agent-orchestrator/bin/configure-phase-agents.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 export PHASE_AGENT_STATE_DIR="$tmp/state"
@@ -15,13 +15,13 @@ fail() { printf 'test_phase_agent_state: %s\n' "$1" >&2; exit 1; }
 printf '%s\n' '{"schema_version":2,"codex_available":false,"codex_profiles":{"implement":{"model":"codex-i","effort":"high"},"fix":{"model":"codex-f","effort":"high"},"fix_fallback":{"model":"codex-ff","effort":"medium"}}}' >"$PHASE_AGENT_LEGACY_QUANT_STATE"
 printf '%s\n' '{"profiles":{"quant_research":{"model":"sonnet","effort":"high"},"plan":{"model":"opus","effort":"medium"},"fallback_implement":{"model":"sonnet","effort":"high"},"verify":{"model":"opus","effort":"medium"},"fallback_fix":{"model":"opus","effort":"high"},"final_verify":{"model":"opus","effort":"high"}}}' >"$PHASE_AGENT_LEGACY_CLAUDE_STATE"
 
-initial="$($STATE init)"
+initial="$(orchestrator phase-agent-state init)"
 jq -e '.legacy_imported and (.providers.codex.available|not) and .phases.implement.candidates[0].model=="codex-i" and .phases.plan.candidates[0].effort=="medium"' <<<"$initial" >/dev/null || fail 'legacy/default migration failed'
 before_verify="$(jq -c '.phases.verify' <<<"$initial")"
-$STATE set implement claude sonnet medium >/dev/null
-after="$($STATE state)"
+orchestrator phase-agent-state set implement claude sonnet medium >/dev/null
+after="$(orchestrator phase-agent-state state)"
 [[ "$(jq -c '.phases.verify' <<<"$after")" = "$before_verify" ]] || fail 'phase isolation failed'
-[[ "$($STATE resolve implement)" == $'claude\tsonnet\tmedium' ]] || fail 'set/resolve failed'
+[[ "$(orchestrator phase-agent-state resolve implement)" == $'claude\tsonnet\tmedium' ]] || fail 'set/resolve failed'
 
 cp "$PHASE_AGENT_STATE_DIR/state.json" "$tmp/good.json"
 if $STATE set plan claude opus low >/dev/null 2>&1; then fail 'invalid Opus effort accepted'; fi
