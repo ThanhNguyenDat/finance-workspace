@@ -214,6 +214,27 @@ def test_codex_sdk_adapter_completes_with_protocol_fixture(tmp_path: Path, monke
     assert result.status.value == "completed"
 
 
+def test_codex_fake_quota_preserves_partial_worktree_evidence(tmp_path: Path, monkeypatch) -> None:
+    cli = Path(__file__).parent / "fixtures/fake_codex_sdk_cli.py"
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_cli = fake_bin / "codex"
+    shutil.copy2(cli, fake_cli)
+    fake_cli.chmod(fake_cli.stat().st_mode | stat.S_IXUSR)
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    monkeypatch.setenv("PATH", f"{fake_bin}:{os.environ['PATH']}")
+    monkeypatch.setenv("FAKE_CODEX_MODE", "quota-mutate")
+    monkeypatch.setenv("FAKE_REPO", str(repository))
+    stdout = tmp_path / "codex-quota.jsonl"
+
+    status, result_class, _ = _codex("continue", "gpt-test", "high", repository, None, stdout, 2)
+
+    assert status == 1
+    assert result_class == "global-quota-exhausted"
+    assert (repository / "partial.txt").read_text(encoding="utf-8") == "partial\n"
+
+
 def test_configure_show_has_stable_table_fixture(tmp_path: Path, monkeypatch, capsys) -> None:
     monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(tmp_path / "missing-accounts.yaml"))
