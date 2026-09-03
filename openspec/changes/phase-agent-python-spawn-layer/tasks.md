@@ -136,7 +136,7 @@ All tasks are in the `finance-workspace` repository only.
   with the full suite from Tasks 1-5, including the new hanging-session
   cancellation coverage from Task 3, and that `uv.lock` pins exact SDK
   versions (no version range).
-- [ ] 6.3 Run one live end-to-end smoke check:
+- [x] 6.3 Run one live end-to-end smoke check:
   `uv run --project tools/orchestrator run-phase-agent-command quant-research` against the
   fully SDK-backed chain, and verify it completes with the same
   `Quant iteration <n> completed with <provider>` success line.
