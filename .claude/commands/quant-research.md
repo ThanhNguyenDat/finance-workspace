@@ -13,6 +13,21 @@ Launcher đã ghi iteration đúng một lần trước khi truyền prompt này
 `begin-iteration` lần nữa. Không tạo `/loop`, daemon, scheduler, sleep, tự gọi
 lại chính mình hoặc gọi trực tiếp provider CLI.
 
+## Nhiệm vụ (chỉ đúng 2 việc)
+
+Vòng này chỉ tồn tại để: **(1) tìm kiếm ra Alpha Layer mới** (signal/candidate
+chưa từng test hoặc hướng thật chưa bị đóng trong `research/quant/index.md`
+mục 3), và **(2) tối ưu Portfolio Layer** (sizing, construction, risk,
+execution-rule tham số) — bằng backtest thật, có train/validation/holdout hoặc
+walk-forward defensible. Không việc nào khác được tính là công việc hợp lệ của
+vòng, kể cả khi có vẻ liên quan: không audit lifecycle OpenSpec/OPS, không
+kiểm tra trạng thái archive/handoff, không theo dõi CI/deploy, không đọc ADR,
+không status-check các thread bị block bởi lý do bên ngoài (chờ thời gian
+lịch, chờ quyết định sản phẩm, chờ hạ tầng không truy cập được). Nếu không có
+hướng Alpha/Portfolio nào còn mở và chưa đóng, kết luận `NO-CHANGE` hoặc
+`NEEDS-MORE-RESEARCH` ngắn gọn rồi dừng — không lấp đầy vòng bằng việc kiểm
+tra trạng thái ngoài phạm vi này.
+
 ## Bắt đầu vòng
 
 1. Đọc research state bằng `uv run --project tools/orchestrator quant-research-state state`
@@ -52,9 +67,6 @@ Sau research/backtest, cập nhật research truth nhất quán:
 - `research/quant/rounds/round<iteration>-<meaningful-name>.md` hoặc addendum
   đúng lịch sử;
 - `research/quant/index.md` — navigation cho hướng mở/đóng.
-
-Không ghi task mới, không di chuyển `Todo`/`Processing`/`Dev-done`/`Verify`/
-`Done`, và không dùng `docs/archive/legacy-handoff-agent.md` để chờ Codex implementation.
 
 ## Phân loại kết quả
 
