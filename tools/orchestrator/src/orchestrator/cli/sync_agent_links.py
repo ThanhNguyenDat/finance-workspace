@@ -8,14 +8,15 @@ import sys
 from pathlib import Path
 from typing import NoReturn
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[3]
 ROOT_DIR = PROJECT_DIR.parents[1]
 AGENTS_DIR = ROOT_DIR / ".agents"
 TOOLS = (".claude", ".kimi-code", ".opencode")
 
 
-def sync_entries(source_dir: Path, target_dir: Path, link_prefix: str, check_only: bool) -> int:
+def sync_entries(
+    source_dir: Path, target_dir: Path, link_prefix: str, check_only: bool
+) -> int:
     status = 0
     if not target_dir.is_dir():
         if check_only:
@@ -49,7 +50,10 @@ def sync_entries(source_dir: Path, target_dir: Path, link_prefix: str, check_onl
             if target.is_symlink():
                 raw = os.readlink(target)
                 if raw != expected:
-                    print(f"incorrect link: {target} -> {raw} (expected {expected})", file=sys.stderr)
+                    print(
+                        f"incorrect link: {target} -> {raw} (expected {expected})",
+                        file=sys.stderr,
+                    )
                     status = 1
             else:
                 print(f"real local entry blocks shared link: {target}", file=sys.stderr)
@@ -71,13 +75,31 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     status = 0
     for tool in TOOLS:
-        status |= sync_entries(AGENTS_DIR / "skills", ROOT_DIR / tool / "skills", "../../.agents/skills", args.check)
-        status |= sync_entries(AGENTS_DIR / "rules", ROOT_DIR / tool / "rules", "../../.agents/rules", args.check)
+        status |= sync_entries(
+            AGENTS_DIR / "skills",
+            ROOT_DIR / tool / "skills",
+            "../../.agents/skills",
+            args.check,
+        )
+        status |= sync_entries(
+            AGENTS_DIR / "rules",
+            ROOT_DIR / tool / "rules",
+            "../../.agents/rules",
+            args.check,
+        )
     if status:
-        message = "Agent skill/rule links need synchronization." if args.check else "Agent skill/rule synchronization failed."
+        message = (
+            "Agent skill/rule links need synchronization."
+            if args.check
+            else "Agent skill/rule synchronization failed."
+        )
         print(message, file=sys.stderr)
         return status
-    print("Agent skill/rule links are synchronized." if args.check else "Agent skill/rule links are up to date.")
+    print(
+        "Agent skill/rule links are synchronized."
+        if args.check
+        else "Agent skill/rule links are up to date."
+    )
     return 0
 
 

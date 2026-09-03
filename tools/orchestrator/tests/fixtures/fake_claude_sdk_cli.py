@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
 
 
 def emit(payload: dict[str, object]) -> None:
@@ -61,13 +61,35 @@ for raw_line in sys.stdin:
         if mode == "mutate":
             target = os.environ.get("FAKE_REPO")
             if target:
-                Path(target, "verify-mutation.txt").write_text("bad\n", encoding="utf-8")
-        if mode != "hang" and (mode in {"complete", "quota-first", "quota-always"} or fake_result in {"success", "quota", "rate", "auth"}):
-            account_is_personal_02 = os.environ.get("CLAUDE_CONFIG_DIR", "").endswith("personal-02")
-            quota = (mode == "quota-first" and account_is_personal_02) or mode == "quota-always" or mode == "quota-delay" or (mode == "quota-work" and os.environ.get("CLAUDE_CONFIG_DIR", "") == os.environ.get("FAKE_CLAUDE_QUOTA_DIR", "")) or fake_result == "quota"
+                Path(target, "verify-mutation.txt").write_text(
+                    "bad\n", encoding="utf-8"
+                )
+        if mode != "hang" and (
+            mode in {"complete", "quota-first", "quota-always"}
+            or fake_result in {"success", "quota", "rate", "auth"}
+        ):
+            account_is_personal_02 = os.environ.get("CLAUDE_CONFIG_DIR", "").endswith(
+                "personal-02"
+            )
+            quota = (
+                (mode == "quota-first" and account_is_personal_02)
+                or mode == "quota-always"
+                or mode == "quota-delay"
+                or (
+                    mode == "quota-work"
+                    and os.environ.get("CLAUDE_CONFIG_DIR", "")
+                    == os.environ.get("FAKE_CLAUDE_QUOTA_DIR", "")
+                )
+                or fake_result == "quota"
+            )
             rate = mode == "rate-first" and account_is_personal_02
-            error_code = {"rate": "rate_limit_exceeded", "auth": "authentication_error"}.get(fake_result) or ("rate_limit_exceeded" if rate else None)
-            result_text = os.environ.get("FAKE_SDK_RESULT_TEXT", os.environ.get("CLAUDE_CONFIG_DIR", ""))
+            error_code = {
+                "rate": "rate_limit_exceeded",
+                "auth": "authentication_error",
+            }.get(fake_result) or ("rate_limit_exceeded" if rate else None)
+            result_text = os.environ.get(
+                "FAKE_SDK_RESULT_TEXT", os.environ.get("CLAUDE_CONFIG_DIR", "")
+            )
             emit(
                 {
                     "type": "result",
@@ -78,8 +100,12 @@ for raw_line in sys.stdin:
                     "num_turns": 1,
                     "session_id": "fixture-session",
                     "result": result_text,
-                    "errors": ["global_quota_exhausted"] if quota else ([error_code] if error_code else None),
-                    "api_error_status": 401 if fake_result == "auth" else (429 if fake_result == "rate" or rate else None),
+                    "errors": ["global_quota_exhausted"]
+                    if quota
+                    else ([error_code] if error_code else None),
+                    "api_error_status": 401
+                    if fake_result == "auth"
+                    else (429 if fake_result == "rate" or rate else None),
                     "terminal_reason": "completed",
                 }
             )

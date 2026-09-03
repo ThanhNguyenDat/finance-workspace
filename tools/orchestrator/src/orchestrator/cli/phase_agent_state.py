@@ -39,9 +39,12 @@ def mutate_command(command: str, args: list[str]) -> int:
         if command == "provider-off":
             if len(args) not in {2, 3, 4}:
                 usage()
-        elif command in {"provider-on", "provider-manual", "provider-auto"} and len(args) not in {2, 3}:
-            usage()
-        elif command == "provider-result" and len(args) not in {3, 4, 5}:
+        elif (
+            command in {"provider-on", "provider-manual", "provider-auto"}
+            and len(args) not in {2, 3}
+            or command == "provider-result"
+            and len(args) not in {3, 4, 5}
+        ):
             usage()
         provider = args[1]
         if not candidates.valid_provider(provider):
@@ -70,7 +73,9 @@ def main() -> int:
     if command == "validate":
         if len(args) not in {4, 5}:
             usage()
-        candidates.validate_candidate(args[1], args[2], args[3], args[4] if len(args) == 5 else None)
+        candidates.validate_candidate(
+            args[1], args[2], args[3], args[4] if len(args) == 5 else None
+        )
         return 0
     if command == "resolve":
         if len(args) != 2:
@@ -97,9 +102,21 @@ def main() -> int:
                 candidates.die(PREFIX, "candidate index must be non-negative")
             provider, model, effort = args[3:6]
             account = args[6] if len(args) == 7 else None
-            candidates.set_candidate(phase, provider, model, effort, account, int(index))
+            candidates.set_candidate(
+                phase, provider, model, effort, account, int(index)
+            )
         return 0
-    if command in {"reset", "reset-all", "pin", "auto", "provider-on", "provider-off", "provider-manual", "provider-auto", "provider-result"}:
+    if command in {
+        "reset",
+        "reset-all",
+        "pin",
+        "auto",
+        "provider-on",
+        "provider-off",
+        "provider-manual",
+        "provider-auto",
+        "provider-result",
+    }:
         return mutate_command(command, args)
     if command == "probe-due":
         if len(args) not in {2, 3}:

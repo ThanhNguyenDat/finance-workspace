@@ -31,7 +31,15 @@ def main() -> int:
         finally:
             current_lock.release()
         return 0
-    if command in {"codex-auto", "codex-manual", "codex-off", "codex-on", "codex-worker-off", "codex-detected-off", "codex-detected-on"}:
+    if command in {
+        "codex-auto",
+        "codex-manual",
+        "codex-off",
+        "codex-on",
+        "codex-worker-off",
+        "codex-detected-off",
+        "codex-detected-on",
+    }:
         if len(args) != 1:
             usage()
         quant_research.update_mode(command)

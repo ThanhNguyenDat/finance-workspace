@@ -46,7 +46,12 @@ def main() -> int:
         if command == "lock" and len(args) == 3:
             change_lock.lock_change(args[1], args[2])
         elif command == "init" and 3 <= len(args) <= 5:
-            ops_transaction.init_change(args[1], args[2], args[3] if len(args) > 3 else None, args[4] if len(args) > 4 else None)
+            ops_transaction.init_change(
+                args[1],
+                args[2],
+                args[3] if len(args) > 3 else None,
+                args[4] if len(args) > 4 else None,
+            )
         elif command == "unlock" and len(args) == 3:
             ops_transaction.unlock_change(args[1], args[2])
         elif command == "lock-repos" and len(args) >= 4:
@@ -57,9 +62,21 @@ def main() -> int:
                 ops_transaction.die(PREFIX, "session id is required")
             change_lock.release_repo_locks(args[1], args[2])
         elif command == "lock-account" and 4 <= len(args) <= 6:
-            account_lock.lock_account(args[1], args[2], args[3], args[4] if len(args) >= 5 else "", args[5] if len(args) == 6 else "")
+            account_lock.lock_account(
+                args[1],
+                args[2],
+                args[3],
+                args[4] if len(args) >= 5 else "",
+                args[5] if len(args) == 6 else "",
+            )
         elif command == "unlock-account" and 4 <= len(args) <= 6:
-            account_lock.unlock_account(args[1], args[2], args[3], args[4] if len(args) >= 5 else "", args[5] if len(args) == 6 else "")
+            account_lock.unlock_account(
+                args[1],
+                args[2],
+                args[3],
+                args[4] if len(args) >= 5 else "",
+                args[5] if len(args) == 6 else "",
+            )
         elif command == "cleanup" and len(args) == 4:
             ops_transaction.cleanup(args[1], args[2], args[3])
         elif command == "assert-repo-lock" and len(args) == 4:

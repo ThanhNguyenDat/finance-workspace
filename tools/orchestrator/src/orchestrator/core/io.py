@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, NoReturn
+from typing import Any, NoReturn
 
 
 class CLIError(Exception):
@@ -19,11 +20,17 @@ def die(prefix: str, message: str) -> NoReturn:
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return (
+        datetime.now(timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    )
 
 
 def utc_after(seconds: int) -> str:
-    return (datetime.now(timezone.utc) + timedelta(seconds=seconds)).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return (
+        (datetime.now(timezone.utc) + timedelta(seconds=seconds))
+        .replace(microsecond=0)
+        .strftime("%Y-%m-%dT%H:%M:%SZ")
+    )
 
 
 def json_text(value: Any) -> str:
@@ -34,7 +41,7 @@ def read_json(path: Path, prefix: str, message: str | None = None) -> Any:
     try:
         with path.open(encoding="utf-8") as handle:
             return json.load(handle)
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+    except OSError, json.JSONDecodeError, UnicodeDecodeError:
         die(prefix, message or f"could not read JSON: {path}")
     raise AssertionError("unreachable")
 

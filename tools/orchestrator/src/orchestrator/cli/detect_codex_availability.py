@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import os
 import io
+import os
 import shutil
-import tempfile
-from pathlib import Path
 from typing import NoReturn
 
 from ..core.io import CLIError, run_cli

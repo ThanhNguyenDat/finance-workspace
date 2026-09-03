@@ -7,9 +7,10 @@ import json
 import os
 import shutil
 import threading
+from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from ..core.io import die
 from ..core.redaction import redact_value
@@ -49,7 +50,12 @@ def jsonable(value: Any) -> Any:
 def append_jsonl(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(redact_value(jsonable(value)), ensure_ascii=False, separators=(",", ":")) + "\n")
+        handle.write(
+            json.dumps(
+                redact_value(jsonable(value)), ensure_ascii=False, separators=(",", ":")
+            )
+            + "\n"
+        )
 
 
 def append_text(path: Path, text: str) -> None:

@@ -9,7 +9,9 @@ from pathlib import Path
 
 
 def _git(root: Path, *args: str) -> bytes:
-    return subprocess.check_output(["git", "-C", str(root), *args], stderr=subprocess.DEVNULL)
+    return subprocess.check_output(
+        ["git", "-C", str(root), *args], stderr=subprocess.DEVNULL
+    )
 
 
 def fingerprint(root: Path) -> str:

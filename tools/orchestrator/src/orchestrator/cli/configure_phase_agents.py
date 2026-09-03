@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import sys
 from typing import NoReturn
 
@@ -15,7 +14,9 @@ PREFIX = "configure-phase-agents"
 def show() -> None:
     current_lock, state = candidates.with_state()
     try:
-        print(f"{'PHASE':<16} {'MODE':<8} {'PROVIDER':<8} {'MODEL':<24} {'ACCOUNT':<12} EFFORT")
+        print(
+            f"{'PHASE':<16} {'MODE':<8} {'PROVIDER':<8} {'MODEL':<24} {'ACCOUNT':<12} EFFORT"
+        )
         for phase, item in state["phases"].items():
             for option in item["candidates"]:
                 print(
@@ -25,7 +26,9 @@ def show() -> None:
         print()
         print(f"{'PROVIDER':<8} {'MODE':<8} {'AVAILABLE':<10} REASON")
         for provider, item in state["providers"].items():
-            print(f"{provider:<8} {item['mode']:<8} {str(item['available']).lower():<10} {item.get('reason') or '-'}")
+            print(
+                f"{provider:<8} {item['mode']:<8} {str(item['available']).lower():<10} {item.get('reason') or '-'}"
+            )
     finally:
         current_lock.release()
 
@@ -48,14 +51,23 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if command == "set" and len(args) in {5, 6}:
         phase = candidates.normalize_phase(args[1])
-        candidates.set_candidate(phase, args[2], args[3], args[4], args[5] if len(args) == 6 else None)
+        candidates.set_candidate(
+            phase, args[2], args[3], args[4], args[5] if len(args) == 6 else None
+        )
         show()
         return 0
     if command == "candidate-set" and len(args) in {6, 7}:
         phase = candidates.normalize_phase(args[1])
         if not args[2].isdigit():
             raise CLIError(f"{PREFIX}: candidate index must be non-negative")
-        candidates.set_candidate(phase, args[3], args[4], args[5], args[6] if len(args) == 7 else None, int(args[2]))
+        candidates.set_candidate(
+            phase,
+            args[3],
+            args[4],
+            args[5],
+            args[6] if len(args) == 7 else None,
+            int(args[2]),
+        )
         show()
         return 0
     if command == "reset" and len(args) == 2:

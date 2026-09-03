@@ -5,7 +5,13 @@ from __future__ import annotations
 import sys
 from typing import NoReturn
 
-from ..coordinator import CoordinatorDB, active_sessions, admit_session, create_session, resume_session
+from ..coordinator import (
+    CoordinatorDB,
+    active_sessions,
+    admit_session,
+    create_session,
+    resume_session,
+)
 from ..core.io import CLIError, json_text, run_cli
 
 PREFIX = "e2e"
@@ -39,7 +45,9 @@ def _arguments(args: list[str]) -> tuple[str, str, str | None]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    change, prompt, requested_session = _arguments(list(argv if argv is not None else sys.argv[1:]))
+    change, prompt, requested_session = _arguments(
+        list(argv if argv is not None else sys.argv[1:])
+    )
     db = CoordinatorDB()
     if requested_session:
         session = resume_session(requested_session, db=db)
@@ -58,7 +66,9 @@ def main(argv: list[str] | None = None) -> int:
     context = {"request": prompt or change, "entrypoint": "e2e"}
     session = create_session(change, context, db=db)
     admission = admit_session(session["id"], db=db)
-    print(json_text({"session": session, "admission": admission, "action": "submitted"}))
+    print(
+        json_text({"session": session, "admission": admission, "action": "submitted"})
+    )
     return 0 if admission["admitted"] else 2
 
 

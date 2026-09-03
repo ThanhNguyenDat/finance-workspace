@@ -11,7 +11,6 @@ from pathlib import Path
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from openai_codex import Codex, CodexConfig
 
-
 FIXTURES = Path(__file__).parent / "fixtures"
 
 

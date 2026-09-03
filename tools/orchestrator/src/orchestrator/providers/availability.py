@@ -9,14 +9,20 @@ from pathlib import Path
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from openai_codex import ApprovalMode, CodexConfig, Sandbox
 
+from ..subprocess_supervision import (
+    hard_kill_claude_client,
+    supervise_claude_turn,
+    supervise_codex_turn,
+)
 from .results import classify_sdk_result
 from .sdk import child_environment, executable, start_codex
-from ..subprocess_supervision import hard_kill_claude_client, supervise_claude_turn, supervise_codex_turn
 
 PREFIX = "detect-provider-availability"
 
 
-async def _probe_claude(model: str, effort: str, timeout_seconds: float, cwd: Path) -> str:
+async def _probe_claude(
+    model: str, effort: str, timeout_seconds: float, cwd: Path
+) -> str:
     client = ClaudeSDKClient(
         ClaudeAgentOptions(
             cli_path=executable("claude", PREFIX),
@@ -50,7 +56,7 @@ async def _probe_claude(model: str, effort: str, timeout_seconds: float, cwd: Pa
     finally:
         try:
             await asyncio.wait_for(client.disconnect(), timeout=2)
-        except (TimeoutError, asyncio.CancelledError):
+        except TimeoutError, asyncio.CancelledError:
             hard_kill_claude_client(client)
 
 
@@ -70,7 +76,12 @@ def _probe_codex(model: str, effort: str, timeout_seconds: float, cwd: Path) -> 
             model=model,
             sandbox=Sandbox.full_access,
         )
-        handle = thread.turn("Reply with exactly OK.", effort=effort, model=model, sandbox=Sandbox.full_access)
+        handle = thread.turn(
+            "Reply with exactly OK.",
+            effort=effort,
+            model=model,
+            sandbox=Sandbox.full_access,
+        )
         outcome = supervise_codex_turn(
             handle,
             timeout_seconds=timeout_seconds,

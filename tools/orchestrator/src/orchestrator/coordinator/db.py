@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 import sqlite3
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 
 SCHEMA_VERSION = 1
 DEFAULT_BUSY_TIMEOUT_MS = 5_000
@@ -133,7 +133,15 @@ class CoordinatorDB:
         busy_timeout_ms: int | None = None,
     ) -> None:
         self.path = path or coordinator_path(root)
-        configured = busy_timeout_ms if busy_timeout_ms is not None else int(os.environ.get("ORCHESTRATOR_DB_BUSY_TIMEOUT_MS", DEFAULT_BUSY_TIMEOUT_MS))
+        configured = (
+            busy_timeout_ms
+            if busy_timeout_ms is not None
+            else int(
+                os.environ.get(
+                    "ORCHESTRATOR_DB_BUSY_TIMEOUT_MS", DEFAULT_BUSY_TIMEOUT_MS
+                )
+            )
+        )
         if configured <= 0:
             raise ValueError("busy timeout must be positive")
         self.busy_timeout_ms = configured
@@ -178,9 +186,13 @@ class CoordinatorDB:
         deadline = time.monotonic() + self.busy_timeout_ms / 1000
         while True:
             try:
-                journal_mode = connection.execute("PRAGMA journal_mode = WAL").fetchone()[0]
+                journal_mode = connection.execute(
+                    "PRAGMA journal_mode = WAL"
+                ).fetchone()[0]
                 if journal_mode.lower() != "wal":
-                    raise RuntimeError(f"coordinator requires WAL journal mode, got {journal_mode}")
+                    raise RuntimeError(
+                        f"coordinator requires WAL journal mode, got {journal_mode}"
+                    )
                 return connection
             except sqlite3.OperationalError as exc:
                 if "locked" not in str(exc).lower() or time.monotonic() >= deadline:

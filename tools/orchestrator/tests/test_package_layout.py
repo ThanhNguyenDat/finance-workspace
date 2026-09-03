@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import tomllib
 from pathlib import Path
 
+import tomllib
 
 PROJECT = Path(__file__).parents[1]
 SOURCE = PROJECT / "src/orchestrator"

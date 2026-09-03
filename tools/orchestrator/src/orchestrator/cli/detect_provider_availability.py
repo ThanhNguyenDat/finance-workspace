@@ -37,7 +37,9 @@ def main(argv: list[str] | None = None) -> int:
     effort = os.environ.get(f"PHASE_AGENT_{args.provider.upper()}_PROBE_EFFORT", effort)
     result = probe(args.provider, model, effort, int(timeout_text))
     if result == "success":
-        candidates.mutate("provider-result", ["provider-result", args.provider, "success"])
+        candidates.mutate(
+            "provider-result", ["provider-result", args.provider, "success"]
+        )
         print("available")
         return 0
     if result in {"global-quota-exhausted", "auth-error"}:
@@ -47,7 +49,10 @@ def main(argv: list[str] | None = None) -> int:
     cooldown = os.environ.get("PHASE_AGENT_PROBE_COOLDOWN_SECONDS", "3600")
     if not cooldown.isdigit():
         raise CLIError(f"{PREFIX}: invalid-cooldown")
-    candidates.mutate("provider-result", ["provider-result", args.provider, "probe-inconclusive", cooldown])
+    candidates.mutate(
+        "provider-result",
+        ["provider-result", args.provider, "probe-inconclusive", cooldown],
+    )
     print(f"inconclusive:{result}")
     return 3
 

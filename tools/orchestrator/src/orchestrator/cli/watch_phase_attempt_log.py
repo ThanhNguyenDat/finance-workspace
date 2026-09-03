@@ -9,7 +9,6 @@ import time
 from pathlib import Path
 from typing import Any, NoReturn
 
-
 ROOT_DIR = Path(__file__).resolve().parents[5]
 
 
@@ -22,7 +21,12 @@ def compact(value: Any, limit: int = 220) -> str:
 
 
 def provider_tag(event: dict[str, Any]) -> str:
-    if event.get("type") in {"item.completed", "item.started", "turn.completed", "error"}:
+    if event.get("type") in {
+        "item.completed",
+        "item.started",
+        "turn.completed",
+        "error",
+    }:
         return "Codex"
     if event.get("type") in {"assistant", "tool_result", "result", "system", "user"}:
         return "Claude"
@@ -33,7 +37,13 @@ def render(event: dict[str, Any]) -> str | None:
     event_type = event.get("type")
     if event_type == "item.completed":
         item = event.get("item") or {}
-        value = item.get("command") or item.get("path") or item.get("text") or item.get("aggregated_output") or ""
+        value = (
+            item.get("command")
+            or item.get("path")
+            or item.get("text")
+            or item.get("aggregated_output")
+            or ""
+        )
         return f"{item.get('type', 'event')}: {compact(value)}"
     if event_type == "error":
         return f"error: {compact(event.get('message') or event.get('error') or event)}"
@@ -47,10 +57,13 @@ def render(event: dict[str, Any]) -> str | None:
             if content.get("type") == "text":
                 lines.append(f"message: {content.get('text', '')}")
             elif content.get("type") == "tool_use":
-                lines.append(f"tool_use: {content.get('name', '')} {compact(content.get('input') or {}, 150)}")
+                lines.append(
+                    f"tool_use: {content.get('name', '')} {compact(content.get('input') or {}, 150)}"
+                )
         return compact(" | ".join(lines)) if lines else None
     if event_type == "tool_result" or any(
-        isinstance(content, dict) and content.get("type") == "tool_result" for content in contents
+        isinstance(content, dict) and content.get("type") == "tool_result"
+        for content in contents
     ):
         text = " ".join(
             str(part.get("text", ""))
@@ -81,7 +94,10 @@ def main(argv: list[str] | None = None) -> int:
         time.sleep(5)
         waited += 5
         if waited >= 3600:
-            print(f"watch-phase-attempt-log: no attempt log found after {waited}s under {log_dir}", file=sys.stderr)
+            print(
+                f"watch-phase-attempt-log: no attempt log found after {waited}s under {log_dir}",
+                file=sys.stderr,
+            )
             return 1
         path = latest_log(log_dir)
 
@@ -102,7 +118,9 @@ def main(argv: list[str] | None = None) -> int:
             if isinstance(event, dict):
                 message = render(event)
                 if message:
-                    print(f"[{provider_tag(event)}][{attempt_tag}] {message}", flush=True)
+                    print(
+                        f"[{provider_tag(event)}][{attempt_tag}] {message}", flush=True
+                    )
     return 0
 
 

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import subprocess
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +47,11 @@ def acquire_account_scope(
 ) -> dict[str, Any]:
     """Reserve one provider login while leaving other configured accounts free."""
 
-    if provider not in {"claude", "codex"} or not isinstance(account, str) or not SAFE_ACCOUNT.fullmatch(account):
+    if (
+        provider not in {"claude", "codex"}
+        or not isinstance(account, str)
+        or not SAFE_ACCOUNT.fullmatch(account)
+    ):
         raise CoordinatorError("provider and account are required")
     lease = acquire_resource(
         _id(session_id),
@@ -65,7 +69,12 @@ def acquire_account_scope(
             (provider, account.lower(), session_id),
         )
         if updated.rowcount != 1:
-            release_resource("account", f"account:{provider}/{account.lower()}", lease["fencing_token"], db=coordinator)
+            release_resource(
+                "account",
+                f"account:{provider}/{account.lower()}",
+                lease["fencing_token"],
+                db=coordinator,
+            )
             raise CoordinatorError(f"session not found: {session_id}")
     return {"provider": provider, "account": account.lower(), **lease}
 
@@ -102,12 +111,19 @@ def allocate_worktree(
     session_id = _id(session_id)
     coordinator = db or CoordinatorDB()
     canonical = _canonical_repository(repository)
-    current = coordinator.read("SELECT worktree, version FROM sessions WHERE id = ?", (session_id,))
+    current = coordinator.read(
+        "SELECT worktree, version FROM sessions WHERE id = ?", (session_id,)
+    )
     if not current:
         raise CoordinatorError(f"session not found: {session_id}")
     existing = current[0]["worktree"]
     if existing and Path(existing).is_dir():
-        return {"session_id": session_id, "repository": str(canonical), "worktree": existing, "reused": True}
+        return {
+            "session_id": session_id,
+            "repository": str(canonical),
+            "worktree": existing,
+            "reused": True,
+        }
     root = repository_root() / ".ops" / "runtime" / "coordinator" / "worktrees"
     target = (worktree_path or root / session_id / canonical.name).resolve()
     if target.exists():
@@ -125,14 +141,25 @@ def allocate_worktree(
     try:
         try:
             result = subprocess.run(
-                ["git", "-C", str(canonical), "worktree", "add", "--detach", str(target), base_ref],
+                [
+                    "git",
+                    "-C",
+                    str(canonical),
+                    "worktree",
+                    "add",
+                    "--detach",
+                    str(target),
+                    base_ref,
+                ],
                 capture_output=True,
                 text=True,
                 check=False,
                 timeout=30,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
-            raise CoordinatorError(f"Git worktree allocation timed out: {target}") from exc
+            raise CoordinatorError(
+                f"Git worktree allocation timed out: {target}"
+            ) from exc
         if result.returncode != 0:
             detail = result.stderr.strip() or "git worktree add failed"
             raise CoordinatorError(detail)
@@ -144,6 +171,14 @@ def allocate_worktree(
             if updated.rowcount != 1:
                 raise CoordinatorError("session changed while allocating worktree")
     except BaseException:
-        release_resource("worktree", f"worktree:{target}", lease["fencing_token"], db=coordinator)
+        release_resource(
+            "worktree", f"worktree:{target}", lease["fencing_token"], db=coordinator
+        )
         raise
-    return {"session_id": session_id, "repository": str(canonical), "worktree": str(target), "fencing_token": lease["fencing_token"], "reused": False}
+    return {
+        "session_id": session_id,
+        "repository": str(canonical),
+        "worktree": str(target),
+        "fencing_token": lease["fencing_token"],
+        "reused": False,
+    }

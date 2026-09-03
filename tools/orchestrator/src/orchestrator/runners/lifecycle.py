@@ -5,10 +5,9 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
-from ..providers.results import RESULT_CLASSES
 from ..core.fingerprint import fingerprint
 from ..core.io import CLIError, atomic_write_json, utc_now
 from ..locks.directory_lock import PidDirectoryLock
@@ -17,7 +16,13 @@ from ..state import candidates, ops_transaction
 
 PREFIX = "run-phase-agent"
 PHASES = {"PLAN", "BRAINSTORM", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
-RETRYABLE = {"global-quota-exhausted", "auth-error", "model-unavailable", "model-specific-limit", "transient-rate-limit"}
+RETRYABLE = {
+    "global-quota-exhausted",
+    "auth-error",
+    "model-unavailable",
+    "model-specific-limit",
+    "transient-rate-limit",
+}
 
 
 @contextlib.contextmanager
@@ -50,14 +55,20 @@ def _state_and_candidates(phase: str) -> tuple[dict, list[dict]]:
 
 def _override_candidates(phase: str) -> list[dict] | None:
     prefix = f"PHASE_AGENT_{phase}_"
-    provider = os.environ.get(prefix + "PROVIDER", os.environ.get("PHASE_AGENT_PROVIDER", ""))
+    provider = os.environ.get(
+        prefix + "PROVIDER", os.environ.get("PHASE_AGENT_PROVIDER", "")
+    )
     model = os.environ.get(prefix + "MODEL", os.environ.get("PHASE_AGENT_MODEL", ""))
     effort = os.environ.get(prefix + "EFFORT", os.environ.get("PHASE_AGENT_EFFORT", ""))
-    account = os.environ.get(prefix + "ACCOUNT", os.environ.get("PHASE_AGENT_ACCOUNT", ""))
+    account = os.environ.get(
+        prefix + "ACCOUNT", os.environ.get("PHASE_AGENT_ACCOUNT", "")
+    )
     if not any((provider, model, effort, account)):
         return None
     if not all((provider, model, effort)):
-        raise CLIError(f"{PREFIX}: provider/model/effort overrides must be supplied together")
+        raise CLIError(
+            f"{PREFIX}: provider/model/effort overrides must be supplied together"
+        )
     candidates.validate_candidate(provider, model, effort, account or None)
     item = {"provider": provider, "model": model, "effort": effort}
     if account:
@@ -69,28 +80,59 @@ def _available(state: dict, item: dict) -> bool:
     provider = item["provider"]
     account = item.get("account")
     if account:
-        return state["providers"][provider].get("accounts", {}).get(account, {}).get("available", True)
+        return (
+            state["providers"][provider]
+            .get("accounts", {})
+            .get(account, {})
+            .get("available", True)
+        )
     return state["providers"][provider].get("available", False)
 
 
 def _probe_if_due(provider: str, state: dict) -> None:
     if not candidates.probe_due(provider, None):
         return
-    options = next((item for phase in state["phases"].values() for item in phase["candidates"] if item["provider"] == provider), None)
+    options = next(
+        (
+            item
+            for phase in state["phases"].values()
+            for item in phase["candidates"]
+            if item["provider"] == provider
+        ),
+        None,
+    )
     if options is None:
         return
     try:
-        result = probe(provider, options["model"], options["effort"], int(os.environ.get("PHASE_AGENT_PROBE_TIMEOUT_SECONDS", "30")))
+        result = probe(
+            provider,
+            options["model"],
+            options["effort"],
+            int(os.environ.get("PHASE_AGENT_PROBE_TIMEOUT_SECONDS", "30")),
+        )
     except BaseException:
         result = "unknown-error"
     if result in {"success", "global-quota-exhausted", "auth-error"}:
         candidates.mutate("provider-result", ["provider-result", provider, result])
     else:
-        candidates.mutate("provider-result", ["provider-result", provider, "probe-inconclusive", os.environ.get("PHASE_AGENT_PROBE_COOLDOWN_SECONDS", "3600")])
+        candidates.mutate(
+            "provider-result",
+            [
+                "provider-result",
+                provider,
+                "probe-inconclusive",
+                os.environ.get("PHASE_AGENT_PROBE_COOLDOWN_SECONDS", "3600"),
+            ],
+        )
 
 
 def _objective_gate(path: Path) -> bool:
-    required = {"FINAL_VERIFY_GATE: PASS", "P0_FINDINGS: 0", "P1_FINDINGS: 0", "OBJECTIVE_GATES: PASS"}
+    required = {
+        "FINAL_VERIFY_GATE: PASS",
+        "P0_FINDINGS: 0",
+        "P1_FINDINGS: 0",
+        "OBJECTIVE_GATES: PASS",
+    }
     try:
         return required.issubset(set(path.read_text(encoding="utf-8").splitlines()))
     except OSError:
@@ -99,7 +141,11 @@ def _objective_gate(path: Path) -> bool:
 
 def _brainstorm_checkpoint(path: Path) -> str | None:
     try:
-        lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip().startswith("BRAINSTORM_CHECKPOINT:")]
+        lines = [
+            line.strip()
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip().startswith("BRAINSTORM_CHECKPOINT:")
+        ]
     except OSError:
         return None
     if lines == ["BRAINSTORM_CHECKPOINT: APPROVED"]:
@@ -109,7 +155,17 @@ def _brainstorm_checkpoint(path: Path) -> str | None:
     return None
 
 
-def _run_attempt(change: str, repository: str, phase: str, item: dict, continuation: bool, state: dict, state_file: Path, runtime_dir: Path, workspace: Path) -> tuple[int, str, bool]:
+def _run_attempt(
+    change: str,
+    repository: str,
+    phase: str,
+    item: dict,
+    continuation: bool,
+    state: dict,
+    state_file: Path,
+    runtime_dir: Path,
+    workspace: Path,
+) -> tuple[int, str, bool]:
     attempt = len(state.get("attempts", [])) + 1
     round_value = state.get("round", 0)
     attempt_id = f"{phase.lower()}-r{round_value}-a{attempt}-{os.getpid()}"
@@ -133,22 +189,38 @@ def _run_attempt(change: str, repository: str, phase: str, item: dict, continuat
             from ..cli.run_codex_phase import main as adapter_main
         status = adapter_main([change, repository, phase])
     result_file = base.with_suffix(".result-class")
-    result = result_file.read_text(encoding="utf-8").strip() if result_file.is_file() else "unknown-error"
+    result = (
+        result_file.read_text(encoding="utf-8").strip()
+        if result_file.is_file()
+        else "unknown-error"
+    )
     last_file = base.with_suffix(".last-message.md")
     if phase == "FINAL_VERIFY" and status == 0 and not _objective_gate(last_file):
         status, result = 1, "implementation-error"
-        base.with_suffix(".stderr.log").open("a", encoding="utf-8").write("FINAL_VERIFY did not provide a passing objective-gate attestation\n")
+        base.with_suffix(".stderr.log").open("a", encoding="utf-8").write(
+            "FINAL_VERIFY did not provide a passing objective-gate attestation\n"
+        )
         base.with_suffix(".exit").write_text("1\n", encoding="utf-8")
         result_file.write_text("implementation-error\n", encoding="utf-8")
     if phase == "BRAINSTORM" and status == 0:
         checkpoint_status = _brainstorm_checkpoint(last_file)
         if checkpoint_status is None:
             status, result = 1, "implementation-error"
-            base.with_suffix(".stderr.log").open("a", encoding="utf-8").write("BRAINSTORM checkpoint was missing or ambiguous\n")
+            base.with_suffix(".stderr.log").open("a", encoding="utf-8").write(
+                "BRAINSTORM checkpoint was missing or ambiguous\n"
+            )
             base.with_suffix(".exit").write_text("1\n", encoding="utf-8")
             result_file.write_text("implementation-error\n", encoding="utf-8")
         else:
-            atomic_write_json(runtime_dir / f"brainstorm-checkpoint-round-{round_value}.json", {"phase": "BRAINSTORM", "status": checkpoint_status, "attempt": attempt, "evidence_base": str(base)})
+            atomic_write_json(
+                runtime_dir / f"brainstorm-checkpoint-round-{round_value}.json",
+                {
+                    "phase": "BRAINSTORM",
+                    "status": checkpoint_status,
+                    "attempt": attempt,
+                    "evidence_base": str(base),
+                },
+            )
     after = (fingerprint(workspace), fingerprint(repository_root))
     head_after = _git_head(repository_root)
     changed = before != after or head_before != head_after
@@ -170,7 +242,11 @@ def _run_attempt(change: str, repository: str, phase: str, item: dict, continuat
         "completed_at": utc_now(),
         "head_before": head_before,
         "head_after": head_after,
-        "evidence_base": str(base.relative_to(Path(os.environ.get("OPS_ROOT", workspace)))) if base.is_relative_to(Path(os.environ.get("OPS_ROOT", workspace))) else str(base),
+        "evidence_base": str(
+            base.relative_to(Path(os.environ.get("OPS_ROOT", workspace)))
+        )
+        if base.is_relative_to(Path(os.environ.get("OPS_ROOT", workspace)))
+        else str(base),
     }
     attempt_path = base.with_suffix(".attempt.json")
     atomic_write_json(attempt_path, record)
@@ -181,16 +257,22 @@ def _run_attempt(change: str, repository: str, phase: str, item: dict, continuat
 def _git_head(repository: Path) -> str:
     import subprocess
 
-    return subprocess.check_output(["git", "-C", str(repository), "rev-parse", "HEAD"], text=True).strip()
+    return subprocess.check_output(
+        ["git", "-C", str(repository), "rev-parse", "HEAD"], text=True
+    ).strip()
 
 
 def run(argv: list[str]) -> int:
     if len(argv) != 3:
-        raise CLIError(f"{PREFIX}: usage: run-phase-agent <change> <repository> <PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY>")
+        raise CLIError(
+            f"{PREFIX}: usage: run-phase-agent <change> <repository> <PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY>"
+        )
     change, repository, phase = argv
     if phase not in PHASES:
         raise CLIError(f"{PREFIX}: unsupported phase")
-    runtime_state, state_file, session_id, round_value, workspace, runtime_dir = _read_runtime(change, repository)
+    runtime_state, state_file, session_id, round_value, workspace, runtime_dir = (
+        _read_runtime(change, repository)
+    )
     lease = PidDirectoryLock(runtime_dir / ".phase-attempt-lock", PREFIX)
     lease.acquire()
     try:
@@ -201,10 +283,16 @@ def run(argv: list[str]) -> int:
         selected = False
         last_status = 1
         for item in options:
-            candidates.validate_candidate(item["provider"], item["model"], item["effort"], item.get("account"))
+            candidates.validate_candidate(
+                item["provider"], item["model"], item["effort"], item.get("account")
+            )
             current_state, _ = _state_and_candidates(phase.lower())
             phase_state = current_state["phases"][phase.lower()]
-            if override is None and phase_state["mode"] == "manual" and phase_state.get("pinned_provider") != item["provider"]:
+            if (
+                override is None
+                and phase_state["mode"] == "manual"
+                and phase_state.get("pinned_provider") != item["provider"]
+            ):
                 continue
             if not _available(current_state, item) and not item.get("account"):
                 _probe_if_due(item["provider"], current_state)
@@ -212,7 +300,17 @@ def run(argv: list[str]) -> int:
             if not _available(current_state, item):
                 continue
             selected = True
-            status, result, changed = _run_attempt(change, repository, phase, item, continuation, runtime_state, state_file, runtime_dir, workspace)
+            status, result, changed = _run_attempt(
+                change,
+                repository,
+                phase,
+                item,
+                continuation,
+                runtime_state,
+                state_file,
+                runtime_dir,
+                workspace,
+            )
             runtime_state = ops_transaction.read_state(change)
             last_status = status
             if status == 0:
@@ -229,18 +327,31 @@ def run(argv: list[str]) -> int:
         lease.release()
 
 
-def _read_runtime(change: str, repository: str) -> tuple[dict, Path, str, int, Path, Path]:
+def _read_runtime(
+    change: str, repository: str
+) -> tuple[dict, Path, str, int, Path, Path]:
     state_file = ops_transaction.state_path(change)
     state = ops_transaction.assert_active_owner(change, _read_session(state_file))
     if state.get("phase") not in PHASES:
         raise CLIError(f"{PREFIX}: phase mismatch")
-    workspace = Path(os.environ.get("OPS_WORKSPACE_ROOT", ops_transaction.root_dir())).resolve()
+    workspace = Path(
+        os.environ.get("OPS_WORKSPACE_ROOT", ops_transaction.root_dir())
+    ).resolve()
     repository_root = Path(_git_root(repository))
-    change_lock = __import__("orchestrator.locks.change_lock", fromlist=["assert_repo_lock"])
+    change_lock = __import__(
+        "orchestrator.locks.change_lock", fromlist=["assert_repo_lock"]
+    )
     change_lock.assert_repo_lock(change, state["session_id"], str(repository_root))
     runtime_dir = state_file.parent
     runtime_dir.joinpath("logs").mkdir(parents=True, exist_ok=True)
-    return state, state_file, state["session_id"], state.get("round", 0), workspace, runtime_dir
+    return (
+        state,
+        state_file,
+        state["session_id"],
+        state.get("round", 0),
+        workspace,
+        runtime_dir,
+    )
 
 
 def _read_session(state_file: Path) -> str:
@@ -255,7 +366,9 @@ def _read_session(state_file: Path) -> str:
 def _git_root(repository: str) -> str:
     import subprocess
 
-    return subprocess.check_output(["git", "-C", repository, "rev-parse", "--show-toplevel"], text=True).strip()
+    return subprocess.check_output(
+        ["git", "-C", repository, "rev-parse", "--show-toplevel"], text=True
+    ).strip()
 
 
 def main(argv: list[str] | None = None) -> int:

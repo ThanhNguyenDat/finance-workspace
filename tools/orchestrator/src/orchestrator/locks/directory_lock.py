@@ -26,7 +26,10 @@ class PidDirectoryLock:
             self.directory.mkdir()
         except FileExistsError:
             if lock_pid_is_live(self.pid_file):
-                die(self.prefix, f"state mutation is already locked by pid {self._owner_pid()}")
+                die(
+                    self.prefix,
+                    f"state mutation is already locked by pid {self._owner_pid()}",
+                )
             shutil.rmtree(self.directory, ignore_errors=True)
             try:
                 self.directory.mkdir()
@@ -51,7 +54,7 @@ class PidDirectoryLock:
             pass
         self.owned = False
 
-    def __enter__(self) -> "PidDirectoryLock":
+    def __enter__(self) -> PidDirectoryLock:
         self.acquire()
         return self
 

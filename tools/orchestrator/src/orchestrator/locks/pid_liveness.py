@@ -14,11 +14,11 @@ def pid_is_alive(pid: int | str, hostname: str) -> bool:
         return False
     try:
         numeric_pid = int(pid)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return False
     try:
         os.kill(numeric_pid, 0)
-    except (ProcessLookupError, PermissionError, ValueError):
+    except ProcessLookupError, PermissionError, ValueError:
         return False
     return True
 

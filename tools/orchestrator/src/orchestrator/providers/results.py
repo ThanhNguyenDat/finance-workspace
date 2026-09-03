@@ -102,31 +102,75 @@ def classify_fields(
         r"(^|\s)(model_capacity_exceeded|model_limit_reached|model_rate_limit_exceeded|model_usage_limit)(\s|$)",
     ):
         return "model-specific-limit"
-    if _matches(structured, r"(^|\s)(rate_limit_exceeded|too_many_requests|http_429)(\s|$)"):
+    if _matches(
+        structured, r"(^|\s)(rate_limit_exceeded|too_many_requests|http_429)(\s|$)"
+    ):
         return "transient-rate-limit"
-    if _matches(structured, r"(^|\s)(authentication_error|invalid_api_key|unauthorized|permission_denied)(\s|$)"):
+    if _matches(
+        structured,
+        r"(^|\s)(authentication_error|invalid_api_key|unauthorized|permission_denied)(\s|$)",
+    ):
         return "auth-error"
-    if _matches(structured, r"(^|\s)(network_error|connection_error|dns_error|tls_error)(\s|$)"):
+    if _matches(
+        structured, r"(^|\s)(network_error|connection_error|dns_error|tls_error)(\s|$)"
+    ):
         return "network-error"
     if _matches(structured, r"(^|\s)(timeout|request_timeout|deadline_exceeded)(\s|$)"):
         return "timeout"
-    if _matches(structured, r"(^|\s)(implementation_error|worker_failed|task_failed)(\s|$)"):
+    if _matches(
+        structured, r"(^|\s)(implementation_error|worker_failed|task_failed)(\s|$)"
+    ):
         return "implementation-error"
-    if _matches(messages, r"(global|account(-wide)?)[\s_-]*(codex[\s_-]*)?quota[^.]{0,80}(exhausted|depleted|reached|exceeded)") or _matches(messages, r"(quota|usage[\s_-]*limit)[^.]*((exhausted|depleted)[^.]*(account|global)|exhausted)") or _matches(messages, r"usage[\s_-]*limit[^.]{0,80}(exhausted|depleted)") or _matches(messages, r"(account|session)[\s_-]*(usage[\s_-]*)?(cap|limit)[^.]{0,80}(reached|exceeded|exhausted)") or _matches(messages, r"no\s+remaining\s+(quota|credits)"):
+    if (
+        _matches(
+            messages,
+            r"(global|account(-wide)?)[\s_-]*(codex[\s_-]*)?quota[^.]{0,80}(exhausted|depleted|reached|exceeded)",
+        )
+        or _matches(
+            messages,
+            r"(quota|usage[\s_-]*limit)[^.]*((exhausted|depleted)[^.]*(account|global)|exhausted)",
+        )
+        or _matches(messages, r"usage[\s_-]*limit[^.]{0,80}(exhausted|depleted)")
+        or _matches(
+            messages,
+            r"(account|session)[\s_-]*(usage[\s_-]*)?(cap|limit)[^.]{0,80}(reached|exceeded|exhausted)",
+        )
+        or _matches(messages, r"no\s+remaining\s+(quota|credits)")
+    ):
         return "global-quota-exhausted"
-    if _matches(messages, r"(selected[\s_-]*)?model[^.]{0,80}(not[\s_-]*found|unavailable|not[\s_-]*available|unsupported|routing[\s_-]*failure)"):
+    if _matches(
+        messages,
+        r"(selected[\s_-]*)?model[^.]{0,80}(not[\s_-]*found|unavailable|not[\s_-]*available|unsupported|routing[\s_-]*failure)",
+    ):
         return "model-unavailable"
-    if _matches(messages, r"model[^.]{0,80}(capacity|specific[\s_-]*limit|usage[\s_-]*limit)[^.]{0,80}(exceeded|reached|unavailable|full)") or _matches(messages, r"(capacity|limit|quota)[^.]{0,80}for\s+(the\s+)?(selected\s+)?model"):
+    if _matches(
+        messages,
+        r"model[^.]{0,80}(capacity|specific[\s_-]*limit|usage[\s_-]*limit)[^.]{0,80}(exceeded|reached|unavailable|full)",
+    ) or _matches(
+        messages, r"(capacity|limit|quota)[^.]{0,80}for\s+(the\s+)?(selected\s+)?model"
+    ):
         return "model-specific-limit"
-    if _matches(messages, r"(^|[^0-9])429([^0-9]|$)|too[\s_-]*many[\s_-]*requests|rate[\s_-]*limit"):
+    if _matches(
+        messages,
+        r"(^|[^0-9])429([^0-9]|$)|too[\s_-]*many[\s_-]*requests|rate[\s_-]*limit",
+    ):
         return "transient-rate-limit"
-    if _matches(messages, r"(^|[^0-9])(401|403)([^0-9]|$)|authentication|unauthorized|invalid[\s_-]*(api[\s_-]*)?key|permission[\s_-]*denied"):
+    if _matches(
+        messages,
+        r"(^|[^0-9])(401|403)([^0-9]|$)|authentication|unauthorized|invalid[\s_-]*(api[\s_-]*)?key|permission[\s_-]*denied",
+    ):
         return "auth-error"
-    if _matches(messages, r"network[\s_-]*error|connection[\s_-]*(failed|reset|refused)|dns|enotfound|tls[\s_-]*(error|failure)|could\s+not\s+resolve"):
+    if _matches(
+        messages,
+        r"network[\s_-]*error|connection[\s_-]*(failed|reset|refused)|dns|enotfound|tls[\s_-]*(error|failure)|could\s+not\s+resolve",
+    ):
         return "network-error"
     if _matches(messages, r"timed[\s_-]*out|timeout|deadline[\s_-]*exceeded"):
         return "timeout"
-    if _matches(messages, r"implementation[\s_-]*error|worker[\s_-]*failed|task[\s_-]*failed|\"status\"\s*:\s*\"failed\""):
+    if _matches(
+        messages,
+        r"implementation[\s_-]*error|worker[\s_-]*failed|task[\s_-]*failed|\"status\"\s*:\s*\"failed\"",
+    ):
         return "implementation-error"
     return "unknown-error"
 
@@ -180,7 +224,11 @@ def classify_sdk_result(
         )
         if part
     )
-    if provider == "claude" and subtype == "success" and not getattr(result, "is_error", False):
+    if (
+        provider == "claude"
+        and subtype == "success"
+        and not getattr(result, "is_error", False)
+    ):
         return "success"
     if provider == "claude" and subtype == "error_max_budget_usd":
         return "global-quota-exhausted"
@@ -210,8 +258,12 @@ def classify_legacy_logs(status: int, stdout_log: Path, stderr_log: Path) -> str
     stderr_values = _load_log(stderr_log)
     return classify_fields(
         status=status,
-        structured=" ".join(_structured_fields(value) for value in stdout_values + stderr_values),
-        messages=" ".join(_message_fields(value) for value in stdout_values + stderr_values)
+        structured=" ".join(
+            _structured_fields(value) for value in stdout_values + stderr_values
+        ),
+        messages=" ".join(
+            _message_fields(value) for value in stdout_values + stderr_values
+        )
         + " "
         + stderr_log.read_text(encoding="utf-8").lower(),
     )

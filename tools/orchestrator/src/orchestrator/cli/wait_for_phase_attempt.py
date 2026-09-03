@@ -9,7 +9,6 @@ from typing import NoReturn
 
 from ..state import ops_transaction
 
-
 ROOT_DIR = Path(__file__).resolve().parents[5]
 
 
@@ -41,7 +40,9 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"phase attempt for {args.change} finished")
     try:
-        print(ops_transaction.state_path(args.change).read_text(encoding="utf-8"), end="")
+        print(
+            ops_transaction.state_path(args.change).read_text(encoding="utf-8"), end=""
+        )
     except OSError:
         print("(no active OPS state — change may have been archived/blocked)")
     return 0

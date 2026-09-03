@@ -11,10 +11,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from queue import Empty, Queue
-from typing import Any, Callable, Generic, TypeVar
-
+from typing import Any, Generic, TypeVar
 
 ResultT = TypeVar("ResultT")
 
@@ -52,7 +52,9 @@ def hard_kill_codex_turn(turn_handle: Any) -> bool:
     return True
 
 
-async def _collect_claude_turn(client: Any, prompt: str, on_message: Callable[[Any], None] | None = None) -> Any:
+async def _collect_claude_turn(
+    client: Any, prompt: str, on_message: Callable[[Any], None] | None = None
+) -> Any:
     await client.query(prompt)
     result = None
     async for message in client.receive_response():

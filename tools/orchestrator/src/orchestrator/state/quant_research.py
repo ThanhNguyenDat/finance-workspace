@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ..core.io import atomic_write_json, die, json_text, utc_after, utc_now
+from ..core.io import atomic_write_json, die, json_text, utc_now
 from ..locks.directory_lock import PidDirectoryLock
 
 PREFIX = "quant-research-state"
@@ -18,11 +18,17 @@ EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh"}
 
 
 def root_dir() -> Path:
-    return Path(os.environ.get("QUANT_RESEARCH_ROOT", Path(__file__).resolve().parents[5]))
+    return Path(
+        os.environ.get("QUANT_RESEARCH_ROOT", Path(__file__).resolve().parents[5])
+    )
 
 
 def state_dir() -> Path:
-    return Path(os.environ.get("QUANT_RESEARCH_STATE_DIR", root_dir() / ".ops/runtime/quant-research"))
+    return Path(
+        os.environ.get(
+            "QUANT_RESEARCH_STATE_DIR", root_dir() / ".ops/runtime/quant-research"
+        )
+    )
 
 
 def state_path() -> Path:
@@ -30,34 +36,74 @@ def state_path() -> Path:
 
 
 def default_profiles() -> dict[str, dict[str, str]]:
-    return {"probe": {"model": "gpt-5.6-luna", "effort": "high"}, "implement": {"model": "gpt-5.6-luna", "effort": "high"}, "fix": {"model": "gpt-5.6-terra", "effort": "high"}, "fix_fallback": {"model": "gpt-5.6-sol", "effort": "high"}}
+    return {
+        "probe": {"model": "gpt-5.6-luna", "effort": "high"},
+        "implement": {"model": "gpt-5.6-luna", "effort": "high"},
+        "fix": {"model": "gpt-5.6-terra", "effort": "high"},
+        "fix_fallback": {"model": "gpt-5.6-sol", "effort": "high"},
+    }
 
 
 def default_state() -> dict[str, Any]:
-    return {"schema_version": 2, "codex_mode": "manual", "codex_available": True, "codex_profiles": default_profiles(), "research_enabled": True, "iteration": 0, "last_run_at": None, "updated_at": None}
+    return {
+        "schema_version": 2,
+        "codex_mode": "manual",
+        "codex_available": True,
+        "codex_profiles": default_profiles(),
+        "research_enabled": True,
+        "iteration": 0,
+        "last_run_at": None,
+        "updated_at": None,
+    }
 
 
 def profile_valid(value: Any) -> bool:
-    return isinstance(value, dict) and isinstance(value.get("model"), str) and bool(SAFE_IDENTIFIER.fullmatch(value["model"])) and value.get("effort") in EFFORTS
+    return (
+        isinstance(value, dict)
+        and isinstance(value.get("model"), str)
+        and bool(SAFE_IDENTIFIER.fullmatch(value["model"]))
+        and value.get("effort") in EFFORTS
+    )
 
 
 def common_valid(value: dict[str, Any]) -> bool:
-    return isinstance(value.get("codex_available"), bool) and isinstance(value.get("research_enabled"), bool) and isinstance(value.get("iteration"), int) and not isinstance(value.get("iteration"), bool) and value["iteration"] >= 0 and (value.get("last_run_at") is None or isinstance(value["last_run_at"], str)) and (value.get("updated_at") is None or isinstance(value["updated_at"], str))
+    return (
+        isinstance(value.get("codex_available"), bool)
+        and isinstance(value.get("research_enabled"), bool)
+        and isinstance(value.get("iteration"), int)
+        and not isinstance(value.get("iteration"), bool)
+        and value["iteration"] >= 0
+        and (value.get("last_run_at") is None or isinstance(value["last_run_at"], str))
+        and (value.get("updated_at") is None or isinstance(value["updated_at"], str))
+    )
 
 
 def state_valid(value: Any) -> bool:
-    return isinstance(value, dict) and value.get("schema_version") == 2 and value.get("codex_mode") in {"auto", "manual"} and isinstance(value.get("codex_profiles"), dict) and set(value["codex_profiles"]) == {"probe", "implement", "fix", "fix_fallback"} and all(profile_valid(item) for item in value["codex_profiles"].values()) and common_valid(value)
+    return (
+        isinstance(value, dict)
+        and value.get("schema_version") == 2
+        and value.get("codex_mode") in {"auto", "manual"}
+        and isinstance(value.get("codex_profiles"), dict)
+        and set(value["codex_profiles"])
+        == {"probe", "implement", "fix", "fix_fallback"}
+        and all(profile_valid(item) for item in value["codex_profiles"].values())
+        and common_valid(value)
+    )
 
 
 def v1_valid(value: Any) -> bool:
-    return isinstance(value, dict) and value.get("schema_version") == 1 and common_valid(value)
+    return (
+        isinstance(value, dict)
+        and value.get("schema_version") == 1
+        and common_valid(value)
+    )
 
 
 def load(path: Path) -> Any:
     try:
         with path.open(encoding="utf-8") as handle:
             return json.load(handle)
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+    except OSError, json.JSONDecodeError, UnicodeDecodeError:
         die(PREFIX, f"state file failed schema validation: {path}")
 
 
@@ -142,7 +188,10 @@ def update_mode(command: str) -> None:
             state["codex_available"] = command == "codex-on"
         else:
             if command.startswith("codex-detected") and state["codex_mode"] != "auto":
-                die(PREFIX, "automatic detection result is stale because manual mode is selected")
+                die(
+                    PREFIX,
+                    "automatic detection result is stale because manual mode is selected",
+                )
             state["codex_available"] = command.endswith("-on")
         state["updated_at"] = now
         write(state)
@@ -151,11 +200,16 @@ def update_mode(command: str) -> None:
         current_lock.release()
 
 
-def update_profile(command: str, role: str, model: str | None = None, effort: str | None = None) -> None:
+def update_profile(
+    command: str, role: str, model: str | None = None, effort: str | None = None
+) -> None:
     current_lock, state = with_state()
     try:
         if command == "profile-set":
-            state["codex_profiles"][role] = {"model": model or "", "effort": effort or ""}
+            state["codex_profiles"][role] = {
+                "model": model or "",
+                "effort": effort or "",
+            }
             state["updated_at"] = utc_now()
             write(state)
         elif command == "profile-reset":

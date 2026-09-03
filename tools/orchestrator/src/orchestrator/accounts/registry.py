@@ -17,16 +17,25 @@ ACCOUNTS_FILE_ENV = "PHASE_AGENT_ACCOUNTS_FILE"
 
 def normalize_account(account: str, prefix: str) -> str:
     if not isinstance(account, str) or not ACCOUNT_NAME.fullmatch(account):
-        die(prefix, "account must contain only letters, numbers, underscores, or hyphens")
+        die(
+            prefix,
+            "account must contain only letters, numbers, underscores, or hyphens",
+        )
     return account.lower()
 
 
-def account_environment_name(provider: str, account: str, prefix: str) -> tuple[str, Path]:
+def account_environment_name(
+    provider: str, account: str, prefix: str
+) -> tuple[str, Path]:
     normalized = normalize_account(account, prefix)
     if provider not in PROVIDERS:
         die(prefix, f"unsupported provider: {provider}")
     configured = os.environ.get(ACCOUNTS_FILE_ENV)
-    accounts_file = Path(configured).expanduser() if configured else Path(__file__).resolve().parents[3] / "accounts.yaml"
+    accounts_file = (
+        Path(configured).expanduser()
+        if configured
+        else Path(__file__).resolve().parents[3] / "accounts.yaml"
+    )
     return normalized, accounts_file
 
 
@@ -37,19 +46,29 @@ def resolve_account_dir(provider: str, account: str, prefix: str) -> tuple[str, 
     try:
         with accounts_file.open(encoding="utf-8") as handle:
             registry = yaml.safe_load(handle)
-    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+    except OSError, UnicodeDecodeError, yaml.YAMLError:
         die(prefix, f"could not read accounts registry file: {accounts_file}")
     if not isinstance(registry, dict):
-        die(prefix, f"accounts registry must map providers to accounts: {accounts_file}")
+        die(
+            prefix, f"accounts registry must map providers to accounts: {accounts_file}"
+        )
     provider_accounts = registry.get(provider)
     if not isinstance(provider_accounts, dict) or not provider_accounts:
-        die(prefix, f"no accounts configured for provider {provider} in {accounts_file}")
+        die(
+            prefix, f"no accounts configured for provider {provider} in {accounts_file}"
+        )
     configured = provider_accounts.get(normalized)
     if not isinstance(configured, str) or not configured:
-        die(prefix, f"account '{normalized}' not found under provider {provider} in {accounts_file}")
+        die(
+            prefix,
+            f"account '{normalized}' not found under provider {provider} in {accounts_file}",
+        )
     directory = Path(configured).expanduser()
     if not directory.is_dir():
-        die(prefix, f"account '{normalized}' for {provider} directory does not exist: {directory}")
+        die(
+            prefix,
+            f"account '{normalized}' for {provider} directory does not exist: {directory}",
+        )
     return normalized, directory.resolve()
 
 
@@ -59,11 +78,15 @@ def configured_accounts(provider: str) -> list[str]:
     if provider not in PROVIDERS:
         return []
     configured = os.environ.get(ACCOUNTS_FILE_ENV)
-    accounts_file = Path(configured).expanduser() if configured else Path(__file__).resolve().parents[3] / "accounts.yaml"
+    accounts_file = (
+        Path(configured).expanduser()
+        if configured
+        else Path(__file__).resolve().parents[3] / "accounts.yaml"
+    )
     try:
         with accounts_file.open(encoding="utf-8") as handle:
             registry = yaml.safe_load(handle)
-    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+    except OSError, UnicodeDecodeError, yaml.YAMLError:
         return []
     values = registry.get(provider) if isinstance(registry, dict) else None
     if not isinstance(values, dict):

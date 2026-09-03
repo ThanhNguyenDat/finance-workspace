@@ -8,12 +8,10 @@ from pathlib import Path
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from openai_codex import Codex, CodexConfig
-
 from orchestrator.subprocess_supervision import (
     supervise_claude_turn,
     supervise_codex_turn,
 )
-
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -95,6 +93,7 @@ def test_claude_helper_hard_kills_after_ignored_interrupt(tmp_path: Path) -> Non
         ClaudeAgentOptions(cli_path=str(cli), permission_mode="bypassPermissions")
     )
     try:
+
         async def run() -> object:
             await client.connect()
             return await supervise_claude_turn(
