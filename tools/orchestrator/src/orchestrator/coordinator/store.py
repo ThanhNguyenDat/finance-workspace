@@ -486,6 +486,56 @@ def record_verification_findings(
     return _row(updated) or {}
 
 
+def record_archive_attestation(
+    session_id: str,
+    attestation: dict[str, Any],
+    *,
+    expected_version: int,
+    fencing_token: str,
+    db: CoordinatorDB | None = None,
+) -> dict[str, Any]:
+    """Persist the explicit evidence required before ARCHIVE."""
+
+    session_id = _id(session_id)
+    if not isinstance(attestation, dict):
+        raise CoordinatorError("archive attestation must be a JSON object")
+    required = ("verification_passed", "objective_gates_passed", "release_gates_passed")
+    if any(attestation.get(key) is not True for key in required):
+        raise CoordinatorError("archive attestation is incomplete")
+    if not isinstance(expected_version, int) or isinstance(expected_version, bool) or expected_version < 1 or not fencing_token:
+        raise CoordinatorError("archive attestation version and fencing token are required")
+    attestation_json = _json(attestation, "archive attestation")
+    coordinator = _db(db)
+    with coordinator.transaction() as connection:
+        current = connection.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+        if current is None:
+            raise CoordinatorError(f"session not found: {session_id}")
+        current_value = _row(current) or {}
+        if current_value["phase"] != "VERIFY":
+            raise IllegalTransitionError("archive attestation requires VERIFY phase")
+        if current_value["version"] != expected_version:
+            raise StaleVersionError(f"session version is {current_value['version']}, expected {expected_version}")
+        if current_value["fencing_token"] != fencing_token:
+            raise StaleVersionError("archive attestation fencing token is stale")
+        checkpoint = dict(current_value["checkpoint"])
+        if checkpoint.get("verification_findings_round") != current_value["round"] or checkpoint.get("blocking_findings") is not False:
+            raise IllegalTransitionError("archive attestation requires clean current-round verification findings")
+        checkpoint["archive_attestation"] = attestation
+        now = utc_now()
+        connection.execute(
+            "UPDATE sessions SET checkpoint = ?, version = version + 1, updated_at = ? WHERE id = ? AND version = ? AND fencing_token = ?",
+            (_json(checkpoint, "checkpoint"), now, session_id, expected_version, fencing_token),
+        )
+        latest = connection.execute("SELECT COALESCE(MAX(sequence), 0) FROM events WHERE session_id = ?", (session_id,)).fetchone()[0]
+        connection.execute(
+            "INSERT INTO events(session_id, sequence, phase, event_type, safe_payload, created_at) VALUES (?, ?, 'VERIFY', 'archive.attestation', ?, ?)",
+            (session_id, int(latest) + 1, _json(attestation, "event payload"), now),
+        )
+        updated = connection.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    assert updated is not None
+    return _row(updated) or {}
+
+
 def answer_question(
     session_id: str,
     question_id: str,
@@ -618,6 +668,11 @@ def transition_session(
                 raise IllegalTransitionError("FIX requires current-round P0/P1 verification findings")
         if current_phase == "VERIFY" and next_phase == "ARCHIVE" and checkpoint.get("blocking_findings") is True:
             raise IllegalTransitionError("ARCHIVE is blocked by current-round P0/P1 findings")
+        if current_phase == "VERIFY" and next_phase == "ARCHIVE":
+            if not isinstance(checkpoint.get("archive_attestation"), dict) or any(checkpoint["archive_attestation"].get(key) is not True for key in ("verification_passed", "objective_gates_passed", "release_gates_passed")):
+                raise IllegalTransitionError("ARCHIVE requires a complete attestation")
+            if connection.execute("SELECT 1 FROM admission_slots WHERE session_id = ? LIMIT 1", (session_id,)).fetchone() is not None or connection.execute("SELECT 1 FROM resource_leases WHERE session_id = ? LIMIT 1", (session_id,)).fetchone() is not None:
+                raise IllegalTransitionError("ARCHIVE requires cleared session leases")
         if current_phase == "FIX" and next_phase == "VERIFY":
             checkpoint.pop("verification_findings", None)
             checkpoint.pop("verification_findings_round", None)

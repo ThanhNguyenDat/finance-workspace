@@ -25,6 +25,7 @@ from orchestrator.coordinator import (
     get_session,
     heartbeat_session,
     record_attempt,
+    record_archive_attestation,
     record_question,
     record_verification_findings,
     release_admission,
@@ -162,9 +163,16 @@ def test_lifecycle_transitions_are_guarded_by_version(tmp_path: Path):
     with pytest.raises(IllegalTransitionError, match="findings"):
         transition_session(session["id"], "FIX", expected_version=verified_again["version"], fencing_token=admitted["fencing_token"], db=db)
     clean = record_verification_findings(session["id"], [], expected_version=verified_again["version"], fencing_token=admitted["fencing_token"], db=db)
-    archived = transition_session(session["id"], "ARCHIVE", expected_version=clean["version"], fencing_token=admitted["fencing_token"], db=db)
+    with pytest.raises(IllegalTransitionError, match="attestation"):
+        transition_session(session["id"], "ARCHIVE", expected_version=clean["version"], fencing_token=admitted["fencing_token"], db=db)
+    attested = record_archive_attestation(session["id"], {"verification_passed": True, "objective_gates_passed": True, "release_gates_passed": True}, expected_version=clean["version"], fencing_token=admitted["fencing_token"], db=db)
+    with pytest.raises(IllegalTransitionError, match="leases"):
+        transition_session(session["id"], "ARCHIVE", expected_version=attested["version"], fencing_token=admitted["fencing_token"], db=db)
+    release_admission(session["id"], admitted["fencing_token"], db=db)
+    archived = transition_session(session["id"], "ARCHIVE", expected_version=attested["version"], db=db)
     assert archived["phase"] == "ARCHIVE"
     assert archived["checkpoint"]["verification_findings"] == []
+    assert archived["checkpoint"]["archive_attestation"]["objective_gates_passed"] is True
 
 
 def test_verification_findings_are_session_scoped_and_atomic(tmp_path: Path):
