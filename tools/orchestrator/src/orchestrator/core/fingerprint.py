@@ -30,6 +30,14 @@ def fingerprint(root: Path) -> str:
         if path.is_symlink():
             digest.update(f"symlink:{os.readlink(path)}\0".encode())
             continue
+        if not path.is_file():
+            # An embedded Git repository boundary (for example a nested
+            # worktree) is reported by `ls-files --others` as one path
+            # rather than being recursed into. It has no single blob to
+            # hash; its appearance/disappearance is already reflected in
+            # the porcelain status digest above, so note its path only.
+            digest.update(f"nonfile:{relative}\n".encode())
+            continue
         content_hash = hashlib.sha256(path.read_bytes()).hexdigest()
         digest.update(f"{content_hash}  {relative}\n".encode())
     return digest.hexdigest()

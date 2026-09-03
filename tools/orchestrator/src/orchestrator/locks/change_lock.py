@@ -84,6 +84,71 @@ def repo_lock_dir(repository: str) -> Path:
     return repo_locks_dir() / key
 
 
+def worktree_dir(change: str, repository: str) -> Path:
+    """Return this change's detached Git worktree, creating it once.
+
+    Replaces the repo-wide lock (assert_repo_lock) as the isolation
+    mechanism between concurrent changes on the same canonical repository:
+    each change gets its own working tree instead of every attempt sharing
+    one physical directory, so nothing needs to serialize access to the
+    canonical repo itself anymore. ``--detach`` avoids the "two worktrees
+    cannot check out the same branch" conflict entirely.
+    """
+
+    canonical = canonical_repo(repository)
+    target = change_dir(change) / "runtime" / "worktree"
+    if target.is_dir() and (target / ".git").exists():
+        return target
+    if target.exists():
+        shutil.rmtree(target, ignore_errors=True)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(
+        ["git", "-C", canonical, "worktree", "add", "--detach", str(target), "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        die(PREFIX, f"could not create worktree for {change}: {result.stderr.strip()}")
+    return target
+
+
+def sync_worktree_to_main(repository: str, workspace: Path) -> None:
+    """Fast-forward the canonical repository onto the worktree's HEAD.
+
+    Only ever fast-forwards (``--ff-only``): if the canonical repo moved in
+    a way that is not a strict ancestor of the worktree's commits, this
+    fails loud rather than creating a merge commit or silently diverging.
+    Mirrors what a human would do after IMPLEMENT/FIX produced a commit in
+    an isolated worktree; pushing to origin remains a separate, explicit
+    RELEASE-phase step, unchanged by this.
+    """
+
+    canonical = canonical_repo(repository)
+    fetch = subprocess.run(
+        ["git", "-C", canonical, "fetch", str(workspace), "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    if fetch.returncode != 0:
+        die(PREFIX, f"could not fetch worktree commits: {fetch.stderr.strip()}")
+    merge = subprocess.run(
+        ["git", "-C", canonical, "merge", "--ff-only", "FETCH_HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    if merge.returncode != 0:
+        die(
+            PREFIX,
+            f"could not fast-forward onto worktree commits: {merge.stderr.strip()}",
+        )
+
+
 def lock_anchor_pid() -> str:
     return os.environ.get("CLAUDE_PID") or os.environ.get("CODEX_PID") or ""
 

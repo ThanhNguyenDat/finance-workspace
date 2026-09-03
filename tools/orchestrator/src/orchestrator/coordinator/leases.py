@@ -47,6 +47,47 @@ def max_sessions(value: int | None = None) -> int:
     return configured
 
 
+def reclaim_expired_admission_slots(db: CoordinatorDB | None = None) -> list[str]:
+    """Free admission slots whose owning session is confirmed dead.
+
+    An expired lease alone is not sufficient to reclaim a slot — the owning
+    process may simply be slow to heartbeat. This reuses the same
+    ``recovery_report``/``recover_session`` liveness check every other
+    recovery path in this module uses, so a slot is only ever freed when its
+    owner's PID/start-time identity no longer matches (RECOVERABLE), never
+    when liveness is merely ambiguous (INDETERMINATE stays held, matching
+    the fail-closed rule the rest of this coordinator follows).
+    """
+
+    from .store import CoordinatorError as _StoreError  # local import: avoid cycle
+
+    coordinator = db or CoordinatorDB()
+    now = utc_now()
+    session_ids = {
+        str(row["session_id"])
+        for row in coordinator.connect()
+        .execute(
+            "SELECT session_id FROM admission_slots WHERE lease_expires_at <= ?",
+            (now,),
+        )
+        .fetchall()
+    }
+    reclaimed: list[str] = []
+    for session_id in session_ids:
+        try:
+            report = recovery_report(session_id, db=coordinator)
+        except (_StoreError, CoordinatorError):
+            continue
+        if report["state"] != "RECOVERABLE":
+            continue
+        try:
+            recover_session(session_id, db=coordinator)
+        except (_StoreError, CoordinatorError):
+            continue
+        reclaimed.append(session_id)
+    return reclaimed
+
+
 def admit_session(
     session_id: str,
     *,
@@ -60,6 +101,7 @@ def admit_session(
 
     session_id = _id(session_id)
     capacity = max_sessions(capacity)
+    reclaim_expired_admission_slots(db)
     owner_pid = owner_pid or os.getpid()
     owner_start_time = (
         owner_start_time or process_start_identity(owner_pid) or "unknown"

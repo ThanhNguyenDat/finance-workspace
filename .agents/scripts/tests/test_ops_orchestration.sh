@@ -59,10 +59,14 @@ test -f "$ROOT_DIR/.ops/archive/2026-08-29-route-quant-promotions-through-ops/ha
   || fail 'quant promotion OPS archive is missing'
 grep -Fq 'Status: DONE.' "$ROOT_DIR/.ops/archive/2026-08-29-route-quant-promotions-through-ops/handoff.md" \
   || fail 'quant promotion OPS archive lacks durable DONE evidence'
-lock_line="$(awk '/lock-repos <change>/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/e2e.md")"
+# Repository-wide locking was replaced by per-attempt detached Git worktree
+# isolation (each change gets its own working tree, so no operator-sequenced
+# lock-repos step is needed before PLAN writes); assert the command still
+# documents that isolation mechanism ahead of the PLAN write step.
+isolation_line="$(awk '/detached Git worktree/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/e2e.md")"
 write_line="$(awk '/run-phase-agent <change> <repository> PLAN/{print NR; exit}' "$ROOT_DIR/.claude/commands/ops/e2e.md")"
-test -n "$lock_line" && test -n "$write_line" && test "$lock_line" -lt "$write_line" \
-  || fail 'planning writes appear before repository lock acquisition'
+test -n "$isolation_line" && test -n "$write_line" && test "$isolation_line" -lt "$write_line" \
+  || fail 'planning writes appear before worktree isolation is documented'
 
 fixture="$tmp/fixture"
 workspace="$fixture/finance-workspace"
@@ -376,23 +380,11 @@ test "$(cat "$(find "$workspace/.ops/changes/change-runner/runtime/logs" -name '
 grep -Fq '"method": "thread/start"' "$tmp/sdk-trace" || fail 'Codex SDK thread was not started'
 grep -Fq '"method": "turn/start"' "$tmp/sdk-trace" || fail 'Codex SDK turn was not started'
 
-"$RUNTIME" lock change-no-repo session-no-repo
-"$RUNTIME" init change-no-repo session-no-repo codex
-"$RUNTIME" phase change-no-repo session-no-repo IMPLEMENT
-expect_failure env PATH="$mock_bin:/usr/bin:/bin" \
-  "$RUNNER" change-no-repo "$web_worktree" IMPLEMENT
-"$RUNTIME" cleanup change-no-repo session-no-repo BLOCKED
-
-"$RUNTIME" lock change-repo-owner session-repo-owner
-"$RUNTIME" init change-repo-owner session-repo-owner codex
-"$RUNTIME" lock-repos change-repo-owner session-repo-owner "$mw"
-"$RUNTIME" lock change-repo-denied session-repo-denied
-"$RUNTIME" init change-repo-denied session-repo-denied codex
-"$RUNTIME" phase change-repo-denied session-repo-denied IMPLEMENT
-expect_failure env PATH="$mock_bin:/usr/bin:/bin" \
-  "$RUNNER" change-repo-denied "$mw" IMPLEMENT
-"$RUNTIME" cleanup change-repo-denied session-repo-denied BLOCKED
-"$RUNTIME" cleanup change-repo-owner session-repo-owner BLOCKED
+# Two different changes running IMPLEMENT on the same canonical repository
+# concurrently is no longer denied here: each gets its own detached Git
+# worktree (change_lock.worktree_dir), so there is nothing left to conflict
+# over at the repository level. This used to be an expect_failure case for
+# repo-lock exclusivity; that invariant was intentionally replaced.
 
 "$RUNTIME" phase change-runner session-runner VERIFY
 "$RUNTIME" fix change-runner session-runner

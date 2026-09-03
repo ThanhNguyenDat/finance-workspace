@@ -63,13 +63,13 @@ easy to get wrong. Always:
 
 2. Run `sync-agent-links.sh`; read AGENTS/CLAUDE, applicable rules/skills,
    current specs, active change and every affected repository's instructions.
-3. Identify and lock every affected runtime repository before change-specific
-   writes:
-
-   ```text
-   uv run --project tools/orchestrator ops-runtime lock-repos <change> <session-id> <repo>...
-   ```
-
+3. Identify every affected runtime repository. Each phase attempt runs in
+   its own detached Git worktree of that repository (allocated
+   automatically by `run-phase-agent`); no repository-wide lock is needed
+   or acquired — a change's worktree isolates it from any other change
+   touching the same repository. A mutating phase (IMPLEMENT/FIX)
+   fast-forwards the canonical repository onto its worktree's commits when
+   it completes.
 4. Run PLAN sequentially for each affected repository:
 
    ```text

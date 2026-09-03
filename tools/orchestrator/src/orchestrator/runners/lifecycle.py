@@ -446,10 +446,6 @@ def _read_runtime(
         os.environ.get("OPS_WORKSPACE_ROOT", ops_transaction.root_dir())
     ).resolve()
     repository_root = Path(_git_root(repository))
-    change_lock = __import__(
-        "orchestrator.locks.change_lock", fromlist=["assert_repo_lock"]
-    )
-    change_lock.assert_repo_lock(change, state["session_id"], str(repository_root))
     runtime_dir = state_file.parent
     runtime_dir.joinpath("logs").mkdir(parents=True, exist_ok=True)
     return (

@@ -216,7 +216,7 @@ def _validate_common(
                 f"{PREFIXES[provider]}: legacy runtime does not select {provider.title()} for this phase"
             )
     repository_root = _git_root(repository, PREFIXES[provider])
-    change_lock.assert_repo_lock(change, session_id, repository_root)
+    workspace = change_lock.worktree_dir(change, str(repository_root))
     return state, state_file, session_id, round_value, workspace, runtime_dir
 
 
@@ -553,6 +553,8 @@ def run(provider: str, argv: list[str]) -> int:
                 file=sys.stderr,
             )
             return status
+        if phase in {"IMPLEMENT", "FIX"}:
+            change_lock.sync_worktree_to_main(repository, workspace)
         print(f"{provider.title()} phase {phase} completed: {base}")
         return 0
     finally:
