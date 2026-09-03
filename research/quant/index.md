@@ -6226,6 +6226,57 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 424 — DATA-ISSUE: 9 round đã commit (412-415, 417-418, 420-421, 423) cùng mục lục `index.md` của chúng biến mất khỏi working tree, chưa commit — khôi phục từ HEAD
+
+Zero container, zero SSH, zero backtest compute — cùng nhóm phát hiện với
+round422, ba round trước. Iteration research-state đầu round: 226 (launcher
+ghi máy móc; không gọi lại `begin-iteration`).
+
+`git status --short` đầu phiên cho thấy `index.md` mất 135 dòng (đúng các
+mục `## Round 423` → `## Round 412`, trừ round416/419/422) và 9 file round
+biến mất khỏi đĩa dù vẫn còn trong tree của `HEAD` (`git cat-file -e` xác
+nhận cả 9). Kiểu xoá có chọn lọc — chỉ đúng các round "status-check thuần,
+không đổi gì" biến mất, mọi round có phát hiện thật (411, 416, 419, 422) vẫn
+còn — nên đã kiểm tra khả năng đây là một lượt biên tập chủ ý trước khi coi
+là mất dữ liệu: mtime của `index.md` chỉ ~5 phút sau commit `3b1315b`
+(refactor orchestrator, không đụng `research/quant/*`); CSV không có diff nào
+(mọi dòng của 9 round vẫn nguyên); tìm khắp repo (`prune`/`consolidat`/
+`redundant`/`dedup`) không thấy lý do nào được ghi lại ở bất kỳ đâu; và cùng
+cửa sổ ~5 phút đó có một phiên orchestrator-relocation không liên quan lớn
+(`815f5bf`, `58a5466`, `0caa758`, ...), với đúng 1 file khác cũng bị xoá
+ngoài `research/quant/` (`tools/orchestrator/accounts.yaml.example`) — thuộc
+về phiên đó, không phải quant-research. Kết luận: không có bằng chứng đây là
+biên tập chủ ý; theo đúng tiền lệ round422 (bảo toàn evidence trail), khôi
+phục từ `HEAD` bằng `git checkout --` theo đúng 10 đường dẫn cụ thể (không
+phải `git checkout -- .`). Xác minh lại: cả 9 file round đã có lại trên đĩa,
+`index.md` có lại đủ mục `## Round 423`/`## Round 412`, chỉ còn đúng
+`accounts.yaml.example` (không liên quan, không đụng tới, ghi chú riêng cho
+phiên orchestrator sở hữu nó).
+
+Rà lại 3 hướng như round422/423, cùng ngày 2026-09-03, không đổi:
+`finance-live-action` `HEAD` vẫn `ca23b05` = `origin/main`, hai CI run cũ
+không đổi; Target 2 vẫn không có metric trong tool (r401, không có
+`docs/adr/` trong checkout này); forward-time vẫn ~4 ngày kể từ baseline
+2026-08-30, ~26 ngày nữa mới tới ngưỡng ~30 ngày; `finance-workspace` và
+`origin/main` giờ cùng ở `3b1315b`, đồng bộ hoàn toàn.
+
+Quan sát ngoài phạm vi (chỉ ghi làm bối cảnh): `openspec/changes/portfolio-measurement-integrity/`
+đã bị xoá hẳn bởi `3b1315b` (không nằm trong `openspec/changes/archive/`),
+trong khi `.ops/changes/portfolio-measurement-integrity/` (OPS runtime state)
+vẫn còn với `handoff.md` **cũ**, vẫn ghi `BLOCKED` bằng đúng văn bản blocker
+trước round419 — chưa được cập nhật theo bằng chứng round419 đã tạo ra. Đây
+là bất nhất lifecycle OpenSpec/OPS, ngoài phạm vi sở hữu của research loop
+này theo đúng ranh giới round416/419 đã lập, không hành động thêm.
+
+Không đổi kết luận chiến lược nào — các file mất chỉ là bằng chứng của các
+phát hiện đã có từ trước. Đóng lần thứ hai trong 3 round một lỗ hổng cùng
+loại (evidence có trên đĩa/trong git nhưng chưa được xác minh đầu-cuối trước
+khi một round khác hoặc một task không liên quan chạm vào working tree) —
+gợi ý bước 8 của round structure ("git status --short sạch trước khi kết
+thúc round") chỉ bắt được sai lệch do chính loop này gây ra, không bắt được
+sai lệch do phiên khác gây ra giữa các round. File:
+`round424-DATA-ISSUE-nine-already-committed-round-files-plus-their-index-entries-were-missing-from-the-working-tree-restored-from-head.md`.
+
 ## Round 423 — NO-CHANGE: kiểm tra trạng thái ~9h sau Round 422 — cả ba hướng vẫn bị chặn không đổi, repo giờ đã đồng bộ hoàn toàn với `origin/main`
 
 Zero container, zero backtest compute, zero SSH tunnel research (chỉ 1 probe
