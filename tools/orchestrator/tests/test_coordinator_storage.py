@@ -380,3 +380,15 @@ def test_operator_question_response_is_session_and_token_scoped(tmp_path: Path):
     with pytest.raises(CoordinatorError, match="stale, missing"):
         answer_question(first["id"], "wrong-question", "yes", fencing_token=first_admission["fencing_token"], db=db)
     assert answer_question(first["id"], "q1", "yes", fencing_token=first_admission["fencing_token"], db=db)["status"] == "ANSWERED"
+
+
+def test_operator_question_expiry_is_enforced_atomically(tmp_path: Path):
+    db = make_db(tmp_path)
+    session = create_session("expired-question", {"request": "expired"}, db=db)
+    admission = admit_session(session["id"], db=db)
+    record_question(session["id"], question_id="q1", safe_payload={"kind": "approval"}, expires_at="2000-01-01T00:00:00Z", db=db)
+
+    with pytest.raises(CoordinatorError, match="expired"):
+        answer_question(session["id"], "q1", "yes", fencing_token=admission["fencing_token"], db=db)
+    question = db.read("SELECT status, response FROM operator_questions WHERE session_id = ? AND question_id = ?", (session["id"], "q1"))[0]
+    assert question["status"] == "EXPIRED" and question["response"] is None

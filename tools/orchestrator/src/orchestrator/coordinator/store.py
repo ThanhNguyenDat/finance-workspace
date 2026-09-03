@@ -6,6 +6,7 @@ import json
 import os
 import re
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -406,19 +407,44 @@ def answer_question(
         raise CoordinatorError("question response and session fencing token are required")
     response = redact_text(response)
     coordinator = _db(db)
+    expiry_error: str | None = None
     with coordinator.transaction() as connection:
         session = connection.execute("SELECT fencing_token FROM sessions WHERE id = ?", (session_id,)).fetchone()
         if session is None:
             raise CoordinatorError(f"session not found: {session_id}")
         if session["fencing_token"] != fencing_token:
             raise StaleVersionError("question response fencing token is stale")
-        updated = connection.execute(
-            "UPDATE operator_questions SET status = 'ANSWERED', response = ? WHERE session_id = ? AND question_id = ? AND status = 'PENDING'",
-            (response, session_id, question_id),
-        )
-        if updated.rowcount != 1:
+        question = connection.execute(
+            "SELECT status, expires_at FROM operator_questions WHERE session_id = ? AND question_id = ?",
+            (session_id, question_id),
+        ).fetchone()
+        if question is None or question["status"] != "PENDING":
             raise CoordinatorError("question is stale, missing or already answered")
-        row = connection.execute("SELECT * FROM operator_questions WHERE session_id = ? AND question_id = ?", (session_id, question_id)).fetchone()
+        try:
+            expires_at = datetime.fromisoformat(question["expires_at"].replace("Z", "+00:00"))
+        except (AttributeError, TypeError, ValueError):
+            connection.execute(
+                "UPDATE operator_questions SET status = 'EXPIRED' WHERE session_id = ? AND question_id = ? AND status = 'PENDING'",
+                (session_id, question_id),
+            )
+            expiry_error = "question expiry is invalid"
+        else:
+            if expires_at <= datetime.now(timezone.utc):
+                connection.execute(
+                    "UPDATE operator_questions SET status = 'EXPIRED' WHERE session_id = ? AND question_id = ? AND status = 'PENDING'",
+                    (session_id, question_id),
+                )
+                expiry_error = "question has expired"
+            else:
+                updated = connection.execute(
+                    "UPDATE operator_questions SET status = 'ANSWERED', response = ? WHERE session_id = ? AND question_id = ? AND status = 'PENDING'",
+                    (response, session_id, question_id),
+                )
+                if updated.rowcount != 1:
+                    raise CoordinatorError("question is stale, missing or already answered")
+                row = connection.execute("SELECT * FROM operator_questions WHERE session_id = ? AND question_id = ?", (session_id, question_id)).fetchone()
+    if expiry_error is not None:
+        raise CoordinatorError(expiry_error)
     assert row is not None
     return _row(row) or {}
 
