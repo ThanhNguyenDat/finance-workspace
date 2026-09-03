@@ -25,6 +25,8 @@ def test_coordinator_cli_submit_resume_status_and_attach(tmp_path: Path, monkeyp
     assert invoke(monkeypatch, ["status", session["id"]]) == 0
     status = json.loads(capsys.readouterr().out)
     assert status["session"]["id"] == session["id"]
+    assert "fencing_token" not in status["session"]
+    assert "lease_owner" not in status["session"]
 
     assert invoke(monkeypatch, ["resume", session["id"]]) == 0
     resumed = json.loads(capsys.readouterr().out)

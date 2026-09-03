@@ -240,8 +240,11 @@ def session_status(session_id: str, *, db: CoordinatorDB | None = None) -> dict[
             "SELECT question_id, expires_at FROM operator_questions WHERE session_id = ? AND status = 'PENDING' ORDER BY question_id",
             (session_id,),
         ).fetchall()
+    session_view = _row(session) or {}
+    session_view.pop("fencing_token", None)
+    session_view.pop("lease_owner", None)
     return {
-        "session": _row(session),
+        "session": session_view,
         "attempts": [dict(item) for item in attempts],
         "attempt_ids": [item["id"] for item in attempts],
         "event_count": int(event_count),
