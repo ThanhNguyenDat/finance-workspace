@@ -12,7 +12,7 @@ from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from openai_codex import ApprovalMode, CodexConfig, Sandbox
 
 from ..providers.results import classify_sdk_result
-from ..coordinator import CoordinatorDB, CoordinatorError, acquire_account_scope, admit_session, append_event, complete_session, create_quant_session, get_session, release_admission, release_resource, seed_quant_iteration_floor, update_checkpoint
+from ..coordinator import CoordinatorDB, CoordinatorError, acquire_account_scope, admit_session, append_event, complete_session, create_quant_session, get_session, record_attempt, release_admission, release_resource, seed_quant_iteration_floor, update_attempt, update_checkpoint
 from ..core.fingerprint import fingerprint
 from ..core.io import CLIError, atomic_write_json
 from ..providers.sdk import append_jsonl, child_environment, executable, start_codex
@@ -180,11 +180,27 @@ def run(argv: list[str]) -> int:
                     )
                 except CoordinatorError as exc:
                     raise CLIError(f"{PREFIX}: {exc}") from exc
+            attempt_id = f"{session_id}-plan-a{index}"
+            record_attempt(
+                session_id,
+                phase="PLAN",
+                round=session["round"],
+                attempt_no=index,
+                attempt_id=attempt_id,
+                provider=provider,
+                model=model,
+                effort=effort,
+                account=account or None,
+                continuation=continuation,
+                status="RUNNING",
+                db=coordinator,
+            )
             append_event(
                 session_id,
                 phase="PLAN",
                 event_type="provider.attempt.started",
                 safe_payload={"provider": provider, "model": model, "effort": effort, "account": account or None, "attempt": index, "continuation": continuation},
+                attempt_id=attempt_id,
                 db=coordinator,
             )
             try:
@@ -208,11 +224,21 @@ def run(argv: list[str]) -> int:
             stdout.with_suffix(".result-class").write_text(f"{result_class}\n", encoding="utf-8")
             stdout.with_suffix(".exit").write_text(f"{status}\n", encoding="utf-8")
             fingerprint_after = _worktree_fingerprint(root)
+            attempt_status = "COMPLETED" if status == 0 else ("INTERRUPTED" if result_class == "timeout" else "FAILED")
+            update_attempt(
+                session_id,
+                attempt_id,
+                status=attempt_status,
+                result_class=result_class,
+                evidence_path=str(stdout.with_suffix(".meta.json")),
+                db=coordinator,
+            )
             append_event(
                 session_id,
                 phase="PLAN",
                 event_type="provider.attempt.completed",
                 safe_payload={"provider": provider, "model": model, "effort": effort, "account": account or None, "attempt": index, "continuation": continuation, "status": status, "result_class": result_class},
+                attempt_id=attempt_id,
                 db=coordinator,
             )
             current_session = get_session(session_id, db=coordinator)

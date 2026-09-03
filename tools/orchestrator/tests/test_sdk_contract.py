@@ -193,6 +193,9 @@ def test_quant_claude_rotates_from_personal_02_to_personal(tmp_path: Path, monke
     assert event_types[:3] == ["session.created", "session.admitted", "provider.attempt.started"]
     assert "provider.attempt.completed" in event_types
     assert event_types[-1] == "session.completed"
+    status = __import__("orchestrator.coordinator", fromlist=["session_status"]).session_status(session_rows[0]["id"], db=db)
+    assert [attempt["status"] for attempt in status["attempts"]] == ["FAILED", "COMPLETED"]
+    assert all(event["attempt_id"] is not None for event in events_since(session_rows[0]["id"], db=db) if event["event_type"].startswith("provider.attempt."))
 
 
 def test_codex_sdk_adapter_completes_with_protocol_fixture(tmp_path: Path, monkeypatch) -> None:

@@ -36,6 +36,7 @@ from .store import (
     seed_quant_iteration_floor,
     session_status,
     transition_session,
+    update_attempt,
     update_checkpoint,
 )
 
@@ -65,6 +66,7 @@ __all__ = [
     "record_attempt",
     "record_question",
     "record_verification_findings",
+    "update_attempt",
     "release_admission",
     "release_resource",
     "recover_session",

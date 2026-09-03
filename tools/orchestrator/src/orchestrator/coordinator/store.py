@@ -329,6 +329,35 @@ def record_attempt(
     return dict(row)
 
 
+def update_attempt(
+    session_id: str,
+    attempt_id: str,
+    *,
+    status: str,
+    result_class: str | None = None,
+    evidence_path: str | None = None,
+    completed_at: str | None = None,
+    db: CoordinatorDB | None = None,
+) -> dict[str, Any]:
+    """Close a persisted provider attempt without holding a provider lease."""
+
+    session_id = _id(session_id)
+    attempt_id = _id(attempt_id)
+    if status not in ATTEMPT_STATUSES:
+        raise CoordinatorError(f"invalid attempt status: {status}")
+    coordinator = _db(db)
+    with coordinator.transaction() as connection:
+        updated = connection.execute(
+            "UPDATE attempts SET status = ?, result_class = ?, evidence_path = COALESCE(?, evidence_path), completed_at = ? WHERE id = ? AND session_id = ? AND status = 'RUNNING'",
+            (status, result_class, evidence_path, completed_at or utc_now(), attempt_id, session_id),
+        )
+        if updated.rowcount != 1:
+            raise StaleVersionError("attempt is missing, not session-scoped or already closed")
+        row = connection.execute("SELECT * FROM attempts WHERE id = ? AND session_id = ?", (attempt_id, session_id)).fetchone()
+    assert row is not None
+    return dict(row)
+
+
 def append_event(
     session_id: str,
     *,
