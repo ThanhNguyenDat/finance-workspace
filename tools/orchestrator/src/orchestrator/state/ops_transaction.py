@@ -117,6 +117,8 @@ def fallback_is_allowed() -> None:
 def init_change(
     change: str, session_id: str, backend: str | None, origin: str | None
 ) -> None:
+    from ..coordinator import CoordinatorDB, ensure_session
+
     directory = change_dir(change)
     state = directory / "runtime/state.json"
     handoff = directory / "handoff.md"
@@ -147,6 +149,15 @@ def init_change(
         die(PREFIX, "initialization lock is owned by another session")
     if state.exists():
         die(PREFIX, f"runtime state already exists: {state}")
+    try:
+        ensure_session(
+            change,
+            session_id,
+            {"request": change, "entrypoint": "ops-runtime"},
+            db=CoordinatorDB(root=root_dir()),
+        )
+    except Exception as exc:
+        die(PREFIX, f"coordinator session binding failed: {exc}")
     (directory / "runtime/logs").mkdir(parents=True, exist_ok=True)
     if not backend:
         new_state: dict[str, Any] = {

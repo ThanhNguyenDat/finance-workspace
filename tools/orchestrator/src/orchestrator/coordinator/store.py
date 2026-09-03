@@ -160,6 +160,31 @@ def create_session(
     return result
 
 
+def ensure_session(
+    change: str,
+    session_id: str,
+    context: dict[str, Any],
+    *,
+    db: CoordinatorDB | None = None,
+) -> dict[str, Any]:
+    """Bind a compatibility entrypoint to one coordinator session identity."""
+
+    coordinator = _db(db)
+    existing = get_session(session_id, db=coordinator)
+    if existing is not None:
+        if existing["change_name"] != _change(change):
+            raise CoordinatorConflictError(
+                f"session belongs to another change: {session_id}"
+            )
+        return existing
+    return create_session(
+        change,
+        context,
+        db=coordinator,
+        session_id=session_id,
+    )
+
+
 def create_quant_session(
     context: dict[str, Any],
     *,

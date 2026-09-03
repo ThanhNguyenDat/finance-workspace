@@ -13,6 +13,7 @@ from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from openai_codex import ApprovalMode, CodexConfig, Sandbox
 
 from ..accounts.registry import resolve_account_dir
+from ..coordinator import CoordinatorDB, append_event
 from ..core.fingerprint import fingerprint
 from ..core.io import CLIError
 from ..core.redaction import redact_text
@@ -22,6 +23,7 @@ from ..providers.sdk import (
     append_jsonl,
     child_environment,
     executable,
+    jsonable,
     start_codex,
 )
 from ..state import candidates, ops_transaction
@@ -35,6 +37,37 @@ PREFIXES = {"claude": "run-claude-phase", "codex": "run-codex-phase"}
 PHASES = {"PLAN", "BRAINSTORM", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
 SAFE_CHANGE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9._:-]+$")
+
+
+def _coordinator_event(value: object, event_type: str | None = None) -> None:
+    """Persist an adapter event when invoked by the coordinator-backed runner."""
+
+    root = os.environ.get("PHASE_AGENT_COORDINATOR_ROOT")
+    session_id = os.environ.get("PHASE_AGENT_COORDINATOR_SESSION_ID")
+    attempt_id = os.environ.get("PHASE_AGENT_COORDINATOR_ATTEMPT_ID")
+    phase = os.environ.get("PHASE_AGENT_COORDINATOR_PHASE")
+    if not all((root, session_id, attempt_id, phase)):
+        return
+    payload = jsonable(value)
+    if not isinstance(payload, dict):
+        payload = {"value": payload}
+    if event_type is None:
+        kind = str(payload.get("type", payload.get("method", ""))).lower()
+        event_type = (
+            "provider.tool"
+            if "tool" in kind
+            else "provider.shell"
+            if "shell" in kind or "command" in kind
+            else "provider.stream"
+        )
+    append_event(
+        session_id,
+        phase=phase,
+        event_type=event_type,
+        safe_payload=payload,
+        attempt_id=attempt_id,
+        db=CoordinatorDB(root=Path(root)),
+    )
 
 
 def _git_root(path: str | Path, prefix: str) -> Path:
@@ -187,6 +220,7 @@ async def _run_claude_sdk(
     account_dir: Path | None,
     stdout: Path,
     timeout_seconds: float,
+    on_message: Any | None = None,
 ) -> tuple[int, str, Any]:
     environment = child_environment()
     if account_dir is not None:
@@ -207,12 +241,18 @@ async def _run_claude_sdk(
         except TimeoutError:
             hard_kill_claude_client(client)
             return 1, "timeout", None
+
+        def record_message(message: object) -> None:
+            append_jsonl(stdout, message)
+            if on_message is not None:
+                on_message(message)
+
         outcome = await supervise_claude_turn(
             client,
             prompt,
             timeout_seconds=timeout_seconds,
             kill_after_seconds=30,
-            on_message=lambda message: append_jsonl(stdout, message),
+            on_message=record_message,
         )
         result = outcome.result
         result_class = classify_sdk_result(
@@ -411,6 +451,7 @@ def run(provider: str, argv: list[str]) -> int:
                     account_dir,
                     stdout,
                     int(timeout_text),
+                    on_message=_coordinator_event,
                 )
             )
         else:

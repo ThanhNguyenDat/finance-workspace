@@ -25,7 +25,11 @@ from orchestrator.providers.results import classify_sdk_result
 from orchestrator.runners import lifecycle as run_phase_agent
 from orchestrator.runners import quant as run_phase_agent_command
 from orchestrator.runners.lifecycle import _brainstorm_checkpoint
-from orchestrator.runners.phase_adapter import _run_claude_sdk, build_prompt
+from orchestrator.runners.phase_adapter import (
+    _coordinator_event,
+    _run_claude_sdk,
+    build_prompt,
+)
 from orchestrator.runners.quant import _codex
 from orchestrator.state import candidates, ops_transaction
 
@@ -416,3 +420,23 @@ def test_generic_resolver_calls_claude_sdk_adapter_in_process(
     state = ops_transaction.read_state(change)
     assert state["attempts"][0]["provider"] == "claude"
     assert state["attempts"][0]["result_class"] == "success"
+    coordinator = CoordinatorDB(root=root)
+    events = events_since(session, db=coordinator)
+    assert [event["event_type"] for event in events] == [
+        "provider.attempt.started",
+        "provider.stream",
+        "provider.result",
+        "provider.attempt.completed",
+    ]
+    assert {event["attempt_id"] for event in events} == {
+        state["attempts"][0]["evidence_base"].split("/")[-1].removeprefix("agent-")
+    }
+    attempt_id = next(iter({event["attempt_id"] for event in events}))
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_ROOT", str(root))
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_SESSION_ID", session)
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_ATTEMPT_ID", attempt_id)
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_PHASE", "PLAN")
+    _coordinator_event({"type": "tool_use", "command": "token=hidden"})
+    tool_event = events_since(session, db=coordinator)[-1]
+    assert tool_event["event_type"] == "provider.tool"
+    assert tool_event["safe_payload"]["command"] == "<REDACTED>"

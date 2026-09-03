@@ -8,6 +8,14 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 
+from ..coordinator import (
+    CoordinatorDB,
+    CoordinatorError,
+    append_event,
+    get_session,
+    record_attempt,
+    update_attempt,
+)
 from ..core.fingerprint import fingerprint
 from ..core.io import CLIError, atomic_write_json, utc_now
 from ..locks.directory_lock import PidDirectoryLock
@@ -174,6 +182,44 @@ def _run_attempt(
     before = (fingerprint(workspace), fingerprint(repository_root))
     head_before = _git_head(repository_root)
     started_at = utc_now()
+    coordinator = CoordinatorDB(root=workspace)
+    coordinator_attempt = None
+    if get_session(state["session_id"], db=coordinator) is not None:
+        try:
+            coordinator_attempt = record_attempt(
+                state["session_id"],
+                phase=phase,
+                round=round_value,
+                attempt_no=attempt,
+                attempt_id=attempt_id,
+                provider=item["provider"],
+                account=item.get("account"),
+                model=item["model"],
+                effort=item["effort"],
+                continuation=continuation,
+                status="RUNNING",
+                started_at=started_at,
+                db=coordinator,
+            )
+            append_event(
+                state["session_id"],
+                phase=phase,
+                event_type="provider.attempt.started",
+                attempt_id=attempt_id,
+                safe_payload={
+                    "provider": item["provider"],
+                    "model": item["model"],
+                    "effort": item["effort"],
+                    "account": item.get("account"),
+                    "attempt": attempt,
+                    "continuation": continuation,
+                },
+                db=coordinator,
+            )
+        except CoordinatorError as exc:
+            raise CLIError(
+                f"{PREFIX}: coordinator attempt binding failed: {exc}"
+            ) from exc
     env = {
         "PHASE_AGENT_MODEL": item["model"],
         "PHASE_AGENT_EFFORT": item["effort"],
@@ -182,6 +228,15 @@ def _run_attempt(
         "PHASE_AGENT_CONTINUATION": "true" if continuation else "false",
         "PHASE_AGENT_EVIDENCE_BASE": str(base),
     }
+    if coordinator_attempt is not None:
+        env.update(
+            {
+                "PHASE_AGENT_COORDINATOR_ROOT": str(workspace),
+                "PHASE_AGENT_COORDINATOR_SESSION_ID": state["session_id"],
+                "PHASE_AGENT_COORDINATOR_ATTEMPT_ID": attempt_id,
+                "PHASE_AGENT_COORDINATOR_PHASE": phase,
+            }
+        )
     with _environment(env):
         if item["provider"] == "claude":
             from ..cli.run_claude_phase import main as adapter_main
@@ -221,6 +276,46 @@ def _run_attempt(
                     "evidence_base": str(base),
                 },
             )
+    if coordinator_attempt is not None:
+        attempt_status = (
+            "COMPLETED"
+            if status == 0
+            else ("INTERRUPTED" if result == "timeout" else "FAILED")
+        )
+        update_attempt(
+            state["session_id"],
+            attempt_id,
+            status=attempt_status,
+            result_class=result,
+            evidence_path=str(base.with_suffix(".attempt.json")),
+            completed_at=utc_now(),
+            db=coordinator,
+        )
+        append_event(
+            state["session_id"],
+            phase=phase,
+            event_type="provider.result",
+            attempt_id=attempt_id,
+            safe_payload={"status": status, "result_class": result},
+            db=coordinator,
+        )
+        append_event(
+            state["session_id"],
+            phase=phase,
+            event_type="provider.attempt.completed",
+            attempt_id=attempt_id,
+            safe_payload={
+                "provider": item["provider"],
+                "model": item["model"],
+                "effort": item["effort"],
+                "account": item.get("account"),
+                "attempt": attempt,
+                "continuation": continuation,
+                "status": status,
+                "result_class": result,
+            },
+            db=coordinator,
+        )
     after = (fingerprint(workspace), fingerprint(repository_root))
     head_after = _git_head(repository_root)
     changed = before != after or head_before != head_after
