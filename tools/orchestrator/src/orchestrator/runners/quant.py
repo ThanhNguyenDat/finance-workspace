@@ -216,13 +216,9 @@ def run(argv: list[str]) -> int:
         if existing is not None and existing["status"] == "COMPLETED":
             session = reopen_quant_session(bound_session_id, db=coordinator)
             resumed = True
-        elif existing is not None and existing["status"] in {
-            "RUNNING",
-            "QUEUED",
-            "PAUSED",
-        }:
-            session = existing
-            resumed = True
+        # An active bound session belongs to the already-running loop. A new
+        # invocation is an independent prompt and must get its own namespace;
+        # admission will queue it when the configured capacity is exhausted.
     if session is None:
         session = create_quant_session(
             {

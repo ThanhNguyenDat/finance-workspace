@@ -38,7 +38,8 @@ set +e; (cd "$workspace" && ./.agents/scripts/run-phase-agent-command.sh quant-r
 [[ "$first_status" -ne 0 ]] || fail 'quota-only fixture unexpectedly completed'
 [[ ! -e "$workspace/.ops/runtime/phase-agents/.quant-research-lock" ]] || fail 'legacy global quant lease remains'
 jq -e '.iteration==3' "$QUANT_RESEARCH_STATE_DIR/state.json" >/dev/null || fail 'concurrent launches changed iteration count'
-find "$workspace/.ops/runtime/phase-agents/quant-runs" -mindepth 1 -maxdepth 1 -type d | wc -l | grep -Fqx 3 || fail 'concurrent sessions did not get isolated namespaces'
+namespace_count="$(find "$workspace/.ops/runtime/phase-agents/quant-runs" -mindepth 1 -maxdepth 1 -type d | wc -l)"
+[[ "$namespace_count" -eq 3 ]] || { find "$workspace/.ops/runtime/phase-agents/quant-runs" -mindepth 1 -maxdepth 1 -type d >&2; fail 'concurrent sessions did not get isolated namespaces'; }
 
 "$STATE" provider-on claude >/dev/null
 set +e; (cd "$workspace" && FAKE_CLAUDE_MODE=delay FAKE_SDK_DELAY_SECONDS=2 PHASE_AGENT_QUANT_TIMEOUT_SECONDS=1 ./.agents/scripts/run-phase-agent-command.sh quant-research) >/dev/null 2>&1; status=$?; set -e

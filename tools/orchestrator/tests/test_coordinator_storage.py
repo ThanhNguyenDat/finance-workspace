@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -57,13 +58,50 @@ def test_database_uses_wal_foreign_keys_and_versioned_schema(tmp_path: Path):
     try:
         assert connection.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
         assert connection.execute("PRAGMA foreign_keys").fetchone()[0] == 1
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
         assert (
             connection.execute("SELECT version FROM schema_migrations").fetchone()[0]
-            == 1
+            == 2
         )
     finally:
         connection.close()
+
+
+def test_schema_v1_migrates_phase_checks_for_final_verify(tmp_path: Path):
+    from orchestrator.coordinator.db import SCHEMA
+
+    path = tmp_path / "coordinator" / "coordinator.db"
+    path.parent.mkdir(parents=True)
+    legacy_schema = SCHEMA.replace(", 'FINAL_VERIFY'", "")
+    connection = sqlite3.connect(path)
+    try:
+        connection.executescript(
+            legacy_schema
+            + "INSERT INTO schema_migrations(version, applied_at) VALUES (1, datetime('now'));"
+            + "PRAGMA user_version = 1;"
+        )
+    finally:
+        connection.close()
+
+    db = CoordinatorDB(path=path)
+    session = create_session("migrated", {}, phase="FINAL_VERIFY", db=db)
+    attempt = record_attempt(
+        session["id"],
+        phase="FINAL_VERIFY",
+        round=0,
+        attempt_no=1,
+        provider="claude",
+        model="opus",
+        effort="high",
+        continuation=False,
+        status="RUNNING",
+        db=db,
+    )
+    assert attempt["phase"] == "FINAL_VERIFY"
+    assert (
+        db.read("SELECT MAX(version) AS version FROM schema_migrations")[0]["version"]
+        == 2
+    )
 
 
 def test_concurrent_quant_sessions_get_unique_iterations_and_namespaces(tmp_path: Path):
@@ -84,6 +122,7 @@ def test_concurrent_quant_sessions_get_unique_iterations_and_namespaces(tmp_path
     assert {item["worktree"] for item in sessions} == {
         str(run_root / item["id"]) for item in sessions
     }
+    assert all(Path(item["worktree"]).is_dir() for item in sessions)
     resumed = resume_session(
         sessions[0]["id"], db=CoordinatorDB(path=db_path, busy_timeout_ms=5_000)
     )

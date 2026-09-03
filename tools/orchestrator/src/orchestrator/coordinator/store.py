@@ -13,7 +13,15 @@ from ..core.io import atomic_write_json, utc_now
 from ..core.redaction import redact_text, redact_value
 from .db import CoordinatorDB, repository_root
 
-PHASES = {"PLAN", "BRAINSTORM", "IMPLEMENT", "VERIFY", "FIX", "ARCHIVE"}
+PHASES = {
+    "PLAN",
+    "BRAINSTORM",
+    "IMPLEMENT",
+    "VERIFY",
+    "FIX",
+    "FINAL_VERIFY",
+    "ARCHIVE",
+}
 TRANSITIONS = {
     ("PLAN", "BRAINSTORM"),
     ("BRAINSTORM", "IMPLEMENT"),
@@ -242,6 +250,8 @@ def create_quant_session(
                 f"session already exists: {session_id}"
             ) from exc
         raise
+    namespace = Path(worktree or str(run_root / session_id))
+    namespace.mkdir(parents=True, exist_ok=True)
     result = _row(row)
     assert result is not None
     return result
