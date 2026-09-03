@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ..core.io import utc_now
+from ..core.io import atomic_write_json, utc_now
 from ..core.redaction import redact_text, redact_value
 from .db import CoordinatorDB, repository_root
 
@@ -633,6 +633,41 @@ def complete_session(
         )
         if updated.rowcount != 1:
             raise StaleVersionError("session completion fencing token or version is stale")
+        row = connection.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    assert row is not None
+    return _row(row) or {}
+
+
+def archive_session(session_id: str, *, db: CoordinatorDB | None = None) -> dict[str, Any]:
+    """Snapshot an ARCHIVE session and close it only after the snapshot exists."""
+
+    session_id = _id(session_id)
+    coordinator = _db(db)
+    current = get_session(session_id, db=coordinator)
+    if current is None:
+        raise CoordinatorError(f"session not found: {session_id}")
+    if current["phase"] != "ARCHIVE" or current["status"] != "RUNNING":
+        raise IllegalTransitionError("archive requires an active ARCHIVE session")
+    if current.get("checkpoint", {}).get("archive_attestation") is None:
+        raise CoordinatorError("archive attestation is missing")
+    if coordinator.read("SELECT 1 FROM admission_slots WHERE session_id = ? LIMIT 1", (session_id,)) or coordinator.read("SELECT 1 FROM resource_leases WHERE session_id = ? LIMIT 1", (session_id,)):
+        raise CoordinatorError("archive requires cleared session leases")
+    archive_root = coordinator.path.parents[3] if len(coordinator.path.parents) > 3 and coordinator.path.parents[2].name == ".ops" else coordinator.path.parent.parent
+    archive_name = current["change_name"].replace("/", "__")
+    evidence_path = archive_root / ".ops" / "archive" / f"{datetime.now(timezone.utc):%Y-%m-%d}-{archive_name}" / "coordinator" / f"{session_id}.json"
+    snapshot = session_status(session_id, db=coordinator)
+    snapshot["session"].pop("fencing_token", None)
+    snapshot["session"].pop("lease_owner", None)
+    atomic_write_json(evidence_path, snapshot)
+    checkpoint = dict(current["checkpoint"])
+    checkpoint["archive_evidence"] = str(evidence_path.relative_to(archive_root))
+    with coordinator.transaction() as connection:
+        updated = connection.execute(
+            "UPDATE sessions SET status = 'COMPLETED', checkpoint = ?, version = version + 1, updated_at = datetime('now') WHERE id = ? AND phase = 'ARCHIVE' AND status = 'RUNNING' AND version = ?",
+            (_json(checkpoint, "checkpoint"), session_id, current["version"]),
+        )
+        if updated.rowcount != 1:
+            raise StaleVersionError("archive session changed during evidence snapshot")
         row = connection.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
     assert row is not None
     return _row(row) or {}

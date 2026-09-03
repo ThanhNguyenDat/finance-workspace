@@ -12,6 +12,7 @@ from ..coordinator import (
     CoordinatorDB,
     CoordinatorError,
     admit_session,
+    archive_session,
     answer_question,
     cancel_session,
     create_session,
@@ -28,7 +29,7 @@ PREFIX = "coordinator"
 
 def usage() -> NoReturn:
     print(
-        "Usage: coordinator <submit CHANGE [CONTEXT_JSON]|resume SESSION|status SESSION|recover SESSION|cancel SESSION VERSION FENCING_TOKEN|attach SESSION [OFFSET]|monitor SESSION [OFFSET]|follow SESSION [OFFSET] [SECONDS]|findings SESSION VERSION FENCING_TOKEN FINDINGS_JSON|answer SESSION QUESTION_ID FENCING_TOKEN RESPONSE>",
+        "Usage: coordinator <submit CHANGE [CONTEXT_JSON]|resume SESSION|status SESSION|recover SESSION|cancel SESSION VERSION FENCING_TOKEN|attach SESSION [OFFSET]|monitor SESSION [OFFSET]|follow SESSION [OFFSET] [SECONDS]|findings SESSION VERSION FENCING_TOKEN FINDINGS_JSON|archive SESSION|answer SESSION QUESTION_ID FENCING_TOKEN RESPONSE>",
         file=sys.stderr,
     )
     raise SystemExit(2)
@@ -91,6 +92,9 @@ def main() -> int:
             return 0
         if command == "findings" and len(args) == 5:
             print(json_text(record_verification_findings(args[1], _findings(args[4]), expected_version=int(args[2]), fencing_token=args[3], db=db)))
+            return 0
+        if command == "archive" and len(args) == 2:
+            print(json_text(archive_session(args[1], db=db)))
             return 0
         if command == "monitor" and 2 <= len(args) <= 3:
             status = session_status(args[1], db=db)

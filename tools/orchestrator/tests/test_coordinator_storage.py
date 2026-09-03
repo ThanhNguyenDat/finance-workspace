@@ -18,6 +18,7 @@ from orchestrator.coordinator import (
     acquire_account_scope,
     admit_session,
     allocate_worktree,
+    archive_session,
     assert_resource_lease,
     create_quant_session,
     create_session,
@@ -173,6 +174,9 @@ def test_lifecycle_transitions_are_guarded_by_version(tmp_path: Path):
     assert archived["phase"] == "ARCHIVE"
     assert archived["checkpoint"]["verification_findings"] == []
     assert archived["checkpoint"]["archive_attestation"]["objective_gates_passed"] is True
+    completed = archive_session(session["id"], db=db)
+    assert completed["status"] == "COMPLETED"
+    assert (tmp_path / completed["checkpoint"]["archive_evidence"]).is_file()
 
 
 def test_verification_findings_are_session_scoped_and_atomic(tmp_path: Path):
