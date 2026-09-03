@@ -143,6 +143,22 @@ to reverse there.
   scope of a single bounded backtest round per this iteration's explicit
   instruction.
 
+## Update — round428 (2026-09-04)
+
+Round428 ran the `bybit XAUT` half of the three-route picture this round
+left open. Result there is materially different from `binance BTC`: both
+arms are gross-positive, and the corner clears `sharpe_ratio`,
+`sortino_ratio` and `cost_to_gross_pnl_ratio` outright (Sharpe 2.046,
+Sortino 3.826, cost÷gross 0.056) — the strongest joint-objective reading
+this arc has measured for this corner anywhere. It still fails
+`minimum_trades_per_week` by 4.3x and three day-distribution checks, so the
+overall REJECTED verdict for the corner as a candidate is unchanged, and
+this round's `binance BTC` failure mode (negative gross pre-cost) does not
+generalise to the corner's failure mode on every route — see round428 for
+the full comparison. `exness XAU` remains gate-ineligible at every window
+measured (round335-336), so the three-route picture is complete only across
+the two gate-eligible routes.
+
 ## Cleanup confirmation
 
 Both containers were started `-d --rm` and exited on their own after

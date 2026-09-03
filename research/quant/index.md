@@ -6226,6 +6226,48 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 428 — REJECTED: cùng "góc có lãi" Round 365/366 (band 0,02/0,04 + hold 288), lần này trên `bybit XAUT` — đạt Sharpe/Sortino/cost-ratio holdout thật MẠNH NHẤT từ trước tới giờ cho corner này, nhưng vẫn hụt Target 3 tới 4,3 lần
+
+Hoàn tất đúng việc Round427 để mở: "`bybit XAUT` gate-eligible và chưa test
+qua unified path". Theo đúng thứ tự ưu tiên XAU trước BTC của prompt vòng
+này, chọn `bybit XAUT` (route vàng gate-eligible duy nhất còn lại — `exness
+XAU` không gate-eligible ở bất kỳ cửa sổ nào, r335-336) thay vì lặp lại
+BTC. Hai container Docker (`--cpus=1 --memory=2g --memory-swap=3g` mỗi
+container — tổng 2 CPU/4GB RAM/2GB swap đúng giới hạn vòng này), một SSH
+tunnel read-only, cùng route/cửa sổ `bybit spot XAUT/USDT 5m --days 500`:
+corner (hold=288, band 0,02/0,04) và control cùng cửa sổ (hold=36, band
+0,01/0,02). Cả hai xác nhận `candle_count=143998`,
+`holdout_candle_count=28799` (holdout 2026-05-26→2026-09-03, 101 ngày quan
+sát) — khớp chính xác với holdout Round427 đo trên `binance BTC`, cùng cửa
+sổ lịch.
+
+**Kết quả — khác hẳn `binance BTC`:** cả hai nhánh đều **dương thật** trên
+route này (không như BTC gross âm cả hai nhánh). Corner: net **+0,62458**,
+gross **+0,66144**, Sharpe **2,046** (ngưỡng 1,0), Sortino **3,826** (ngưỡng
+1,0), cost÷gross **0,056** (ngưỡng ≤0,5) — **lần đầu tiên corner này vượt cả
+Sharpe lẫn Sortino lẫn cost-ratio trên một holdout thật ở bất kỳ route nào**.
+Vẫn trượt gate 4/12 check: `minimum_trades_per_week` (1,61 so với ngưỡng
+7,0 — hụt 4,3 lần), `positive_day_ratio` (0,455 so với 0,55),
+`median_daily_pnl` (đúng bằng 0,0 — phần lớn 101 ngày không có lệnh đóng nào
+trong tổng 23 lệnh), `negative_day_streak` (13 ngày so với ngưỡng 5). Control
+deployed cùng cửa sổ cũng dương (+0,13795) nhưng yếu hơn corner mọi chiều
+(Sharpe 0,485, Sortino 0,764, cost÷gross 0,727 — trượt cả 3) và **cũng trượt
+tần suất** ở route này (4,13/tuần, khác `binance BTC`'s deployed vẫn đạt
+13,79/tuần ở Round427) — 8/12 check fail.
+
+**REJECTED**: corner không promote được — hụt tần suất 4,3 lần và 3 check
+phân phối ngày, đúng mẫu hình Round366 "mọi cấu hình có lãi đều trượt Target
+3" (nay là ô thứ 8 khớp mẫu này). Cũng chưa đủ điều kiện promotion theo
+chuẩn chính arc này đặt ra (Round391-392: một holdout không đủ đặc trưng cho
+một route — cần ≥3 holdout độc lập). Đóng góp mới của vòng: `bybit XAUT`
+gia nhập `exness XAU` (Round343) là route thứ hai có bằng chứng gross dương
+tương đối ổn định qua gate; bức tranh 3-route Round427 đặt ra nay hoàn tất
+cho 2 route gate-eligible (`binance BTC` thua trước phí, `bybit XAUT` thua
+tần suất); `exness XAU` (nơi corner xuất phát) vẫn không thể có verdict gate
+ở bất kỳ cửa sổ nào. Không đổi production, không implement gì. Hai container
+đã dọn sạch (`docker ps -a` rỗng), tunnel đã đóng (`ss -tlnp` xác nhận). File:
+`round428-REJECTED-the-round365-366-corner-clears-sharpe-sortino-and-cost-ratio-on-bybit-xauts-real-holdout-but-still-misses-target-3-by-4.3x.md`.
+
 ## Round 427 — REJECTED: "góc có lãi" Round 365/366 (band 0,02/0,04 + hold 288) nhận điểm holdout thật đầu tiên, sau khi xung đột `--daily-profit-gate`/`--portfolio-minimum-hold-decisions` đã được gỡ — và nó **thua ngay trước cả chi phí**
 
 Không lặp lại status-check 15 round liên tiếp (r411-r426) về ba hướng bị
