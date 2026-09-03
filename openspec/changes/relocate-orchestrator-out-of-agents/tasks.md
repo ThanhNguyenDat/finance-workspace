@@ -115,7 +115,7 @@ after Task 1.
   `./.agents/scripts/run-phase-agent-command.sh quant-research`, and verify it
   completes with a `Quant iteration <n> completed with <provider>` line (or
   the same lease-contention message when a prior run still holds the lease).
-- [ ] 5.5 Commit Tasks 1-3's files as one reviewable commit (Task 4's OpenSpec
+- [x] 5.5 Commit Tasks 1-3's files as one reviewable commit (Task 4's OpenSpec
   reconciliation may ride along), push to `origin/main` per the solo-maintainer
   direct-to-main rule, and verify the `Agent contracts` workflow run **for that
   exact SHA** succeeds — including the "Run bounded orchestration tests" step,

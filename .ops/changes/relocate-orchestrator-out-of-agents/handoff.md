@@ -124,3 +124,16 @@
   shell-router limitation discovered during verification.
 - The live provider retry remains required for release evidence; the prompt
   fix itself has only local regression evidence so far.
+
+## DELIVERY evidence (2026-09-03)
+
+- The relocation implementation remains in the reviewable commit
+  `45d107e065735c12fb003293e4264bae8f4d38d4` and is an ancestor of the
+  delivered `main` tip.
+- Final delivery SHA:
+  `3cf41b7e1f09e6dfb646f5ad8d1202fbdfd0d3c8`.
+- GitHub Actions exact-SHA evidence: [Agent contracts run 33763792010](https://github.com/ThanhNguyenDat/finance-workspace/actions/runs/33763792010)
+  completed successfully in 5m28s, including bounded orchestration tests,
+  bounded Python orchestration tests, and managed-link verification.
+- Local and remote `main` resolve to the same SHA. No deployment surface is
+  involved; this remains a workspace-only orchestration change.
