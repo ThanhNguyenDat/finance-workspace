@@ -2,8 +2,8 @@
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-STATE="$ROOT_DIR/.agents/scripts/phase-agent-state.sh"
-CONFIG="$ROOT_DIR/.agents/scripts/configure-phase-agents.sh"
+STATE="$ROOT_DIR/.agents/scripts/phase-agent-state.py"
+CONFIG="$ROOT_DIR/.agents/scripts/configure-phase-agents.py"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 export PHASE_AGENT_STATE_DIR="$tmp/state"

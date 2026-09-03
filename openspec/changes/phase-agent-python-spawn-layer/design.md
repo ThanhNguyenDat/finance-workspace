@@ -1,5 +1,10 @@
 ## Context
 
+Implementation status: the canonical operational entrypoints are now Python
+files under `.agents/scripts/`; the former runtime `.sh` paths were removed.
+Only `.agents/scripts/tests/*.sh` and the native Claude stop hook remain shell
+because they are test/native-hook surfaces rather than orchestration runtime.
+
 See `proposal.md - Why`. Relevant current-state facts:
 
 - `phase-agent-python-orchestrator` already ported the state/lock layer and
@@ -76,11 +81,12 @@ See `proposal.md - Why`. Relevant current-state facts:
 
 **Non-Goals:**
 - No persistent daemon (same non-goal as `phase-agent-python-orchestrator`
-  — each top-level invocation, e.g. one `run-phase-agent-command.sh
+  — each top-level invocation, e.g. one `run-phase-agent-command.py
   quant-research` call, is still a fresh, short-lived Python process; the
   SDK's own internal subprocess is spawned and torn down within that
   invocation, not kept warm across invocations).
-- No change to `sync-agent-links.sh` (proposal.md).
+- The agent-link synchronizer is also Python (`sync-agent-links.py`) so the
+  operational `.agents/scripts/` surface has one runtime language.
 - No change to prompt wording, model/effort validation rules, or the
   candidate-resolution/failover logic itself — that behavior is owned by
   `phase-agent-python-orchestrator`/`phase-agent-multi-account-routing` and
@@ -92,21 +98,19 @@ See `proposal.md - Why`. Relevant current-state facts:
 
 ## Decisions
 
-**1. One Python module per existing script, called directly (no
-subprocess) when the caller is itself already-ported Python; the
-`.agents/scripts/*.sh` paths become thin `uv run` shims exactly like the
-three already-ported scripts (`phase-agent-python-orchestrator` Decision
-2), for any caller that is not yet ported (a human at a terminal, or a
-not-yet-ported script during the migration window).** [unchanged from the
-original design]
+**1. One Python module per operational entrypoint, called directly (no
+subprocess) when the caller is itself already-ported Python. The canonical
+operator paths are `.agents/scripts/*.py`; there are no Bash runtime shims.
+Shell tests remain under `.agents/scripts/tests/` because they are contract
+tests, not production orchestration logic.** [updated at implementation]
 Concretely: `run_phase_agent.py`'s candidate loop imports
 `ops_runtime.lock_account`/`phase_agent_state.resolve` and calls them as
 Python functions, and imports `run_claude_phase`/`run_codex_phase` and
 calls their `main()`-equivalent directly, rather than spawning
 `run-claude-phase.sh` as a child process. Each of those modules keeps its
 own `if __name__ == "__main__":` entry point and its own
-`.agents/scripts/run-claude-phase.sh` shim, so
-`./.agents/scripts/run-claude-phase.sh <change> <repo> PLAN` still works
+`.agents/scripts/run-claude-phase.py` entrypoint, so
+`./.agents/scripts/run-claude-phase.py <change> <repo> PLAN` still works
 exactly as it does today, standalone.
 *Alternative considered*: merge everything into one CLI with subcommands
 — rejected for the same reason `phase-agent-python-orchestrator` rejected

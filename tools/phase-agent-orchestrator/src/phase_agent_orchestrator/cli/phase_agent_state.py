@@ -1,4 +1,4 @@
-"""Argument parsing and dispatch for phase-agent-state.sh."""
+"""Argument parsing and dispatch for phase-agent-state.py."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ PREFIX = candidates.PREFIX
 
 def usage() -> None:
     print(
-        "Usage: phase-agent-state.sh <init|state|account-dir PROVIDER ACCOUNT|validate PROVIDER MODEL EFFORT [ACCOUNT]|resolve PHASE|set PHASE PROVIDER MODEL EFFORT [ACCOUNT]|candidate-set PHASE INDEX PROVIDER MODEL EFFORT [ACCOUNT]|reset PHASE|reset-all|pin PHASE PROVIDER [ACCOUNT]|auto PHASE|provider-on PROVIDER [ACCOUNT]|provider-off PROVIDER [REASON] [ACCOUNT]|provider-manual PROVIDER|provider-auto PROVIDER|provider-result PROVIDER RESULT [COOLDOWN_SECONDS] [ACCOUNT]|probe-due PROVIDER [ACCOUNT]>",
+        "Usage: phase-agent-state.py <init|state|account-dir PROVIDER ACCOUNT|validate PROVIDER MODEL EFFORT [ACCOUNT]|resolve PHASE|set PHASE PROVIDER MODEL EFFORT [ACCOUNT]|candidate-set PHASE INDEX PROVIDER MODEL EFFORT [ACCOUNT]|reset PHASE|reset-all|pin PHASE PROVIDER [ACCOUNT]|auto PHASE|provider-on PROVIDER [ACCOUNT]|provider-off PROVIDER [REASON] [ACCOUNT]|provider-manual PROVIDER|provider-auto PROVIDER|provider-result PROVIDER RESULT [COOLDOWN_SECONDS] [ACCOUNT]|probe-due PROVIDER [ACCOUNT]>",
         file=sys.stderr,
     )
     raise SystemExit(2)

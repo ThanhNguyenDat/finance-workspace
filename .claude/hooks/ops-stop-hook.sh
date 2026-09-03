@@ -16,7 +16,7 @@ set -Eeuo pipefail
 # actively supervising each transaction via Monitor/wait-for-phase-attempt.sh
 # per .claude/commands/ops/run.md, not this hook.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-RUNTIME="$SCRIPT_DIR/../../.agents/scripts/ops-runtime.sh"
+RUNTIME="$SCRIPT_DIR/../../.agents/scripts/ops-runtime.py"
 payload="$(cat || true)"
 cwd="$(jq -r '.cwd // empty' <<<"$payload" 2>/dev/null || true)"
 session_id="$(jq -r '.session_id // empty' <<<"$payload" 2>/dev/null || true)"

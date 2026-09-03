@@ -9,7 +9,7 @@ from .classify_result import classify_legacy_logs, classify_sdk_result
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="classify-codex-result.sh")
+    parser = argparse.ArgumentParser(prog="classify-codex-result.py")
     parser.add_argument("status", type=int)
     parser.add_argument("stdout_log", type=Path)
     parser.add_argument("stderr_log", type=Path)

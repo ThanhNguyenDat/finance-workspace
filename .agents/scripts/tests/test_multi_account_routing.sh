@@ -2,17 +2,15 @@
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-RUNNER="$ROOT_DIR/.agents/scripts/run-claude-phase.sh"
-OPS="$ROOT_DIR/.agents/scripts/ops-runtime.sh"
-STATE="$ROOT_DIR/.agents/scripts/phase-agent-state.sh"
+RUNNER="$ROOT_DIR/.agents/scripts/run-claude-phase.py"
+OPS="$ROOT_DIR/.agents/scripts/ops-runtime.py"
+STATE="$ROOT_DIR/.agents/scripts/phase-agent-state.py"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 workspace="$tmp/workspace"; repo="$tmp/repo"; bin="$tmp/bin"; trace="$tmp/trace"
 mkdir -p "$workspace" "$repo" "$bin" "$trace" "$tmp/claude-work" "$workspace/.agents/scripts"
-for helper in ops-runtime.sh phase-agent-state.sh quant-research-state.sh run-phase-agent-command.sh classify-claude-result.sh classify-codex-result.sh; do
-  cp "$ROOT_DIR/.agents/scripts/$helper" "$workspace/.agents/scripts/$helper"
-done
-chmod +x "$workspace/.agents/scripts/"*.sh
+cp "$ROOT_DIR/.agents/scripts/"*.py "$workspace/.agents/scripts/"
+chmod +x "$workspace/.agents/scripts/"*.py
 
 git -C "$workspace" init -q
 git -C "$workspace" config user.email test@example.invalid
@@ -80,7 +78,7 @@ printf '%s\n' 'CANONICAL QUANT PROMPT' >"$workspace/.claude/commands/quant-resea
 "$STATE" candidate-set quant_research 1 claude sonnet high personal >/dev/null
 export QUANT_RESEARCH_STATE_DIR="$workspace/.ops/runtime/quant-research"
 export FAKE_SDK_MODE=quota-work FAKE_CLAUDE_QUOTA_DIR="$tmp/claude-work"
-(cd "$workspace" && ./.agents/scripts/run-phase-agent-command.sh quant-research) >/dev/null
+(cd "$workspace" && ./.agents/scripts/run-phase-agent-command.py quant-research) >/dev/null
 
 quant_state="$QUANT_RESEARCH_STATE_DIR/state.json"
 jq -e '.iteration == 1' "$quant_state" >/dev/null || fail 'quant iteration was not incremented exactly once'

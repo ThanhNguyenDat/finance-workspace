@@ -18,7 +18,7 @@ PREFIX = "detect-codex-availability"
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="detect-codex-availability.sh")
+    parser = argparse.ArgumentParser(prog="detect-codex-availability.py")
     parser.parse_args(argv)
     if shutil.which("codex") is None:
         print("inconclusive:missing-codex")

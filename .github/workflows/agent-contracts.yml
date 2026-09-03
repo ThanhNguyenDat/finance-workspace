@@ -26,19 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n .agents/scripts/ops-runtime.sh
-          bash -n .agents/scripts/quant-research-state.sh
-          bash -n .agents/scripts/detect-codex-availability.sh
-          bash -n .agents/scripts/classify-codex-result.sh
-          bash -n .agents/scripts/run-codex-phase.sh
-          bash -n .agents/scripts/phase-agent-state.sh
-          bash -n .agents/scripts/configure-phase-agents.sh
-          bash -n .agents/scripts/classify-claude-result.sh
-          bash -n .agents/scripts/detect-provider-availability.sh
-          bash -n .agents/scripts/run-claude-phase.sh
-          bash -n .agents/scripts/run-phase-agent.sh
-          bash -n .agents/scripts/run-phase-agent-command.sh
-          bash -n .agents/scripts/run-claude-command.sh
+          python -m compileall -q .agents/scripts tools/phase-agent-orchestrator/src
           bash -n .agents/scripts/tests/hermetic-env.sh
           bash -n .claude/hooks/ops-stop-hook.sh
           bash -n .agents/scripts/tests/test_ops_orchestration.sh
@@ -93,10 +81,17 @@ jobs:
           timeout --signal=TERM --kill-after=10s 5m \
             ./.agents/scripts/tests/test_hermetic_agent_contracts.sh
 
+      - name: Run bounded Python orchestration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1m \
+            uv run --project tools/phase-agent-orchestrator pytest
+
       - name: Verify managed links and diff
         shell: bash
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=10s 1m \
-            ./.agents/scripts/sync-agent-links.sh --check
+            ./.agents/scripts/sync-agent-links.py --check
           git diff --check

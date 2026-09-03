@@ -18,3 +18,4 @@ tools/phase-agent-orchestrator/accounts.yaml
 # Autonomous /ops runtime is transient; handoff remains tracked.
 .ops/**/runtime/
 __pycache__/
+.venv/

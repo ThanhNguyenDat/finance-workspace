@@ -4,7 +4,7 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/../../.." && pwd -P)"
-STATE_HELPER="$ROOT_DIR/.agents/scripts/quant-research-state.sh"
+STATE_HELPER="$ROOT_DIR/.agents/scripts/quant-research-state.py"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 
@@ -25,7 +25,7 @@ run_state() {
 }
 
 test -x "$STATE_HELPER" || fail 'state helper is not executable'
-bash -n "$STATE_HELPER" || fail 'state helper syntax is invalid'
+python3 -m py_compile "$STATE_HELPER" || fail 'state helper syntax is invalid'
 
 initial="$(run_state init)"
 printf '%s\n' "$initial" | jq -e '

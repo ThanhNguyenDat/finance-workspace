@@ -2,8 +2,8 @@
 set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-DETECT="$ROOT_DIR/.agents/scripts/detect-provider-availability.sh"
-STATE="$ROOT_DIR/.agents/scripts/phase-agent-state.sh"
+DETECT="$ROOT_DIR/.agents/scripts/detect-provider-availability.py"
+STATE="$ROOT_DIR/.agents/scripts/phase-agent-state.py"
 tmp="$(mktemp -d)"; trap 'rm -rf -- "$tmp"' EXIT
 mkdir -p "$tmp/bin"; export PATH="$tmp/bin:$PATH" CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1 PHASE_AGENT_STATE_DIR="$tmp/state" PHASE_AGENT_LEGACY_QUANT_STATE="$tmp/no-quant" PHASE_AGENT_LEGACY_CLAUDE_STATE="$tmp/no-claude"
 fail() { printf 'test_provider_availability: %s\n' "$1" >&2; exit 1; }

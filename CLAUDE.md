@@ -106,7 +106,7 @@ Run the shared-link utility from the workspace root when starting or finishing
 work:
 
 ```bash
-./.agents/scripts/sync-agent-links.sh
+./.agents/scripts/sync-agent-links.py
 ```
 
 It synchronizes only non-OpenSpec entries and preserves CLI-native files.
@@ -124,7 +124,7 @@ Codex skill format applies.
 
 Before starting **every task**, Claude MUST:
 
-1. run `./.agents/scripts/sync-agent-links.sh`;
+1. run `./.agents/scripts/sync-agent-links.py`;
 2. inspect `.agents/rules/` and identify the rules applicable to the task;
 3. read and follow every applicable rule;
 4. inspect `.agents/skills/` and identify the skills relevant to the task;
@@ -218,8 +218,8 @@ At the end of every task:
 4. preserve the skill when no improvement is warranted;
 5. create a new skill only when reusable workflow knowledge does not fit an existing skill;
 6. keep skills generic and reusable—do not encode one-off task details;
-7. run `./.agents/scripts/sync-agent-links.sh` after rule/skill updates;
-8. run `./.agents/scripts/sync-agent-links.sh --check` and verify synchronization.
+7. run `./.agents/scripts/sync-agent-links.py` after rule/skill updates;
+8. run `./.agents/scripts/sync-agent-links.py --check` and verify synchronization.
 
 Upsert can include:
 

@@ -5,7 +5,7 @@ description: "Bật lại Codex cho các vòng quant research kế tiếp"
 Chạy lệnh state helper sau đúng một lần:
 
 ```bash
-./.agents/scripts/phase-agent-state.sh provider-on codex
+./.agents/scripts/phase-agent-state.py provider-on codex
 ```
 
 Không bắt đầu research. Khi lệnh thành công, chỉ xác nhận bằng tiếng Việt rằng
