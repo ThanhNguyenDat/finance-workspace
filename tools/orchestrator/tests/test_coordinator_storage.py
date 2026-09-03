@@ -221,31 +221,23 @@ def test_lifecycle_transitions_are_guarded_by_version(tmp_path: Path):
         )
     assert get_session(session["id"], db=db)["phase"] == "PLAN"
 
-    brainstorm = transition_session(
+    implementation = transition_session(
         session["id"],
-        "BRAINSTORM",
+        "IMPLEMENT",
         expected_version=2,
         fencing_token=admitted["fencing_token"],
         db=db,
     )
-    assert brainstorm["version"] == 3
+    assert implementation["version"] == 3
     with pytest.raises(StaleVersionError):
         transition_session(
             session["id"],
-            "IMPLEMENT",
+            "VERIFY",
             expected_version=2,
             fencing_token=admitted["fencing_token"],
             db=db,
         )
-    assert get_session(session["id"], db=db)["phase"] == "BRAINSTORM"
-
-    implementation = transition_session(
-        session["id"],
-        "IMPLEMENT",
-        expected_version=3,
-        fencing_token=admitted["fencing_token"],
-        db=db,
-    )
+    assert get_session(session["id"], db=db)["phase"] == "IMPLEMENT"
     transition_session(
         session["id"],
         "VERIFY",
@@ -403,17 +395,10 @@ def test_verification_findings_are_session_scoped_and_atomic(tmp_path: Path):
     db = make_db(tmp_path)
     session = create_session("change-a", {"request": "verify"}, db=db)
     admitted = admit_session(session["id"], db=db)
-    brainstorm = transition_session(
-        session["id"],
-        "BRAINSTORM",
-        expected_version=2,
-        fencing_token=admitted["fencing_token"],
-        db=db,
-    )
     implementation = transition_session(
         session["id"],
         "IMPLEMENT",
-        expected_version=brainstorm["version"],
+        expected_version=2,
         fencing_token=admitted["fencing_token"],
         db=db,
     )
@@ -580,16 +565,16 @@ def test_admission_persists_backpressure_and_uses_session_fencing(tmp_path: Path
 
     transitioned = transition_session(
         sessions[0]["id"],
-        "BRAINSTORM",
+        "IMPLEMENT",
         expected_version=2,
         fencing_token=first["fencing_token"],
         db=db,
     )
-    assert transitioned["phase"] == "BRAINSTORM"
+    assert transitioned["phase"] == "IMPLEMENT"
     with pytest.raises(StaleVersionError):
         transition_session(
             sessions[0]["id"],
-            "IMPLEMENT",
+            "VERIFY",
             expected_version=transitioned["version"],
             fencing_token="stale-token",
             db=db,
@@ -853,14 +838,14 @@ def test_safe_interrupt_pauses_and_reopens_without_repeating_attempt(tmp_path: P
     )
     transitioned = transition_session(
         session["id"],
-        "BRAINSTORM",
+        "IMPLEMENT",
         expected_version=admitted["session"]["version"],
         fencing_token=admitted["fencing_token"],
         db=db,
     )
     attempt = record_attempt(
         session["id"],
-        phase="BRAINSTORM",
+        phase="IMPLEMENT",
         round=0,
         attempt_no=1,
         provider="codex",
@@ -891,7 +876,7 @@ def test_safe_interrupt_pauses_and_reopens_without_repeating_attempt(tmp_path: P
     assert recovery_report(session["id"], db=db)["reason"] == "safe_boundary_ready"
     reopened = recover_session(session["id"], db=db)
     assert reopened["status"] == "QUEUED"
-    assert reopened["phase"] == "BRAINSTORM"
+    assert reopened["phase"] == "IMPLEMENT"
     assert (
         db.read("SELECT status FROM attempts WHERE id = ?", (completed_plan["id"],))[0][
             "status"

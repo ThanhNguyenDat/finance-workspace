@@ -19,7 +19,6 @@ SAFE_CHANGE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SAFE_ARTIFACT = re.compile(r"^[A-Za-z0-9._/-]+$")
 PHASES = {
     "PLAN",
-    "BRAINSTORM",
     "IMPLEMENT",
     "VERIFY",
     "FINAL_VERIFY",
@@ -29,8 +28,6 @@ PHASES = {
     "ARCHIVE",
 }
 TRANSITIONS = {
-    "PLAN:BRAINSTORM",
-    "BRAINSTORM:IMPLEMENT",
     "PLAN:IMPLEMENT",
     "IMPLEMENT:VERIFY",
     "VERIFY:FINAL_VERIFY",
@@ -372,7 +369,7 @@ def record_attempt(change: str, session_id: str, attempt_file: str) -> None:
             is_number(record.get("attempt"))
             and record["attempt"] >= 1
             and record.get("phase")
-            in {"PLAN", "BRAINSTORM", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
+            in {"PLAN", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
             and is_number(record.get("round"))
             and record.get("provider") in {"codex", "claude"}
             and isinstance(record.get("model"), str)

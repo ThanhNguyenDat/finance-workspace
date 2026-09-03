@@ -15,7 +15,6 @@ from .db import CoordinatorDB, repository_root
 
 PHASES = {
     "PLAN",
-    "BRAINSTORM",
     "IMPLEMENT",
     "VERIFY",
     "FIX",
@@ -23,8 +22,7 @@ PHASES = {
     "ARCHIVE",
 }
 TRANSITIONS = {
-    ("PLAN", "BRAINSTORM"),
-    ("BRAINSTORM", "IMPLEMENT"),
+    ("PLAN", "IMPLEMENT"),
     ("IMPLEMENT", "VERIFY"),
     ("VERIFY", "FIX"),
     ("FIX", "VERIFY"),

@@ -18,10 +18,9 @@ from ..core.io import CLIError, atomic_write_json, die, json_text, utc_after, ut
 from ..locks.directory_lock import PidDirectoryLock
 
 PREFIX = "phase-agent-state"
-PHASES = (
+ROLES = (
     "quant_research",
     "plan",
-    "brainstorm",
     "implement",
     "verify",
     "fix",
@@ -52,7 +51,7 @@ def lock() -> PidDirectoryLock:
 
 
 def valid_phase(value: str) -> bool:
-    return value in PHASES
+    return value in ROLES
 
 
 def normalize_phase(value: str) -> str:
@@ -115,14 +114,6 @@ def default_state() -> dict[str, Any]:
                 "pinned_provider": None,
                 "candidates": [
                     candidate("claude", "opus", "medium"),
-                    candidate("codex", "gpt-5.6-terra", "high"),
-                ],
-            },
-            "brainstorm": {
-                "mode": "auto",
-                "pinned_provider": None,
-                "candidates": [
-                    candidate("claude", "sonnet", "high"),
                     candidate("codex", "gpt-5.6-terra", "high"),
                 ],
             },
@@ -209,12 +200,12 @@ def state_valid(value: Any) -> bool:
     phases, providers = value.get("phases"), value.get("providers")
     if (
         not isinstance(phases, dict)
-        or set(phases) != set(PHASES)
+        or set(phases) != set(ROLES)
         or not isinstance(providers, dict)
         or set(providers) != set(PROVIDERS)
     ):
         return False
-    for phase in PHASES:
+    for phase in ROLES:
         item = phases[phase]
         if not isinstance(item, dict) or item.get("mode") not in {"auto", "manual"}:
             return False
@@ -423,7 +414,7 @@ def rotate_claude_accounts(state: dict[str, Any]) -> dict[str, Any]:
     if not {"personal", "personal-02"}.issubset(accounts):
         return state
     changed = False
-    for phase in PHASES:
+    for phase in ROLES:
         options = state["phases"][phase]["candidates"]
         claude_index = next(
             (

@@ -25,7 +25,7 @@ from ..providers.availability import probe
 from ..state import candidates, ops_transaction
 
 PREFIX = "run-phase-agent"
-PHASES = {"PLAN", "BRAINSTORM", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
+PHASES = {"PLAN", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
 RETRYABLE = {
     "global-quota-exhausted",
     "auth-error",
@@ -149,22 +149,6 @@ def _objective_gate(path: Path) -> bool:
         return False
 
 
-def _brainstorm_checkpoint(path: Path) -> str | None:
-    try:
-        lines = [
-            line.strip()
-            for line in path.read_text(encoding="utf-8").splitlines()
-            if line.strip().startswith("BRAINSTORM_CHECKPOINT:")
-        ]
-    except OSError:
-        return None
-    if lines == ["BRAINSTORM_CHECKPOINT: APPROVED"]:
-        return "APPROVED"
-    if lines == ["BRAINSTORM_CHECKPOINT: EMPTY"]:
-        return "EMPTY"
-    return None
-
-
 def _run_attempt(
     change: str,
     repository: str,
@@ -269,25 +253,6 @@ def _run_attempt(
         )
         base.with_suffix(".exit").write_text("1\n", encoding="utf-8")
         result_file.write_text("implementation-error\n", encoding="utf-8")
-    if phase == "BRAINSTORM" and status == 0:
-        checkpoint_status = _brainstorm_checkpoint(last_file)
-        if checkpoint_status is None:
-            status, result = 1, "implementation-error"
-            base.with_suffix(".stderr.log").open("a", encoding="utf-8").write(
-                "BRAINSTORM checkpoint was missing or ambiguous\n"
-            )
-            base.with_suffix(".exit").write_text("1\n", encoding="utf-8")
-            result_file.write_text("implementation-error\n", encoding="utf-8")
-        else:
-            atomic_write_json(
-                runtime_dir / f"brainstorm-checkpoint-round-{round_value}.json",
-                {
-                    "phase": "BRAINSTORM",
-                    "status": checkpoint_status,
-                    "attempt": attempt,
-                    "evidence_base": str(base),
-                },
-            )
     if coordinator_attempt is not None:
         attempt_status = (
             "COMPLETED"

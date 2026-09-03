@@ -12,8 +12,6 @@ from orchestrator.state import ops_transaction
 
 def test_transition_matrix_preserves_all_allowed_and_rejected_edges() -> None:
     accepted = {
-        "PLAN:BRAINSTORM",
-        "BRAINSTORM:IMPLEMENT",
         "PLAN:IMPLEMENT",
         "IMPLEMENT:VERIFY",
         "VERIFY:FINAL_VERIFY",

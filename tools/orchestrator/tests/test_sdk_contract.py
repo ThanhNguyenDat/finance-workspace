@@ -24,7 +24,6 @@ from orchestrator.locks import change_lock
 from orchestrator.providers.results import classify_sdk_result
 from orchestrator.runners import lifecycle as run_phase_agent
 from orchestrator.runners import quant as run_phase_agent_command
-from orchestrator.runners.lifecycle import _brainstorm_checkpoint
 from orchestrator.runners.phase_adapter import (
     _coordinator_event,
     _operator_permission,
@@ -63,26 +62,6 @@ def test_prompt_construction_is_stable() -> None:
         "Read AGENTS.md, applicable rules/skills, the active change, OPS state and repository-local instructions. Preserve locks, scope, tests, safety and secrets. Do not push or launch another model process.\n"
         "Plan/reconcile OpenSpec only; do not implement runtime code."
     )
-
-
-def test_brainstorm_prompt_requires_one_explicit_checkpoint() -> None:
-    prompt = build_prompt("change-name", Path("/tmp/repo"), "BRAINSTORM", False)
-    assert "BRAINSTORM_CHECKPOINT: APPROVED or BRAINSTORM_CHECKPOINT: EMPTY" in prompt
-
-
-def test_brainstorm_checkpoint_accepts_exactly_one_terminal_marker(
-    tmp_path: Path,
-) -> None:
-    checkpoint = tmp_path / "last-message.md"
-    checkpoint.write_text(
-        "direction\nBRAINSTORM_CHECKPOINT: APPROVED\n", encoding="utf-8"
-    )
-    assert _brainstorm_checkpoint(checkpoint) == "APPROVED"
-    checkpoint.write_text(
-        "BRAINSTORM_CHECKPOINT: APPROVED\nBRAINSTORM_CHECKPOINT: EMPTY\n",
-        encoding="utf-8",
-    )
-    assert _brainstorm_checkpoint(checkpoint) is None
 
 
 def test_fingerprint_matches_legacy_byte_stream(tmp_path: Path) -> None:
@@ -349,8 +328,6 @@ quant_research   auto     claude   sonnet                   -            high
 quant_research   auto     codex    gpt-5.6-luna             -            high
 plan             auto     claude   opus                     -            medium
 plan             auto     codex    gpt-5.6-terra            -            high
-brainstorm       auto     claude   sonnet                   -            high
-brainstorm       auto     codex    gpt-5.6-terra            -            high
 implement        auto     codex    gpt-5.6-luna             -            high
 implement        auto     claude   sonnet                   -            high
 verify           auto     claude   opus                     -            medium

@@ -46,7 +46,7 @@ from ..subprocess_supervision import (
 )
 
 PREFIXES = {"claude": "run-claude-phase", "codex": "run-codex-phase"}
-PHASES = {"PLAN", "BRAINSTORM", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
+PHASES = {"PLAN", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
 SAFE_CHANGE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9._:-]+$")
 
@@ -173,10 +173,8 @@ def build_prompt(
     )
     if phase == "PLAN":
         prompt += "\nPlan/reconcile OpenSpec only; do not implement runtime code."
-    elif phase == "BRAINSTORM":
-        prompt += "\nExplore implementation options and record one actionable direction; do not modify runtime code or commit. End with exactly one machine-readable line: BRAINSTORM_CHECKPOINT: APPROVED or BRAINSTORM_CHECKPOINT: EMPTY."
     elif phase == "IMPLEMENT":
-        prompt += "\nRead the current BRAINSTORM checkpoint before implementing the approved scope; add tests and run bounded local checks."
+        prompt += "\nImplement the approved scope; add tests and run bounded local checks."
     elif phase in {"VERIFY", "FINAL_VERIFY"}:
         prompt += "\nRead-only verification: do not edit, format, stage or commit. Report severity with exact evidence."
     elif phase == "FIX":
@@ -205,7 +203,7 @@ def _validate_common(
         valid = (
             provider == "claude"
             and (
-                phase in {"PLAN", "BRAINSTORM", "VERIFY", "FINAL_VERIFY"}
+                phase in {"PLAN", "VERIFY", "FINAL_VERIFY"}
                 or (phase in {"IMPLEMENT", "FIX"} and backend == "claude-fallback")
             )
         ) or (

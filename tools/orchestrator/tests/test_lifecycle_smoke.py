@@ -84,7 +84,7 @@ def test_read_only_lifecycle_smoke_records_fake_provider_evidence(
         db=db,
     )
 
-    for next_phase in ("BRAINSTORM", "IMPLEMENT"):
+    for next_phase in ("IMPLEMENT",):
         current = get_session(session_id, db=db)
         assert current is not None
         transition_session(
