@@ -789,6 +789,53 @@ def record_question(
     return _row(row) or {}
 
 
+def question_status(
+    session_id: str, question_id: str, *, db: CoordinatorDB | None = None
+) -> dict[str, Any] | None:
+    """Read one session-scoped operator question without granting write access."""
+
+    session_id = _id(session_id)
+    question_id = _id(question_id)
+    rows = _db(db).read(
+        "SELECT * FROM operator_questions WHERE session_id = ? AND question_id = ?",
+        (session_id, question_id),
+    )
+    return _row(rows[0]) if rows else None
+
+
+def expire_question(
+    session_id: str, question_id: str, *, db: CoordinatorDB | None = None
+) -> dict[str, Any] | None:
+    """Expire a pending operator question and emit its timeout event atomically."""
+
+    session_id = _id(session_id)
+    question_id = _id(question_id)
+    coordinator = _db(db)
+    with coordinator.transaction() as connection:
+        session = connection.execute(
+            "SELECT phase FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+        if session is None:
+            raise CoordinatorError(f"session not found: {session_id}")
+        updated = connection.execute(
+            "UPDATE operator_questions SET status = 'EXPIRED' WHERE session_id = ? AND question_id = ? AND status = 'PENDING'",
+            (session_id, question_id),
+        )
+        if updated.rowcount == 1:
+            _append_event_in_transaction(
+                connection,
+                session_id,
+                phase=session["phase"],
+                event_type="operator.timeout",
+                safe_payload={"question_id": question_id, "reason": "expired"},
+            )
+        row = connection.execute(
+            "SELECT * FROM operator_questions WHERE session_id = ? AND question_id = ?",
+            (session_id, question_id),
+        ).fetchone()
+    return _row(row)
+
+
 def record_verification_findings(
     session_id: str,
     findings: list[dict[str, Any]],

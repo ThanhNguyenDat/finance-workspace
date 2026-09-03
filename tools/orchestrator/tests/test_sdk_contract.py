@@ -27,6 +27,7 @@ from orchestrator.runners import quant as run_phase_agent_command
 from orchestrator.runners.lifecycle import _brainstorm_checkpoint
 from orchestrator.runners.phase_adapter import (
     _coordinator_event,
+    _operator_permission,
     _run_claude_sdk,
     build_prompt,
 )
@@ -453,3 +454,78 @@ def test_generic_resolver_calls_claude_sdk_adapter_in_process(
     tool_event = events_since(session, db=coordinator)[-1]
     assert tool_event["event_type"] == "provider.tool"
     assert tool_event["safe_payload"]["command"] == "<REDACTED>"
+
+
+def test_claude_tool_permission_forwards_only_fenced_operator_answer(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from orchestrator.coordinator import admit_session, answer_question, create_session
+
+    db = CoordinatorDB(root=tmp_path)
+    session = create_session("interactive", {"request": "approval"}, db=db)
+    admission = admit_session(session["id"], db=db)
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_ROOT", str(tmp_path))
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_SESSION_ID", session["id"])
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_ATTEMPT_ID", "attempt-1")
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_PHASE", "PLAN")
+    monkeypatch.setenv(
+        "PHASE_AGENT_COORDINATOR_FENCING_TOKEN", admission["fencing_token"]
+    )
+    monkeypatch.setenv("PHASE_AGENT_OPERATOR_TIMEOUT_SECONDS", "2")
+
+    async def answer_pending_question() -> object:
+        while True:
+            pending = db.read(
+                "SELECT question_id FROM operator_questions WHERE session_id = ? AND status = 'PENDING'",
+                (session["id"],),
+            )
+            if pending:
+                return answer_question(
+                    session["id"],
+                    pending[0]["question_id"],
+                    "allow",
+                    fencing_token=admission["fencing_token"],
+                    db=db,
+                )
+            await asyncio.sleep(0.01)
+
+    async def exercise() -> object:
+        permission = asyncio.create_task(
+            _operator_permission("Bash", {"command": "pytest"}, object())
+        )
+        await answer_pending_question()
+        return await permission
+
+    result = asyncio.run(exercise())
+    assert result.behavior == "allow"
+
+
+def test_claude_tool_permission_expires_without_operator_answer(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from orchestrator.coordinator import admit_session, create_session
+
+    db = CoordinatorDB(root=tmp_path)
+    session = create_session("interactive-timeout", {"request": "approval"}, db=db)
+    admission = admit_session(session["id"], db=db)
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_ROOT", str(tmp_path))
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_SESSION_ID", session["id"])
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_ATTEMPT_ID", "attempt-timeout")
+    monkeypatch.setenv("PHASE_AGENT_COORDINATOR_PHASE", "PLAN")
+    monkeypatch.setenv(
+        "PHASE_AGENT_COORDINATOR_FENCING_TOKEN", admission["fencing_token"]
+    )
+    monkeypatch.setenv("PHASE_AGENT_OPERATOR_TIMEOUT_SECONDS", "1")
+
+    result = asyncio.run(_operator_permission("Bash", {"command": "pytest"}, object()))
+
+    assert result.behavior == "deny"
+    question = db.read(
+        "SELECT status, response FROM operator_questions WHERE session_id = ?",
+        (session["id"],),
+    )[0]
+    assert question["status"] == "EXPIRED" and question["response"] is None
+    assert [event["event_type"] for event in events_since(session["id"], db=db)] == [
+        "operator.question",
+        "operator.timeout",
+    ]

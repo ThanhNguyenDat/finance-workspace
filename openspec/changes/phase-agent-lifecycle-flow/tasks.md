@@ -34,7 +34,7 @@
 
 - [x] 5.1 Emit ordered per-session SDK/tool/shell/result events and redacted human-readable views; verify event sequence, phase/attempt correlation and cross-session isolation.
 - [x] 5.2 Add attach/detach/follow from an event offset; verify a detached bounded session continues and reattach replays only its own events.
-- [ ] 5.3 Add coordinator-owned approval/input forwarding with question IDs and expiry; verify wrong-session, stale-question and read-only viewer responses cannot reach the provider.
+- [x] 5.3 Add coordinator-owned approval/input forwarding with question IDs and expiry; verify wrong-session, stale-question and read-only viewer responses cannot reach the provider.
 - [x] 5.4 Add bounded monitor output for phase, model, account, elapsed time, quota/failover, tests and terminal state; verify credentials and secret-bearing output are redacted before persistence.
 
 ## 6. Contract and regression verification

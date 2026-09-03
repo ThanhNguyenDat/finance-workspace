@@ -6,16 +6,28 @@ import asyncio
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
-from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
+from claude_agent_sdk import (
+    ClaudeAgentOptions,
+    ClaudeSDKClient,
+    PermissionResultAllow,
+    PermissionResultDeny,
+)
 from openai_codex import ApprovalMode, CodexConfig, Sandbox
 
 from ..accounts.registry import resolve_account_dir
-from ..coordinator import CoordinatorDB, append_event
+from ..coordinator import (
+    CoordinatorDB,
+    append_event,
+    expire_question,
+    question_status,
+    record_question,
+)
 from ..core.fingerprint import fingerprint
-from ..core.io import CLIError
+from ..core.io import CLIError, utc_after
 from ..core.redaction import redact_text
 from ..locks import account_lock, change_lock
 from ..providers.results import classify_sdk_result
@@ -68,6 +80,55 @@ def _coordinator_event(value: object, event_type: str | None = None) -> None:
         attempt_id=attempt_id,
         db=CoordinatorDB(root=Path(root)),
     )
+
+
+async def _operator_permission(
+    tool_name: str, tool_input: dict[str, Any], _context: object
+) -> PermissionResultAllow | PermissionResultDeny:
+    """Gate Claude tool requests through one fenced coordinator question."""
+
+    root = os.environ.get("PHASE_AGENT_COORDINATOR_ROOT")
+    session_id = os.environ.get("PHASE_AGENT_COORDINATOR_SESSION_ID")
+    attempt_id = os.environ.get("PHASE_AGENT_COORDINATOR_ATTEMPT_ID")
+    phase = os.environ.get("PHASE_AGENT_COORDINATOR_PHASE")
+    fencing_token = os.environ.get("PHASE_AGENT_COORDINATOR_FENCING_TOKEN")
+    if not all((root, session_id, attempt_id, phase, fencing_token)):
+        return PermissionResultDeny(
+            behavior="deny", message="coordinator approval is unavailable"
+        )
+    timeout_text = os.environ.get("PHASE_AGENT_OPERATOR_TIMEOUT_SECONDS", "300")
+    if not timeout_text.isdigit() or int(timeout_text) < 1:
+        return PermissionResultDeny(behavior="deny", message="invalid approval timeout")
+    question_id = f"q-{attempt_id[:80]}-{int(time.monotonic() * 1000) % 1000000}"
+    database = CoordinatorDB(root=Path(root))
+    record_question(
+        session_id,
+        question_id=question_id,
+        safe_payload={"tool_name": tool_name, "tool_input": tool_input},
+        expires_at=utc_after(int(timeout_text)),
+        db=database,
+    )
+    deadline = time.monotonic() + int(timeout_text)
+    while time.monotonic() < deadline:
+        question = question_status(session_id, question_id, db=database)
+        if question is None:
+            return PermissionResultDeny(
+                behavior="deny", message="coordinator question disappeared"
+            )
+        if question["status"] == "ANSWERED":
+            response = str(question.get("response") or "").strip().lower()
+            if response in {"allow", "approve", "approved", "yes", "y"}:
+                return PermissionResultAllow(behavior="allow")
+            return PermissionResultDeny(
+                behavior="deny", message="operator denied the tool request"
+            )
+        if question["status"] != "PENDING":
+            return PermissionResultDeny(
+                behavior="deny", message="coordinator question expired"
+            )
+        await asyncio.sleep(min(0.25, max(0.01, deadline - time.monotonic())))
+    expire_question(session_id, question_id, db=database)
+    return PermissionResultDeny(behavior="deny", message="operator approval timed out")
 
 
 def _git_root(path: str | Path, prefix: str) -> Path:
@@ -225,6 +286,16 @@ async def _run_claude_sdk(
     environment = child_environment()
     if account_dir is not None:
         environment["CLAUDE_CONFIG_DIR"] = str(account_dir)
+    coordinator_enabled = all(
+        os.environ.get(name)
+        for name in (
+            "PHASE_AGENT_COORDINATOR_ROOT",
+            "PHASE_AGENT_COORDINATOR_SESSION_ID",
+            "PHASE_AGENT_COORDINATOR_ATTEMPT_ID",
+            "PHASE_AGENT_COORDINATOR_PHASE",
+            "PHASE_AGENT_COORDINATOR_FENCING_TOKEN",
+        )
+    )
     options = ClaudeAgentOptions(
         cli_path=executable("claude", "run-claude-phase"),
         cwd=workspace,
@@ -232,7 +303,8 @@ async def _run_claude_sdk(
         env=environment,
         model=model,
         effort=effort,
-        permission_mode="bypassPermissions",
+        permission_mode="default" if coordinator_enabled else "bypassPermissions",
+        can_use_tool=_operator_permission if coordinator_enabled else None,
     )
     client = ClaudeSDKClient(options)
     try:

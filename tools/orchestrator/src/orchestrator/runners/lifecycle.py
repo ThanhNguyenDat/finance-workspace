@@ -11,9 +11,11 @@ from pathlib import Path
 from ..coordinator import (
     CoordinatorDB,
     CoordinatorError,
+    admit_session,
     append_event,
     get_session,
     record_attempt,
+    release_admission,
     update_attempt,
 )
 from ..core.fingerprint import fingerprint
@@ -184,8 +186,17 @@ def _run_attempt(
     started_at = utc_now()
     coordinator = CoordinatorDB(root=workspace)
     coordinator_attempt = None
+    coordinator_token = None
     if get_session(state["session_id"], db=coordinator) is not None:
         try:
+            admission = admit_session(
+                state["session_id"], db=coordinator, owner_pid=os.getpid()
+            )
+            if not admission["admitted"]:
+                raise CLIError(
+                    f"{PREFIX}: coordinator session queued: {admission['reason']}"
+                )
+            coordinator_token = admission["fencing_token"]
             coordinator_attempt = record_attempt(
                 state["session_id"],
                 phase=phase,
@@ -235,6 +246,7 @@ def _run_attempt(
                 "PHASE_AGENT_COORDINATOR_SESSION_ID": state["session_id"],
                 "PHASE_AGENT_COORDINATOR_ATTEMPT_ID": attempt_id,
                 "PHASE_AGENT_COORDINATOR_PHASE": phase,
+                "PHASE_AGENT_COORDINATOR_FENCING_TOKEN": coordinator_token,
             }
         )
     with _environment(env):
@@ -299,6 +311,7 @@ def _run_attempt(
             safe_payload={"status": status, "result_class": result},
             db=coordinator,
         )
+        release_admission(state["session_id"], coordinator_token, db=coordinator)
         append_event(
             state["session_id"],
             phase=phase,
