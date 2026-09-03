@@ -49,5 +49,5 @@
 
 - [x] 7.1 Update applicable orchestration rules/skills with session leases, worktree scopes, SQLite recovery, quota continuation and archive gates; verify `uv run --project tools/orchestrator sync-agent-links --check`.
 - [x] 7.2 Run OpenSpec validation, Python/shell suites, format/lint and workflow syntax checks with hard timeouts.
-- [ ] 7.3 Run one bounded read-only lifecycle smoke test with fake providers and inspect session, attempts, events, leases and archive evidence.
+- [x] 7.3 Run one bounded read-only lifecycle smoke test with fake providers and inspect session, attempts, events, leases and archive evidence.
 - [ ] 7.4 Obtain fresh configured FINAL_VERIFY, commit the implementation and push/track exact-SHA CI evidence only after all local gates pass.
