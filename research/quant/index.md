@@ -6226,6 +6226,34 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 422 — DATA-ISSUE: 11 round nghiên cứu (411-421) nằm chưa commit, và CSV metric đã trôi sang CRLF
+
+Zero compute, zero container, zero SSH. Kiểm lại trạng thái y hệt r421 trước
+(finance-live-action `HEAD` vẫn `ca23b05` = `origin/main`, hai CI run cũ
+không đổi, `openspec/changes/portfolio-measurement-integrity/tasks.md` 6.4
+vẫn chưa tick, `.ops/changes/` chỉ có phase-agent-orchestrator work không
+liên quan, forward-time mới 4 ngày kể từ baseline 2026-08-30 (~26 ngày nữa),
+Target 2 vẫn không có metric — tất cả khớp y hệt r421, bản thân sẽ chỉ là
+NO-CHANGE thuần.
+
+**Phát hiện thật của round này**: `git status --short` đầu phiên cho thấy
+`research/quant/index.md` và CSV metric đã sửa đổi, cộng round411-421's
+`.md` **chưa từng track** — 11 round viết ra đĩa nhưng chưa bao giờ commit kể
+từ `29bc7f7` (2026-09-01). Riêng CSV đã trôi sang **line-ending hỗn hợp**
+(755/759 terminator là CRLF, ~5 dòng cũ vẫn LF) — khả năng cao do một tool
+Python `csv.writer` mặc định `\r\n` khi rewrite toàn file ở một round nào đó
+giữa 411-421, khiến diff tương lai luôn nhiễu toàn file (750 xoá/947 thêm chỉ
+cho ~10 dòng nội dung thật). Đã chuẩn hoá CSV về LF thuần (0 CRLF còn lại,
+diff còn lại đúng 10 dòng thêm sạch), commit backlog trong 1 commit phạm vi
+hẹp chỉ đụng `research/quant/*` (`3f40f88`, local `main`, **chưa push** —
+local đang lead `origin/main` 17 commit, 16 commit trong đó là
+phase-agent-orchestrator work không liên quan và không thuộc phạm vi round
+này để verify/push thay). Không đụng phần openspec/.ops archive/deletion
+không liên quan khác đang nằm dirty trong working tree — ghi nhận nhưng để
+nguyên, thuộc task khác. Không đổi kết luận chiến lược nào; chỉ đóng lỗ hổng
+tính toàn vẹn evidence trail. File:
+`round422-DATA-ISSUE-eleven-rounds-of-research-evidence-sat-uncommitted-and-the-metrics-csv-had-drifted-to-crlf.md`.
+
 ## Round 421 — NO-CHANGE: commit mới duy nhất kể từ Round 420 là tooling SSH-tunnel không liên quan — cả hai hướng còn lại vẫn bị chặn không đổi
 
 Zero compute, zero container, zero SSH mở bởi round này. `git fetch origin
