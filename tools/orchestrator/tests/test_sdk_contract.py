@@ -388,6 +388,7 @@ def test_legacy_codex_detector_uses_sdk_probe_result(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:
     monkeypatch.setenv("QUANT_RESEARCH_STATE_DIR", str(tmp_path / "quant-state"))
+    monkeypatch.setattr(detect_codex_availability.shutil, "which", lambda _: "codex")
     quant_research = detect_codex_availability.quant_research
     quant_research.update_mode("codex-auto")
     capsys.readouterr()
