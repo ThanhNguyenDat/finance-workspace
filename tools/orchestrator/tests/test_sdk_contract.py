@@ -253,6 +253,8 @@ def test_quant_claude_rotates_from_personal_02_to_personal(
         "session.admitted",
         "provider.attempt.started",
     ]
+    assert "provider.stream" in event_types
+    assert "provider.result" in event_types
     assert "provider.attempt.completed" in event_types
     assert event_types[-1] == "session.completed"
     status = __import__(
@@ -265,7 +267,7 @@ def test_quant_claude_rotates_from_personal_02_to_personal(
     assert all(
         event["attempt_id"] is not None
         for event in events_since(session_rows[0]["id"], db=db)
-        if event["event_type"].startswith("provider.attempt.")
+        if event["event_type"].startswith("provider.")
     )
 
 

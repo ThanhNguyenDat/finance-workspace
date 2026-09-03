@@ -6,6 +6,7 @@ import asyncio
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
@@ -32,7 +33,13 @@ from ..core.io import CLIError, atomic_write_json
 from ..core.redaction import redact_text
 from ..providers.availability import probe
 from ..providers.results import classify_sdk_result
-from ..providers.sdk import append_jsonl, child_environment, executable, start_codex
+from ..providers.sdk import (
+    append_jsonl,
+    child_environment,
+    executable,
+    jsonable,
+    start_codex,
+)
 from ..state import candidates, quant_research
 from ..subprocess_supervision import (
     hard_kill_claude_client,
@@ -51,6 +58,7 @@ async def _claude(
     account_dir: Path | None,
     stdout: Path,
     timeout_seconds: int,
+    on_message: Callable[[object], None] | None = None,
 ) -> tuple[int, str, object]:
     env = child_environment()
     if account_dir:
@@ -65,6 +73,12 @@ async def _claude(
             permission_mode="bypassPermissions",
         )
     )
+
+    def record_message(value: object) -> None:
+        append_jsonl(stdout, value)
+        if on_message is not None:
+            on_message(value)
+
     try:
         try:
             await asyncio.wait_for(client.connect(), timeout=max(1, timeout_seconds))
@@ -76,7 +90,7 @@ async def _claude(
             prompt,
             timeout_seconds=timeout_seconds,
             kill_after_seconds=30,
-            on_message=lambda value: append_jsonl(stdout, value),
+            on_message=record_message,
         )
         result = outcome.result
         result_class = classify_sdk_result(
@@ -152,6 +166,15 @@ def _last_message(result: object) -> str:
             or ""
         )
     )
+
+
+def _sdk_event_payload(value: object) -> dict[str, object]:
+    """Keep streaming events structured while making scalar SDK values valid payloads."""
+
+    safe_value = jsonable(value)
+    if isinstance(safe_value, dict):
+        return safe_value
+    return {"value": safe_value}
 
 
 def _worktree_fingerprint(root: Path) -> str | None:
@@ -356,6 +379,17 @@ def run(argv: list[str]) -> int:
                     if not continuation
                     else f"Continue quant iteration {iteration} after provider quota interruption. Preserve existing research artifacts and do not restart, reschedule, or increment the iteration.\n\n{base_prompt}"
                 )
+
+                def record_stream(value: object, attempt_id: str = attempt_id) -> None:
+                    append_event(
+                        session_id,
+                        phase="PLAN",
+                        event_type="provider.stream",
+                        safe_payload=_sdk_event_payload(value),
+                        attempt_id=attempt_id,
+                        db=coordinator,
+                    )
+
                 if provider == "claude":
                     status, result_class, result = asyncio.run(
                         _claude(
@@ -366,6 +400,7 @@ def run(argv: list[str]) -> int:
                             account_dir,
                             stdout,
                             int(timeout_text),
+                            on_message=record_stream,
                         )
                     )
                 else:
@@ -378,6 +413,14 @@ def run(argv: list[str]) -> int:
                         stdout,
                         int(timeout_text),
                     )
+                append_event(
+                    session_id,
+                    phase="PLAN",
+                    event_type="provider.result",
+                    safe_payload=_sdk_event_payload(result),
+                    attempt_id=attempt_id,
+                    db=coordinator,
+                )
                 last.write_text(_last_message(result), encoding="utf-8")
             finally:
                 if account_lease:
