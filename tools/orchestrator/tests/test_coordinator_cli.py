@@ -64,4 +64,5 @@ def test_coordinator_cli_monitor_is_redacted_and_session_scoped(tmp_path: Path, 
     assert invoke(monkeypatch, ["monitor", session["id"]]) == 0
     output = capsys.readouterr().out
     assert "phase=PLAN" in output and "provider=claude" in output and "model=opus" in output
+    assert "current_action=provider.tool" in output and "quota_failover=-" in output and "tests=-" in output
     assert "hidden" not in output and "<REDACTED>" in output

@@ -100,6 +100,13 @@ def main() -> int:
             status = session_status(args[1], db=db)
             attempts = status["attempts"]
             latest = attempts[-1] if attempts else {}
+            events = events_since(args[1], int(args[2]) if len(args) == 3 else 0, db=db)
+            latest_event = events[-1] if events else {}
+            latest_payload = latest_event.get("safe_payload", {})
+            if not isinstance(latest_payload, dict):
+                latest_payload = {}
+            quota_result = latest.get("result_class") if latest.get("result_class") in {"global-quota-exhausted", "auth-error", "model-unavailable", "model-specific-limit", "transient-rate-limit"} else "-"
+            tests = latest_payload.get("tests", status["session"].get("checkpoint", {}).get("tests", "-"))
             started_at = latest.get("started_at") or status["session"]["created_at"]
             print(
                 f"session={status['session']['id']} phase={status['session']['phase']} "
@@ -107,9 +114,11 @@ def main() -> int:
                 f"provider={latest.get('provider', status['session'].get('selected_provider') or '-')} "
                 f"model={latest.get('model', '-')} account={latest.get('account', status['session'].get('selected_account') or '-')} "
                 f"elapsed_seconds={_elapsed_seconds(started_at)} last_result={latest.get('result_class', '-')} "
-                f"updated_at={status['session']['updated_at']} events={status['event_count']} terminal={status['session']['status']}"
+                f"current_action={latest_event.get('event_type', '-')} quota_failover={quota_result} "
+                f"tests={tests} updated_at={status['session']['updated_at']} events={status['event_count']} "
+                f"terminal={status['session']['status']}"
             )
-            for event in events_since(args[1], int(args[2]) if len(args) == 3 else 0, db=db):
+            for event in events:
                 payload = json_text(event["safe_payload"])
                 print(f"[{event['sequence']}] {event['event_type']} phase={event['phase']} payload={payload}")
             return 0
