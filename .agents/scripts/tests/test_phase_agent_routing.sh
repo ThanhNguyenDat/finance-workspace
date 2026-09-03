@@ -13,7 +13,7 @@ mkdir "$repo/untracked-target"; ln -s untracked-target "$repo/untracked-director
 cp "$ROOT_DIR/tools/orchestrator/tests/fixtures/fake_codex_sdk_cli.py" "$bin/codex"
 cp "$ROOT_DIR/tools/orchestrator/tests/fixtures/fake_claude_sdk_cli.py" "$bin/claude"
 chmod +x "$bin/codex" "$bin/claude" "$workspace/.agents/scripts/ops-runtime.sh"
-export PATH="$bin:$PATH" OPS_ROOT="$workspace" OPS_WORKSPACE_ROOT="$workspace" PHASE_AGENT_STATE_DIR="$workspace/.ops/runtime/phase-agents" PHASE_AGENT_LEGACY_QUANT_STATE="$tmp/no-quant" PHASE_AGENT_LEGACY_CLAUDE_STATE="$tmp/no-claude" FAKE_SDK_TRACE="$trace/sdk.jsonl" FAKE_REPO="$repo" CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1 FAKE_SDK_MODE=complete FAKE_SDK_RESULT_TEXT=$'OK\nFINAL_VERIFY_GATE: PASS\nP0_FINDINGS: 0\nP1_FINDINGS: 0\nOBJECTIVE_GATES: PASS' CODEX_TIMEOUT_SECONDS=5 CLAUDE_TIMEOUT_SECONDS=5
+export PATH="$bin:$PATH" OPS_ROOT="$workspace" OPS_WORKSPACE_ROOT="$workspace" PHASE_AGENT_ROOT="$workspace" PHASE_AGENT_STATE_DIR="$workspace/.ops/runtime/phase-agents" PHASE_AGENT_LEGACY_QUANT_STATE="$tmp/no-quant" PHASE_AGENT_LEGACY_CLAUDE_STATE="$tmp/no-claude" FAKE_SDK_TRACE="$trace/sdk.jsonl" FAKE_REPO="$repo" CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1 FAKE_SDK_MODE=complete FAKE_SDK_RESULT_TEXT=$'OK\nFINAL_VERIFY_GATE: PASS\nP0_FINDINGS: 0\nP1_FINDINGS: 0\nOBJECTIVE_GATES: PASS' CODEX_TIMEOUT_SECONDS=5 CLAUDE_TIMEOUT_SECONDS=5
 fail() { printf 'test_phase_agent_routing: %s\n' "$1" >&2; exit 1; }
 session=session-test; change=agent-route
 "$STATE" init >/dev/null; "$OPS" lock "$change" "$session"; "$OPS" init "$change" "$session"; "$OPS" lock-repos "$change" "$session" "$repo"
