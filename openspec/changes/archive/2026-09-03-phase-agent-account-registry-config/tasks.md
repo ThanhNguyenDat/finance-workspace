@@ -32,9 +32,17 @@ All tasks are in the `finance-workspace` repository only.
 
 - [x] 2.1 Verify: the full bash and pytest suites from
   `phase-agent-multi-account-routing` Task 3.1 still pass.
-- [ ] 2.2 Run one live end-to-end smoke check with the operator's real
+- [x] 2.2 Run one live end-to-end smoke check with the operator's real
   `accounts.yaml` (not the example), confirming resolution still exports
   the correct `CLAUDE_CONFIG_DIR`/`CODEX_HOME` for a real candidate.
+  Verified by a routed FINAL_VERIFY sub-agent (attempt
+  `agent-final_verify-r1-a5-4042351`, 2026-09-03), read-only: the real
+  operator `accounts.yaml` now exists (created after the unrelated
+  `relocate-orchestrator-out-of-agents` change); `phase-agent-state.sh
+  account-dir claude personal-02` resolved exit 0 to an existing absolute
+  directory, and that directory matched the live `CLAUDE_CONFIG_DIR` of the
+  concurrently-running SDK child holding the `claude/personal-02` account
+  lock at the time.
 
 ## 3. FIX round — Claude VERIFY finding
 
