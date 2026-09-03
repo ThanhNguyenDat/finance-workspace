@@ -198,6 +198,17 @@ def get_session(session_id: str, *, db: CoordinatorDB | None = None) -> dict[str
     return _row(row[0]) if row else None
 
 
+def active_sessions(change: str, *, db: CoordinatorDB | None = None) -> list[dict[str, Any]]:
+    """Return resumable sessions for one change in creation order."""
+
+    change = _change(change)
+    rows = _db(db).read(
+        "SELECT * FROM sessions WHERE change_name = ? AND status IN ('QUEUED', 'RUNNING', 'PAUSED') ORDER BY created_at, id",
+        (change,),
+    )
+    return [_row(row) or {} for row in rows]
+
+
 def resume_session(session_id: str, *, db: CoordinatorDB | None = None) -> dict[str, Any]:
     """Read one durable session under a short transaction for safe re-entry."""
 

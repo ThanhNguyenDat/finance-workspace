@@ -10,6 +10,7 @@ uv run --project tools/orchestrator ops-runtime state <change>
 uv run --project tools/orchestrator phase-agent-state state
 uv run --project tools/orchestrator run-phase-agent <change> <repo> IMPLEMENT
 uv run --project tools/orchestrator run-phase-agent-command quant-research
+uv run --project tools/orchestrator e2e <change> "<prompt>"
 ```
 
 The source is split by responsibility:
@@ -20,6 +21,8 @@ The source is split by responsibility:
   and result-classification adapters.
 - `orchestrator/runners/` contains reusable lifecycle and quant
   orchestration runners; it does not own argument parsing.
+- `e2e` submits a prompt to the coordinator or resumes the one active session
+  for that change; it does not launch a provider outside the coordinator.
 - `core/`, `state/`, `coordinator/`, `accounts/`, `locks/`, and
   `subprocess_supervision/` contain reusable domain services.
 

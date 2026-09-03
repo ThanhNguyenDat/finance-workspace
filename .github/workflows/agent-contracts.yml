@@ -53,6 +53,7 @@ jobs:
           bash -n .agents/scripts/tests/test_quant_promotion_trace.sh
           bash -n .agents/scripts/tests/test_phase_agent_state.sh
           bash -n .agents/scripts/tests/test_provider_availability.sh
+          bash -n .agents/scripts/tests/test_e2e_entrypoint.sh
           bash -n .agents/scripts/tests/test_phase_agent_routing.sh
           bash -n .agents/scripts/tests/test_phase_agent_quant_launcher.sh
           bash -n .agents/scripts/tests/test_multi_account_routing.sh
@@ -93,6 +94,8 @@ jobs:
             ./.agents/scripts/tests/test_claude_quant_launcher.sh
           timeout --signal=TERM --kill-after=10s 2m \
             ./.agents/scripts/tests/test_claude_worker_policy.sh
+          timeout --signal=TERM --kill-after=10s 2m \
+            ./.agents/scripts/tests/test_e2e_entrypoint.sh
           timeout --signal=TERM --kill-after=10s 5m \
             ./.agents/scripts/tests/test_hermetic_agent_contracts.sh
 
