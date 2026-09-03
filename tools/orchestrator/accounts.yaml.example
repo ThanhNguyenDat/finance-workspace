@@ -1,7 +1,0 @@
-# Copy this file to accounts.yaml and replace the example paths with local
-# provider account directories. The real accounts.yaml is ignored by Git.
-claude:
-  personal: /home/operator/.claude-personal
-  work: /home/operator/.claude-work
-codex:
-  personal: /home/operator/.codex

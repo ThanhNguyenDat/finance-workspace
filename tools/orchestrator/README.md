@@ -34,8 +34,16 @@ need an executable path; they contain no orchestration logic and only dispatch
 to the same `uv` project. Contract tests remain under `.agents/scripts/tests/`
 because they exercise the shell boundary.
 
-Provider accounts are configured in `accounts.yaml`, next to this package.
-Copy [`accounts.yaml.example`](accounts.yaml.example) and replace its example
-paths with the local Claude and Codex account directories. Set
-`PHASE_AGENT_ACCOUNTS_FILE` when a different registry path is needed, such as
-for tests. The real `accounts.yaml` is local-only and ignored by Git.
+Provider accounts are configured in `accounts.yaml`, next to this package:
+
+```yaml
+claude:
+  personal: /path/to/claude/personal/account/dir
+  personal-02: /path/to/claude/personal-02/account/dir
+codex:
+  personal: /path/to/codex/personal/account/dir
+```
+
+Set `PHASE_AGENT_ACCOUNTS_FILE` when a different registry path is needed,
+such as for tests. The real `accounts.yaml` is local-only and ignored by
+Git.
