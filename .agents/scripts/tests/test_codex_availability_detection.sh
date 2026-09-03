@@ -4,8 +4,8 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/../../.." && pwd -P)"
-DETECTOR="$ROOT_DIR/.agents/scripts/detect-codex-availability.py"
-STATE_HELPER="$ROOT_DIR/.agents/scripts/quant-research-state.py"
+DETECTOR="$ROOT_DIR/.agents/scripts/detect-codex-availability.sh"
+STATE_HELPER="$ROOT_DIR/.agents/scripts/quant-research-state.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 
@@ -51,7 +51,7 @@ expect_inconclusive() {
 }
 
 test -x "$DETECTOR" || fail 'detector is not executable'
-python3 -m py_compile "$DETECTOR" || fail 'detector syntax is invalid'
+bash -n "$DETECTOR" || fail 'detector syntax is invalid'
 run_state codex-auto >/dev/null
 run_state profile-set probe probe-model low >/dev/null
 

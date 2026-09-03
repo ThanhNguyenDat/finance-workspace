@@ -6,7 +6,7 @@ argument-hint: "[show|set|candidate-set|reset|reset-all|pin|auto|provider-on|pro
 Chuyển `$ARGUMENTS` sang đúng một invocation allowlisted của:
 
 ```text
-./.agents/scripts/configure-phase-agents.py <operation> ...
+./.agents/scripts/configure-phase-agents.sh <operation> ...
 ```
 
 Không dùng `eval`, không in raw state JSON, không khởi động research/model

@@ -137,23 +137,21 @@ All tasks are in the `finance-workspace` repository only.
   cancellation coverage from Task 3, and that `uv.lock` pins exact SDK
   versions (no version range).
 - [ ] 6.3 Run one live end-to-end smoke check:
-  `./.agents/scripts/run-phase-agent-command.py quant-research` against the
+  `./.agents/scripts/run-phase-agent-command.sh quant-research` against the
   fully SDK-backed chain, and verify it completes with the same
   `Quant iteration <n> completed with <provider>` success line.
-- [x] 6.4 Update `.github/workflows/agent-contracts.yml` to compile the
-  Python entrypoints instead of running `bash -n` against removed runtime
-  shims; retain syntax checks for shell contract tests and native hooks.
-  A pushed CI run remains pending until delivery authorization.
+- [x] 6.4 Update `.github/workflows/agent-contracts.yml` to keep `bash -n`
+  checks for the thin `.sh` wrappers and compile the Python package. A pushed
+  CI run remains pending until delivery authorization.
 - [x] 6.5 Update `.agents/rules/coding-and-verification.md` and/or the
   relevant skill to reflect that the phase-agent system is now
   Python-first and SDK-backed for provider invocation, and verify
-  `./.agents/scripts/sync-agent-links.py --check` still passes.
+  `./.agents/scripts/sync-agent-links.sh --check` still passes.
 
 - [x] 6.6 Port `sync-agent-links.sh`, `wait-for-phase-attempt.sh`, and
-  `watch-phase-attempt-log.sh` to standalone Python entrypoints, preserving
-  stale-link protection, bounded waiting, JSONL progress rendering, and
-  stdout/stderr behavior.
-- [x] 6.7 Remove the operational `.sh` entrypoints and update current
-  commands, hooks, tests, README, AGENTS/CLAUDE guidance, and CI to use the
-  canonical `.py` paths. Keep `.agents/scripts/tests/*.sh` as shell contract
-  tests only.
+  `watch-phase-attempt-log.sh` implementations into the Python package,
+  preserving stale-link protection, bounded waiting, JSONL progress
+  rendering, and stdout/stderr behavior.
+- [x] 6.7 Keep the stable operational `.sh` paths as thin `uv run` wrappers
+  and update current commands, hooks, tests, README, AGENTS/CLAUDE guidance,
+  and CI accordingly. Keep all Python implementation under `tools/`.

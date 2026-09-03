@@ -135,9 +135,9 @@ request, that overrides this note for that request only.
 - `uv` is required for the Python-backed state and OPS CLIs under
   `tools/phase-agent-orchestrator/`.
 - Bootstrap the project with `uv sync --project tools/phase-agent-orchestrator`
-  before invoking the executable Python entrypoints in `.agents/scripts/`.
-  The entrypoints use the bootstrapped project venv and import the shared
-  package directly; no Bash shim or per-call `uv run` indirection is required.
+  before invoking the executable shims in `.agents/scripts/`; the shims use
+  `uv run --project` and can use the bootstrapped venv when a restricted
+  `PATH` omits `uv`.
 - Keep `tools/phase-agent-orchestrator/pyproject.toml` and `uv.lock` committed together;
   do not introduce another Python package manager for this tooling.
 

@@ -1235,7 +1235,7 @@ Only a result classified PROMOTE enters engineering. Derive one stable,
 meaningful kebab-case change name, create/reuse complete native OpenSpec
 artifacts that reference the research evidence, then enter the existing
 `/ops:run` lifecycle with the same change name. Attach immutable origin
-references with `ops-runtime.py trace-origin` during PLAN. Never implement
+references with `ops-runtime.sh trace-origin` during PLAN. Never implement
 runtime code directly from a research-only result and never copy the OPS state
 machine into the research command.
 
@@ -1247,7 +1247,7 @@ partial PLAN/IMPLEMENT/FIX work, the next eligible candidate continues the
 actual diff/commits under the same phase, round and repository lock.
 
 1. Route actionable implementation only through `/ops:run` and
-   `run-phase-agent.py`; do not modify runtime code outside that lifecycle or
+   `run-phase-agent.sh`; do not modify runtime code outside that lifecycle or
    invoke Codex/Claude directly. Read a sibling implementation first — e.g. an
    existing `Strategy` impl or `StrategyKind` variant — before writing a new
    one. Verification labels come from actual mutator/verifier providers.

@@ -8,21 +8,21 @@ $ARGUMENTS
 
 Invoke as `/ops:run "<request>"`. The parent process orchestrates deterministic
 state and never calls a model CLI directly. Every model-owned phase runs only
-through `./.agents/scripts/run-phase-agent.py`.
+through `./.agents/scripts/run-phase-agent.sh`.
 
 ## Running a phase attempt without blocking
 
-`run-phase-agent.py` can run up to its full timeout (default 3600s). Never
+`run-phase-agent.sh` can run up to its full timeout (default 3600s). Never
 invoke it as a plain foreground call and never poll it with an ad-hoc
 `sleep`/`ps aux | grep <pid>` loop — the PID changes every attempt and is
 easy to get wrong. Always:
 
 1. Launch it with `run_in_background: true`.
-2. Immediately arm `./.agents/scripts/wait-for-phase-attempt.py <change>`
+2. Immediately arm `./.agents/scripts/wait-for-phase-attempt.sh <change>`
    in a `Monitor` (or as a second `run_in_background` command) — it blocks
    on the change's `.phase-attempt-lock` lease itself, not a PID, so it
    works unmodified across retries/continuations. Also arm
-   `./.agents/scripts/watch-phase-attempt-log.py <change>` in a second
+   `./.agents/scripts/watch-phase-attempt-log.sh <change>` in a second
    `Monitor` to stream real agent progress (tool calls, file changes,
    messages) instead of manually polling status.
 3. Do not manually re-check status between notifications. A stop hook may
@@ -34,7 +34,7 @@ easy to get wrong. Always:
 
 - Logical agents own PLAN, IMPLEMENT, VERIFY, FIX and FINAL_VERIFY; ordered
   Codex/Claude candidates are configured by
-  `./.agents/scripts/configure-phase-agents.py`.
+  `./.agents/scripts/configure-phase-agents.sh`.
 - Exactly one attempt owns the phase lease and repository lock. A provider/model
   cannot change while that attempt is alive.
 - Confirmed global quota/model availability may select another candidate only
@@ -57,30 +57,30 @@ easy to get wrong. Always:
    the new routing-policy state, then read instructions:
 
    ```text
-   ./.agents/scripts/ops-runtime.py lock <change> <session-id>
-   ./.agents/scripts/ops-runtime.py init <change> <session-id>
+   ./.agents/scripts/ops-runtime.sh lock <change> <session-id>
+   ./.agents/scripts/ops-runtime.sh init <change> <session-id>
    ```
 
-2. Run `sync-agent-links.py`; read AGENTS/CLAUDE, applicable rules/skills,
+2. Run `sync-agent-links.sh`; read AGENTS/CLAUDE, applicable rules/skills,
    current specs, active change and every affected repository's instructions.
 3. Identify and lock every affected runtime repository before change-specific
    writes:
 
    ```text
-   ./.agents/scripts/ops-runtime.py lock-repos <change> <session-id> <repo>...
+   ./.agents/scripts/ops-runtime.sh lock-repos <change> <session-id> <repo>...
    ```
 
 4. Run PLAN sequentially for each affected repository:
 
    ```text
-   ./.agents/scripts/run-phase-agent.py <change> <repository> PLAN
+   ./.agents/scripts/run-phase-agent.sh <change> <repository> PLAN
    ```
 
 5. Validate the native OpenSpec change strictly. For a quant promotion, attach
    immutable origin references exactly once:
 
    ```text
-   ./.agents/scripts/ops-runtime.py trace-origin <change> <session-id> <research-iteration> <instrument> <research-artifact>...
+   ./.agents/scripts/ops-runtime.sh trace-origin <change> <session-id> <research-iteration> <instrument> <research-artifact>...
    ```
 
 ## IMPLEMENT, VERIFY, FIX
@@ -88,20 +88,20 @@ easy to get wrong. Always:
 Run each model phase sequentially through the same resolver:
 
 ```text
-./.agents/scripts/ops-runtime.py phase <change> <session-id> IMPLEMENT
-./.agents/scripts/run-phase-agent.py <change> <repository> IMPLEMENT
+./.agents/scripts/ops-runtime.sh phase <change> <session-id> IMPLEMENT
+./.agents/scripts/run-phase-agent.sh <change> <repository> IMPLEMENT
 
-./.agents/scripts/ops-runtime.py phase <change> <session-id> VERIFY
-./.agents/scripts/run-phase-agent.py <change> <repository> VERIFY
+./.agents/scripts/ops-runtime.sh phase <change> <session-id> VERIFY
+./.agents/scripts/run-phase-agent.sh <change> <repository> VERIFY
 ```
 
 For P0/P1 findings, enter FIX atomically, write only the current round's exact
 findings, then invoke the resolver:
 
 ```text
-./.agents/scripts/ops-runtime.py fix <change> <session-id>
+./.agents/scripts/ops-runtime.sh fix <change> <session-id>
 .ops/changes/<change>/runtime/verification-findings-round-<round>.md
-./.agents/scripts/run-phase-agent.py <change> <repository> FIX
+./.agents/scripts/run-phase-agent.sh <change> <repository> FIX
 ```
 
 `OPS_MAX_FIX_ROUNDS` remains bounded at 3 by default. P2/P3 does not silently
@@ -110,8 +110,8 @@ become a release blocker. After a fix, return through VERIFY.
 When no P0/P1 remains:
 
 ```text
-./.agents/scripts/ops-runtime.py phase <change> <session-id> FINAL_VERIFY
-./.agents/scripts/run-phase-agent.py <change> <repository> FINAL_VERIFY
+./.agents/scripts/ops-runtime.sh phase <change> <session-id> FINAL_VERIFY
+./.agents/scripts/run-phase-agent.sh <change> <repository> FINAL_VERIFY
 ```
 
 Release requires successful derived FINAL_VERIFY evidence. Same-provider
@@ -125,10 +125,10 @@ After FINAL_VERIFY gates pass, follow repository-delivery rules through local
 commit, push, exact-SHA CI, deployment and production verification when scoped:
 
 ```text
-./.agents/scripts/ops-runtime.py phase <change> <session-id> RELEASE
-./.agents/scripts/ops-runtime.py phase <change> <session-id> DEPLOY_VERIFY
-./.agents/scripts/ops-runtime.py phase <change> <session-id> ARCHIVE
-./.agents/scripts/ops-runtime.py complete <change> <session-id>
+./.agents/scripts/ops-runtime.sh phase <change> <session-id> RELEASE
+./.agents/scripts/ops-runtime.sh phase <change> <session-id> DEPLOY_VERIFY
+./.agents/scripts/ops-runtime.sh phase <change> <session-id> ARCHIVE
+./.agents/scripts/ops-runtime.sh complete <change> <session-id>
 ```
 
 Implementation defects found during RELEASE/DEPLOY_VERIFY return through the
@@ -136,7 +136,7 @@ atomic FIX path and fresh VERIFY/FINAL_VERIFY. External infrastructure blockers
 become BLOCKED with evidence. Use centralized cleanup on terminal failure:
 
 ```text
-./.agents/scripts/ops-runtime.py cleanup <change> <session-id> <FAILED|BLOCKED>
+./.agents/scripts/ops-runtime.sh cleanup <change> <session-id> <FAILED|BLOCKED>
 ```
 
 Legacy active transactions that already persist `implementation_backend` and

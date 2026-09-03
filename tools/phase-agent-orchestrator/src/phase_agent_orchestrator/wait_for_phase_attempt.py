@@ -1,26 +1,26 @@
-#!/usr/bin/env python3
 """Wait for a phase attempt lease to appear and then be released."""
 
 from __future__ import annotations
 
 import argparse
-import subprocess
-import sys
 import time
 from pathlib import Path
 
+from .state import ops_transaction
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent.parent
+
+ROOT_DIR = Path(__file__).resolve().parents[4]
 
 
 def fail(message: str) -> int:
+    import sys
+
     print(f"wait-for-phase-attempt: {message}", file=sys.stderr)
     return 1
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="wait-for-phase-attempt.py")
+    parser = argparse.ArgumentParser(prog="wait-for-phase-attempt.sh")
     parser.add_argument("change")
     parser.add_argument("poll_seconds", nargs="?", type=int, default=5)
     args = parser.parse_args(argv)
@@ -39,11 +39,10 @@ def main(argv: list[str] | None = None) -> int:
         time.sleep(args.poll_seconds)
 
     print(f"phase attempt for {args.change} finished")
-    subprocess.run(
-        [sys.executable, str(SCRIPT_DIR / "ops-runtime.py"), "state", args.change],
-        check=False,
-        stderr=subprocess.DEVNULL,
-    )
+    try:
+        print(ops_transaction.state_path(args.change).read_text(encoding="utf-8"), end="")
+    except OSError:
+        print("(no active OPS state — change may have been archived/blocked)")
     return 0
 
 

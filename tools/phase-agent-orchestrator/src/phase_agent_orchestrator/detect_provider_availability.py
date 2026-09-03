@@ -112,7 +112,7 @@ def _candidate(state: dict, provider: str) -> tuple[str, str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="detect-provider-availability.py")
+    parser = argparse.ArgumentParser(prog="detect-provider-availability.sh")
     parser.add_argument("provider", choices=("codex", "claude"))
     args = parser.parse_args(argv)
     timeout_text = os.environ.get("PHASE_AGENT_PROBE_TIMEOUT_SECONDS", "30")

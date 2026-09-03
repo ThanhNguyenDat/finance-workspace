@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Synchronize shared rules and skills into agent-native directories."""
 
 from __future__ import annotations
@@ -9,8 +8,8 @@ import sys
 from pathlib import Path
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent.parent
+PROJECT_DIR = Path(__file__).resolve().parents[2]
+ROOT_DIR = PROJECT_DIR.parents[1]
 AGENTS_DIR = ROOT_DIR / ".agents"
 TOOLS = (".claude", ".kimi-code", ".opencode")
 
@@ -66,7 +65,7 @@ def sync_entries(source_dir: Path, target_dir: Path, link_prefix: str, check_onl
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="sync-agent-links.py")
+    parser = argparse.ArgumentParser(prog="sync-agent-links.sh")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
     status = 0

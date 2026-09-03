@@ -4,7 +4,7 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/../../.." && pwd -P)"
-RUNTIME="$ROOT_DIR/.agents/scripts/ops-runtime.py"
+RUNTIME="$ROOT_DIR/.agents/scripts/ops-runtime.sh"
 QUANT_COMMAND="$ROOT_DIR/.claude/commands/quant-research.md"
 OPS_COMMAND="$ROOT_DIR/.claude/commands/ops/run.md"
 tmp="$(mktemp -d)"

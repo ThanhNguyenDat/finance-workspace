@@ -1,4 +1,4 @@
-"""Argument parsing and dispatch for quant-research-state.py."""
+"""Argument parsing and dispatch for quant-research-state.sh."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ PREFIX = quant_research.PREFIX
 
 def usage() -> None:
     print(
-        "Usage: quant-research-state.py <init|state|codex-auto|codex-manual|codex-off|codex-on|codex-worker-off|codex-detected-off|codex-detected-on|profile-get ROLE|profile-set ROLE MODEL EFFORT|profile-reset ROLE|profiles-reset|begin-iteration>",
+        "Usage: quant-research-state.sh <init|state|codex-auto|codex-manual|codex-off|codex-on|codex-worker-off|codex-detected-off|codex-detected-on|profile-get ROLE|profile-set ROLE MODEL EFFORT|profile-reset ROLE|profiles-reset|begin-iteration>",
         file=sys.stderr,
     )
     raise SystemExit(2)

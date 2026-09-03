@@ -6,7 +6,7 @@
 already-clean layout instead of a set of flat files.
 
 `phase-agent-python-orchestrator` ported the state/lock/routing layer
-(`ops-runtime.py`, `phase-agent-state.py`, `quant-research-state.py`) to
+(`ops-runtime.sh`, `phase-agent-state.sh`, `quant-research-state.sh`) to
 Python and deliberately left the remaining ~700 lines of bash — the
 scripts that actually spawn `claude`/`codex` subprocesses and glue the
 system together — untouched, reasoning that bash's `timeout` + `trap ...
@@ -43,25 +43,26 @@ open verification items this pivot introduces.
   official `claude-agent-sdk` and `openai_codex` Python SDKs instead of
   spawning the raw `claude`/`codex` CLI binaries directly, while preserving
   every *externally observable* behavior (same CLI invocation for the
-  `.agents/scripts/*.py` entry points, same effective model/effort/timeout/
+  `.agents/scripts/*.sh` entry points, same effective model/effort/timeout/
   kill-after values, same lease/lock acquisition order, same log file
   layout under `.ops/changes/<change>/runtime/logs/`, same
   `result_class` vocabulary consumed by `phase_agent_state`):
-  - `run-claude-phase.py`, `run-codex-phase.py` (spawn adapters, now SDK-backed)
-  - `run-phase-agent.py` (candidate resolution + adapter dispatch loop)
-  - `run-phase-agent-command.py` (quant-research launcher)
-  - `classify-claude-result.py`, `classify-codex-result.py` (result
+  - `run-claude-phase.sh`, `run-codex-phase.sh` (spawn adapters, now SDK-backed)
+  - `run-phase-agent.sh` (candidate resolution + adapter dispatch loop)
+  - `run-phase-agent-command.sh` (quant-research launcher)
+  - `classify-claude-result.sh`, `classify-codex-result.sh` (result
     classification, now sourced from SDK structured fields)
-  - `detect-provider-availability.py`, `detect-codex-availability.py`
+  - `detect-provider-availability.sh`, `detect-codex-availability.sh`
     (availability probes)
-  - `configure-phase-agents.py` (operator-facing config CLI)
+  - `configure-phase-agents.sh` (operator-facing config CLI)
 - Add `claude-agent-sdk` and `openai_codex` (exact PyPI distribution names
   to be confirmed at implementation time — Task 3.0) as dependencies of
   `tools/phase-agent-orchestrator/pyproject.toml`, pinned in `uv.lock`.
 - The three files ported by `phase-agent-python-orchestrator`
-  (`ops-runtime.py`, `phase-agent-state.py`, `quant-research-state.py`) are
-  Python entrypoints; this change makes their *callers* Python too, so no
-  Bash runtime shim remains under `.agents/scripts/`.
+  (`ops-runtime.sh`, `phase-agent-state.sh`, `quant-research-state.sh`) are
+  Python implementations exposed through thin `uv run` wrappers; this
+  change keeps the stable `.agents/scripts/*.sh` operator paths while moving
+  all Python code into `tools/phase-agent-orchestrator/`.
 - Subprocess supervision (spawn `claude`/`codex` via its SDK, enforce a
   timeout via the SDK's native cancellation call, then a hard-kill fallback
   if the process is still alive after a grace period, always release the
@@ -74,9 +75,10 @@ open verification items this pivot introduces.
   would be easy to introduce, now for a different reason: dependency on
   each SDK's own documented-but-not-fully-verified cancellation contract).
 - Port the remaining operational helpers (`sync-agent-links.py`,
-  `wait-for-phase-attempt.py`, and `watch-phase-attempt-log.py`) so the
-  `.agents/scripts/` runtime surface is Python-first. Shell contract tests
-  remain shell because they exercise the public process/CLI contracts.
+  `wait-for-phase-attempt.py`, and `watch-phase-attempt-log.py`) into
+  `tools/phase-agent-orchestrator/`, exposing them through thin `.sh`
+  wrappers. Shell contract tests remain shell because they exercise the
+  public process/CLI contracts.
 
 ## Capabilities
 

@@ -5,8 +5,8 @@ description: "Tự phát hiện Codex availability cho mỗi vòng quant researc
 Chạy tuần tự đúng một lần mỗi lệnh:
 
 ```bash
-./.agents/scripts/phase-agent-state.py provider-auto codex
-./.agents/scripts/detect-provider-availability.py codex
+./.agents/scripts/phase-agent-state.sh provider-auto codex
+./.agents/scripts/detect-provider-availability.sh codex
 ```
 
 Không bắt đầu research và không retry probe. Dù probe kết luận available,

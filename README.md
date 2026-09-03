@@ -38,7 +38,7 @@ research từ workspace, sau đó sửa đúng repository sở hữu code.
 
 ## Bắt đầu một vòng làm việc
 
-1. Chạy `./.agents/scripts/sync-agent-links.py`.
+1. Chạy `./.agents/scripts/sync-agent-links.sh`.
 2. Đọc `AGENTS.md` hoặc `CLAUDE.md`, rồi đọc shared rule phù hợp.
 3. Xác định và sử dụng shared skill liên quan; load capability/OpenSpec-native
    integration của CLI nếu cần.
@@ -48,7 +48,7 @@ research từ workspace, sau đó sửa đúng repository sở hữu code.
 5. Kiểm tra branch/status và deployed revision của repository code trước khi sửa.
 6. Thực hiện theo role: Claude plan/verify; Codex implement/test/fix.
 7. Upsert reusable skill/rule nếu có kiến thức mới, rồi chạy lại sync và
-   `./.agents/scripts/sync-agent-links.py --check`.
+   `./.agents/scripts/sync-agent-links.sh --check`.
 8. Ghi SHA, CI, Coolify và verification vào handoff; không chuyển task sang
    `Done` nếu chưa có review độc lập.
 
@@ -72,7 +72,7 @@ OPS; quant evidence đi vào `research/quant/`; legacy-only content nằm dướ
 Operator chủ động chạy đúng một iteration, không có loop/daemon tự động:
 
 ```text
-./.agents/scripts/run-phase-agent-command.py quant-research
+./.agents/scripts/run-phase-agent-command.sh quant-research
 ```
 
 Launcher increment iteration một lần, đọc canonical
@@ -85,12 +85,12 @@ phase có ordered Codex/Claude candidates riêng tại ignored atomic state
 `.ops/runtime/phase-agents/state.json`. Xem và điều chỉnh an toàn:
 
 ```text
-./.agents/scripts/configure-phase-agents.py show
-./.agents/scripts/configure-phase-agents.py set implement codex gpt-5.6-luna high
-./.agents/scripts/configure-phase-agents.py pin verify claude
-./.agents/scripts/configure-phase-agents.py auto verify
-./.agents/scripts/configure-phase-agents.py provider-off codex
-./.agents/scripts/configure-phase-agents.py provider-auto codex
+./.agents/scripts/configure-phase-agents.sh show
+./.agents/scripts/configure-phase-agents.sh set implement codex gpt-5.6-luna high
+./.agents/scripts/configure-phase-agents.sh pin verify claude
+./.agents/scripts/configure-phase-agents.sh auto verify
+./.agents/scripts/configure-phase-agents.sh provider-off codex
+./.agents/scripts/configure-phase-agents.sh provider-auto codex
 ```
 
 Mặc định ưu tiên Claude Opus `medium` cho PLAN/VERIFY, Codex cho

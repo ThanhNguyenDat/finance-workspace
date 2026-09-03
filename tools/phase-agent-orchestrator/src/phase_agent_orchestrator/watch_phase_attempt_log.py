@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Stream structured progress from the latest phase-agent JSONL log."""
 
 from __future__ import annotations
@@ -11,8 +10,7 @@ from pathlib import Path
 from typing import Any
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent.parent
+ROOT_DIR = Path(__file__).resolve().parents[4]
 
 
 def compact(value: Any, limit: int = 220) -> str:
@@ -39,9 +37,11 @@ def render(event: dict[str, Any]) -> str | None:
         return f"{item.get('type', 'event')}: {compact(value)}"
     if event_type == "error":
         return f"error: {compact(event.get('message') or event.get('error') or event)}"
-    if event_type == "assistant" and isinstance(event.get("message"), dict):
+    message = event.get("message")
+    contents = message.get("content", []) if isinstance(message, dict) else []
+    if event_type == "assistant":
         lines: list[str] = []
-        for content in event["message"].get("content", []):
+        for content in contents:
             if not isinstance(content, dict):
                 continue
             if content.get("type") == "text":
@@ -49,8 +49,6 @@ def render(event: dict[str, Any]) -> str | None:
             elif content.get("type") == "tool_use":
                 lines.append(f"tool_use: {content.get('name', '')} {compact(content.get('input') or {}, 150)}")
         return compact(" | ".join(lines)) if lines else None
-    message = event.get("message")
-    contents = message.get("content", []) if isinstance(message, dict) else []
     if event_type == "tool_result" or any(
         isinstance(content, dict) and content.get("type") == "tool_result" for content in contents
     ):
@@ -73,7 +71,7 @@ def latest_log(log_dir: Path) -> Path | None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="watch-phase-attempt-log.py")
+    parser = argparse.ArgumentParser(prog="watch-phase-attempt-log.sh")
     parser.add_argument("change")
     args = parser.parse_args(argv)
     log_dir = ROOT_DIR / ".ops/changes" / args.change / "runtime/logs"
@@ -101,11 +99,10 @@ def main(argv: list[str] | None = None) -> int:
                 event = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if not isinstance(event, dict):
-                continue
-            message = render(event)
-            if message:
-                print(f"[{provider_tag(event)}][{attempt_tag}] {message}", flush=True)
+            if isinstance(event, dict):
+                message = render(event)
+                if message:
+                    print(f"[{provider_tag(event)}][{attempt_tag}] {message}", flush=True)
     return 0
 
 

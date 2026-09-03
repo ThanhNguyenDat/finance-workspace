@@ -72,7 +72,7 @@ def _last_message(result: object) -> str:
 
 def run(argv: list[str]) -> int:
     if argv != ["quant-research"]:
-        raise CLIError(f"{PREFIX}: usage: run-phase-agent-command.py quant-research")
+        raise CLIError(f"{PREFIX}: usage: run-phase-agent-command.sh quant-research")
     timeout_text = os.environ.get("PHASE_AGENT_QUANT_TIMEOUT_SECONDS", "3600")
     if not timeout_text.isdigit() or int(timeout_text) < 1:
         raise CLIError(f"{PREFIX}: invalid timeout")

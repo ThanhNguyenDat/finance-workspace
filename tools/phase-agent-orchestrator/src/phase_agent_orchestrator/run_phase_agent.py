@@ -165,7 +165,7 @@ def _git_head(repository: Path) -> str:
 
 def run(argv: list[str]) -> int:
     if len(argv) != 3:
-        raise CLIError(f"{PREFIX}: usage: run-phase-agent.py <change> <repository> <PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY>")
+        raise CLIError(f"{PREFIX}: usage: run-phase-agent.sh <change> <repository> <PLAN|IMPLEMENT|VERIFY|FIX|FINAL_VERIFY>")
     change, repository, phase = argv
     if phase not in PHASES:
         raise CLIError(f"{PREFIX}: unsupported phase")

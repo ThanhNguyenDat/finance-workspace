@@ -6,12 +6,12 @@ spec for every task below that says "matches the current bash behavior."
 
 ## 1. Bootstrap the `uv` project
 
-- [x] 1.1 Run `uv init --package` at `.agents/orchestrator/` to scaffold
+- [x] 1.1 Run `uv init --package` at `tools/phase-agent-orchestrator/` to scaffold
   `pyproject.toml` and `src/phase_agent_orchestrator/`, and verify
-  `uv run --project .agents/orchestrator python -c "import phase_agent_orchestrator"`
+  `uv run --project tools/phase-agent-orchestrator python -c "import phase_agent_orchestrator"`
   succeeds.
 - [x] 1.2 Add `pytest` as a dev dependency via `uv add --dev pytest`, and
-  verify `uv run --project .agents/orchestrator pytest --collect-only` exits 0
+  verify `uv run --project tools/phase-agent-orchestrator pytest --collect-only` exits 0
   with zero tests collected yet.
 - [x] 1.3 Add a `command -v uv` preflight check with a clear error message to
   `run-phase-agent-command.sh`'s existing
@@ -112,7 +112,7 @@ spec for every task below that says "matches the current bash behavior."
   `test_claude_quant_launcher.sh`, `test_phase_agent_quant_launcher.sh`,
   `test_codex_availability_detection.sh`, `test_codex_worker_policy.sh`,
   `test_claude_worker_policy.sh`, `test_provider_availability.sh`).
-- [x] 7.2 Verify: `uv run --project .agents/orchestrator pytest` passes with
+- [x] 7.2 Verify: `uv run --project tools/phase-agent-orchestrator pytest` passes with
   the full suite from Tasks 2, 5, and 6.
 - [x] 7.3 Run one live end-to-end smoke check:
   `./.agents/scripts/run-phase-agent-command.sh quant-research` against the
@@ -123,14 +123,14 @@ spec for every task below that says "matches the current bash behavior."
   `Quant iteration 212 completed with claude`, round416 NO-CHANGE recorded.
 - [x] 7.4 Update `.agents/rules/coding-and-verification.md` or the relevant
   skill (per `CLAUDE.md`'s Task Completion and Skill Upsert) to record `uv`
-  as a required tool and note the new `.agents/orchestrator/` bootstrap step,
+  as a required tool and note the new `tools/phase-agent-orchestrator/` bootstrap step,
   and verify `./.agents/scripts/sync-agent-links.sh --check` still passes
   after the edit.
 
 ## 8. FIX round — Claude VERIFY findings
 
 - [x] 8.1 **P1 (correctness).** In `lock_repositories`
-  (`.agents/orchestrator/src/phase_agent_orchestrator/ops_runtime.py:311-353`),
+  (`tools/phase-agent-orchestrator/src/phase_agent_orchestrator/ops_runtime.py:311-353`),
   the `ThreadPoolExecutor` snapshot taken before the sequential acquisition
   loop is reused as the liveness verdict when a repo lock is contended
   (`live = statuses.get(canonical); if live is None: live = owner_is_live(...)`),
@@ -164,7 +164,7 @@ spec for every task below that says "matches the current bash behavior."
   read) shows no remaining `/proc` reference in any of the three shims, and
   Task 7.1's bash suite still passes unmodified.
 - [x] 8.3 Verify: re-run the full bash test suite (Task 7.1's list) and
-  `uv run --project .agents/orchestrator pytest` after 8.1 and 8.2, and
+  `uv run --project tools/phase-agent-orchestrator pytest` after 8.1 and 8.2, and
   re-run the live smoke check from 7.3 once more as the FINAL_VERIFY gate for
   this FIX round. Verified by Claude (VERIFY): 13/13 bash suites pass, 15/15
   pytest pass (new test `test_repo_lock_rechecks_owner_after_existence_snapshot`
@@ -179,14 +179,14 @@ spec for every task below that says "matches the current bash behavior."
   repo's convention of pinning third-party actions) before the "Validate
   shell and JSON" step, and verify: a workflow run (or a local `act`/manual
   dry run reproducing the same steps in a clean checkout with no
-  pre-existing `.agents/orchestrator/.venv`) completes the "Run bounded
+  pre-existing `tools/phase-agent-orchestrator/.venv`) completes the "Run bounded
   orchestration tests" step successfully.
   Evidence (2026-09-02): commit `1f68f7b431edc7a000c745fb23846dd45a54ebc8`
   adds `astral-sh/setup-uv@v6.1.0`; [Agent contracts run
   33607048099](https://github.com/ThanhNguyenDat/finance-workspace/actions/runs/33607048099)
   completed successfully, including both the setup and bounded-test steps on
   the hosted clean runner.
-- [x] 8.5 Commit every file this change touches (`.agents/orchestrator/`,
+- [x] 8.5 Commit every file this change touches (`tools/phase-agent-orchestrator/`,
   the three shims, `.agents/rules/coding-and-verification.md`,
   `.agents/skills/quant-research-loop/SKILL.md`, and the CI workflow from
   8.4) in one reviewable commit or small stack, push to `origin/main`, and

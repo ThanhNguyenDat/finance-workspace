@@ -60,13 +60,13 @@ design must account for:
 
 ## Decisions
 
-**1. New code lives at `.agents/orchestrator/`, with the package under
-`.agents/orchestrator/src/`.**
+**1. New code lives at `tools/phase-agent-orchestrator/`, with the package under
+`tools/phase-agent-orchestrator/src/`.**
 Grouped under `.agents/` alongside `.agents/scripts/`, `.agents/rules/`,
 `.agents/skills/`, matching this repo's existing convention for shared
 tooling rather than introducing a top-level `src/` that implies this is the
 whole repository's source. `uv init --package` at
-`.agents/orchestrator/` gives the standard `pyproject.toml` + `src/<pkg>/`
+`tools/phase-agent-orchestrator/` gives the standard `pyproject.toml` + `src/<pkg>/`
 layout; `<pkg>` is `phase_agent_orchestrator`.
 *Alternative considered*: a repository-root `src/` — rejected because
 `finance-workspace` is an orchestration/specs repo (per its own
@@ -84,7 +84,7 @@ exec uv run --project "$(dirname -- "${BASH_SOURCE[0]}")/../orchestrator" \
   python -m phase_agent_orchestrator.ops_runtime "$@"
 ```
 (module name varies per script). `uv run --project` resolves/creates the
-`.venv` under `.agents/orchestrator/` lazily and transparently; no separate
+`.venv` under `tools/phase-agent-orchestrator/` lazily and transparently; no separate
 "activate" step is needed by any caller.
 *Alternative considered*: rename the callers to invoke a `uv run`-based
 command directly — rejected, since it would require editing every caller
@@ -165,7 +165,7 @@ persistent pool of concurrent tasks to manage as in a daemon.
 
 ## Migration Plan
 
-1. Scaffold `.agents/orchestrator/` (`uv init --package`), add `pyproject.toml`
+1. Scaffold `tools/phase-agent-orchestrator/` (`uv init --package`), add `pyproject.toml`
    dependencies, commit `uv.lock`.
 2. Port `phase-agent-state.sh` first (smallest, no lock semantics) as the
    Python module + shim; get its existing bash test suite green.

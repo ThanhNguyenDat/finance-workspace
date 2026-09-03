@@ -1,4 +1,4 @@
-"""Argument parsing and dispatch for ops-runtime.py."""
+"""Argument parsing and dispatch for ops-runtime.sh."""
 
 from __future__ import annotations
 
@@ -16,23 +16,23 @@ TRANSITIONS = ops_transaction.TRANSITIONS
 def usage() -> None:
     print(
         """usage:
-  ops-runtime.py lock <change> <session-id>
-  ops-runtime.py init <change> <session-id> [legacy-backend] [origin]
-  ops-runtime.py unlock <change> <session-id>
-  ops-runtime.py lock-repos <change> <session-id> <repository>...
-  ops-runtime.py unlock-repos <change> <session-id>
-  ops-runtime.py lock-account <provider> <account> <owner-pid> [change] [session-id]
-  ops-runtime.py unlock-account <provider> <account> <owner-pid> [change] [session-id]
-  ops-runtime.py cleanup <change> <session-id> <FAILED|BLOCKED>
-  ops-runtime.py assert-repo-lock <change> <session-id> <repository>
-  ops-runtime.py phase <change> <session-id> <next-phase>
-  ops-runtime.py fix <change> <session-id>
-  ops-runtime.py route <change> <session-id> <IMPLEMENT|FIX>
-  ops-runtime.py record-attempt <change> <session-id> <attempt-json-file>
-  ops-runtime.py trace-origin <change> <session-id> <research-iteration> <instrument> <research-artifact>...
-  ops-runtime.py state <change>
-  ops-runtime.py active <workspace-root> [session-id]
-  ops-runtime.py complete <change> <session-id>""",
+  ops-runtime.sh lock <change> <session-id>
+  ops-runtime.sh init <change> <session-id> [legacy-backend] [origin]
+  ops-runtime.sh unlock <change> <session-id>
+  ops-runtime.sh lock-repos <change> <session-id> <repository>...
+  ops-runtime.sh unlock-repos <change> <session-id>
+  ops-runtime.sh lock-account <provider> <account> <owner-pid> [change] [session-id]
+  ops-runtime.sh unlock-account <provider> <account> <owner-pid> [change] [session-id]
+  ops-runtime.sh cleanup <change> <session-id> <FAILED|BLOCKED>
+  ops-runtime.sh assert-repo-lock <change> <session-id> <repository>
+  ops-runtime.sh phase <change> <session-id> <next-phase>
+  ops-runtime.sh fix <change> <session-id>
+  ops-runtime.sh route <change> <session-id> <IMPLEMENT|FIX>
+  ops-runtime.sh record-attempt <change> <session-id> <attempt-json-file>
+  ops-runtime.sh trace-origin <change> <session-id> <research-iteration> <instrument> <research-artifact>...
+  ops-runtime.sh state <change>
+  ops-runtime.sh active <workspace-root> [session-id]
+  ops-runtime.sh complete <change> <session-id>""",
         file=sys.stderr,
     )
     raise SystemExit(2)

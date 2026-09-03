@@ -5,7 +5,7 @@ description: "Đánh dấu Codex tạm thời không khả dụng cho quant rese
 Chạy lệnh state helper sau đúng một lần:
 
 ```bash
-./.agents/scripts/phase-agent-state.py provider-off codex
+./.agents/scripts/phase-agent-state.sh provider-off codex
 ```
 
 Không bắt đầu research, không khởi động Codex, không dừng hoặc khởi động lại
