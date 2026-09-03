@@ -4,12 +4,12 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/hermetic-env.sh"
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
 RUNNER="$ROOT_DIR/tools/orchestrator/bin/run-claude-phase.sh"
 OPS="$ROOT_DIR/tools/orchestrator/bin/ops-runtime.sh"
-STATE="$ROOT_DIR/tools/orchestrator/bin/phase-agent-state.sh"
+STATE="$ROOT_DIR/tools/orchestrator/bin/agent-role-state.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 workspace="$tmp/workspace"; repo="$tmp/repo"; bin="$tmp/bin"; trace="$tmp/trace"
 mkdir -p "$workspace" "$repo" "$bin" "$trace" "$tmp/claude-work" "$workspace/.agents/scripts"
-for helper in ops-runtime.sh phase-agent-state.sh quant-research-state.sh run-phase-agent-command.sh classify-claude-result.sh classify-codex-result.sh; do
+for helper in ops-runtime.sh agent-role-state.sh quant-research-state.sh run-phase-agent-command.sh classify-claude-result.sh classify-codex-result.sh; do
   cp "$ROOT_DIR/tools/orchestrator/bin/$helper" "$workspace/.agents/scripts/$helper"
 done
 chmod +x "$workspace/.agents/scripts/"*.sh
@@ -33,9 +33,9 @@ chmod +x "$bin/claude"
 export PATH="$bin:$PATH" CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1 FAKE_SDK_ACCOUNT_TRACE="$trace/claude.config-dir" FAKE_SDK_RESULT_TEXT="OK"
 export OPS_ROOT="$workspace" OPS_WORKSPACE_ROOT="$workspace"
 export QUANT_RESEARCH_ROOT="$workspace"
-export PHASE_AGENT_STATE_DIR="$workspace/.ops/runtime/phase-agents"
-export PHASE_AGENT_LEGACY_QUANT_STATE="$tmp/no-quant"
-export PHASE_AGENT_LEGACY_CLAUDE_STATE="$tmp/no-claude"
+export AGENT_ROLE_STATE_DIR="$workspace/.ops/runtime/agent-roles"
+export AGENT_ROLE_LEGACY_QUANT_STATE="$tmp/no-quant"
+export AGENT_ROLE_LEGACY_CLAUDE_STATE="$tmp/no-claude"
 export PHASE_AGENT_ACCOUNTS_FILE="$tmp/accounts.yaml"
 mkdir -p "$tmp/claude-personal"
 cat >"$PHASE_AGENT_ACCOUNTS_FILE" <<EOF
@@ -84,7 +84,7 @@ export FAKE_SDK_MODE=quota-work FAKE_CLAUDE_QUOTA_DIR="$tmp/claude-work"
 
 quant_state="$QUANT_RESEARCH_STATE_DIR/state.json"
 jq -e '.iteration == 1' "$quant_state" >/dev/null || fail 'quant iteration was not incremented exactly once'
-jq -e '.providers.claude.available == true and .providers.claude.accounts.work.available == false' "$PHASE_AGENT_STATE_DIR/state.json" >/dev/null || fail 'account-specific quota state was not isolated'
+jq -e '.providers.claude.available == true and .providers.claude.accounts.work.available == false' "$AGENT_ROLE_STATE_DIR/state.json" >/dev/null || fail 'account-specific quota state was not isolated'
 grep -Fqx -- "$tmp/claude-work" "$trace/claude.config-dir" || fail 'work account was not attempted'
 grep -Fqx -- "$tmp/claude-personal" "$trace/claude.config-dir" || fail 'personal account was not used for continuation'
 find "$workspace/.ops/runtime/phase-agents/quant-runs" -mindepth 2 -maxdepth 2 -name '*.meta.json' -print0 | sort -z -V | xargs -0 jq -s -e 'length == 2 and .[0].account == "work" and .[0].result_class == "global-quota-exhausted" and .[1].account == "personal" and .[1].result_class == "success"' >/dev/null || fail 'same-provider account failover evidence is invalid'

@@ -14,7 +14,7 @@ from claude_agent_sdk import ResultMessage
 from openai_codex import TurnResult
 from openai_codex.generated.v2_all import TurnStatus
 from orchestrator.cli import (
-    configure_phase_agents,
+    configure_agent_roles,
     detect_codex_availability,
     detect_provider_availability,
 )
@@ -115,13 +115,13 @@ def test_claude_accounts_rotate_with_personal_02_first(
         f"claude:\n  personal: {personal}\n  personal-02: {personal_02}\ncodex:\n  personal: {tmp_path}\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_ROLE_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(registry))
     current_lock, state = candidates.with_state()
     try:
         claude = [
             item
-            for item in state["phases"]["quant_research"]["candidates"]
+            for item in state["roles"]["quant_research"]["candidates"]
             if item["provider"] == "claude"
         ]
         assert [item["account"] for item in claude] == ["personal-02", "personal"]
@@ -187,11 +187,11 @@ def test_quant_claude_rotates_from_personal_02_to_personal(
     (root / ".claude/commands/quant-research.md").write_text(
         "fixture quant prompt\n", encoding="utf-8"
     )
-    state_dir = root / ".ops/runtime/phase-agents"
+    state_dir = root / ".ops/runtime/agent-roles"
     quant_dir = root / ".ops/runtime/quant-research"
     monkeypatch.setenv("QUANT_RESEARCH_ROOT", str(root))
-    monkeypatch.setenv("PHASE_AGENT_ROOT", str(root))
-    monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(state_dir))
+    monkeypatch.setenv("AGENT_ROLE_ROOT", str(root))
+    monkeypatch.setenv("AGENT_ROLE_STATE_DIR", str(state_dir))
     monkeypatch.setenv("QUANT_RESEARCH_STATE_DIR", str(quant_dir))
     monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(registry))
     monkeypatch.setenv("PATH", f"{fake_bin}:{os.environ['PATH']}")
@@ -316,14 +316,14 @@ def test_codex_fake_quota_preserves_partial_worktree_evidence(
 def test_configure_show_has_stable_table_fixture(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:
-    monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_ROLE_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv(
         "PHASE_AGENT_ACCOUNTS_FILE", str(tmp_path / "missing-accounts.yaml")
     )
     candidates.ensure_state()
-    configure_phase_agents.show()
+    configure_agent_roles.show()
     output = capsys.readouterr().out
-    expected = """PHASE            MODE     PROVIDER MODEL                    ACCOUNT      EFFORT
+    expected = """ROLE             MODE     PROVIDER MODEL                    ACCOUNT      EFFORT
 quant_research   auto     claude   sonnet                   -            high
 quant_research   auto     codex    gpt-5.6-luna             -            high
 plan             auto     claude   opus                     -            medium
@@ -348,7 +348,7 @@ claude   auto     true       -
 def test_provider_detectors_map_sdk_result_without_cli_parsing(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:
-    monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(tmp_path / "phase-state"))
+    monkeypatch.setenv("AGENT_ROLE_STATE_DIR", str(tmp_path / "role-state"))
     monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(tmp_path / "missing.yaml"))
     candidates.ensure_state()
     monkeypatch.setattr(detect_provider_availability, "probe", lambda *args: "success")
@@ -398,8 +398,8 @@ def test_generic_resolver_calls_claude_sdk_adapter_in_process(
     subprocess.run(["git", "-C", str(root), "commit", "-qm", "init"], check=True)
     monkeypatch.setenv("OPS_ROOT", str(root))
     monkeypatch.setenv("OPS_WORKSPACE_ROOT", str(root))
-    monkeypatch.setenv("PHASE_AGENT_ROOT", str(root))
-    monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(root / ".ops/runtime/phase-agents"))
+    monkeypatch.setenv("AGENT_ROLE_ROOT", str(root))
+    monkeypatch.setenv("AGENT_ROLE_STATE_DIR", str(root / ".ops/runtime/agent-roles"))
     monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(tmp_path / "missing.yaml"))
     monkeypatch.setenv("PATH", f"{fake_bin}:{os.environ['PATH']}")
     monkeypatch.setenv("FAKE_SDK_MODE", "complete")

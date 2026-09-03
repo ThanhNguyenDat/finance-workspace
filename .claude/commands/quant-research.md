@@ -16,7 +16,7 @@ lại chính mình hoặc gọi trực tiếp provider CLI.
 ## Bắt đầu vòng
 
 1. Đọc research state bằng `uv run --project tools/orchestrator quant-research-state state`
-   và phase-agent state bằng `uv run --project tools/orchestrator phase-agent-state state`.
+   và agent-role state bằng `uv run --project tools/orchestrator agent-role-state state`.
    Iteration trong research state đã được launcher increment; dùng đúng giá trị
    đó cho mọi attempt tiếp quản. Provider health/probe/candidate selection do
    launcher xử lý, không tự chạy probe hoặc đổi provider trong prompt.

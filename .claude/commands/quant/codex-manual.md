@@ -5,7 +5,7 @@ description: "Chuyển Codex availability về chế độ điều khiển thủ
 Chạy state helper sau đúng một lần:
 
 ```bash
-uv run --project tools/orchestrator phase-agent-state provider-manual codex
+uv run --project tools/orchestrator agent-role-state provider-manual codex
 ```
 
 Không thay đổi resolved availability, không chạy probe và không bắt đầu research.

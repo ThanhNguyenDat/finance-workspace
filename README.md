@@ -81,17 +81,18 @@ Launcher increment iteration một lần, đọc canonical
 `quant_research`. Nếu provider hết quota giữa vòng, candidate kế tiếp tiếp tục
 cùng iteration và artifacts hiện tại.
 
-PLAN, IMPLEMENT, VERIFY, FIX và FINAL_VERIFY cũng là logical phase agents. Mỗi
-phase có ordered Codex/Claude candidates riêng tại ignored atomic state
-`.ops/runtime/phase-agents/state.json`. Xem và điều chỉnh an toàn:
+PLAN, IMPLEMENT, VERIFY, FIX và FINAL_VERIFY cũng là logical phase agents, và
+`quant_research` là một role riêng biệt (không phải một OPS phase). Mỗi role
+có ordered Codex/Claude candidates riêng tại ignored atomic state
+`.ops/runtime/agent-roles/state.json`. Xem và điều chỉnh an toàn:
 
 ```text
-uv run --project tools/orchestrator configure-phase-agents show
-uv run --project tools/orchestrator configure-phase-agents set implement codex gpt-5.6-luna high
-uv run --project tools/orchestrator configure-phase-agents pin verify claude
-uv run --project tools/orchestrator configure-phase-agents auto verify
-uv run --project tools/orchestrator configure-phase-agents provider-off codex
-uv run --project tools/orchestrator configure-phase-agents provider-auto codex
+uv run --project tools/orchestrator configure-agent-roles show
+uv run --project tools/orchestrator configure-agent-roles set implement codex gpt-5.6-luna high
+uv run --project tools/orchestrator configure-agent-roles pin verify claude
+uv run --project tools/orchestrator configure-agent-roles auto verify
+uv run --project tools/orchestrator configure-agent-roles provider-off codex
+uv run --project tools/orchestrator configure-agent-roles provider-auto codex
 ```
 
 Mặc định ưu tiên Claude Opus `medium` cho PLAN/VERIFY, Codex cho

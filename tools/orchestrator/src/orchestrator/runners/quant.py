@@ -319,7 +319,7 @@ def run(argv: list[str]) -> int:
                 agent_lock, agent_state = candidates.with_state()
                 try:
                     options = list(
-                        agent_state["phases"]["quant_research"]["candidates"]
+                        agent_state["roles"]["quant_research"]["candidates"]
                     )
                 finally:
                     agent_lock.release()
@@ -600,11 +600,11 @@ def run(argv: list[str]) -> int:
 
 
 def _quant_candidate_allowed(state: dict, item: dict, override: bool) -> bool:
-    phase = state["phases"]["quant_research"]
+    role = state["roles"]["quant_research"]
     if (
         not override
-        and phase["mode"] == "manual"
-        and phase.get("pinned_provider") != item["provider"]
+        and role["mode"] == "manual"
+        and role.get("pinned_provider") != item["provider"]
     ):
         return False
     return _provider_available(state, item["provider"], item.get("account"))
@@ -624,7 +624,7 @@ def _provider_available(state: dict, provider: str, account: str | None = None) 
 def _probe_quant(provider: str, state: dict) -> None:
     option = next(
         item
-        for item in state["phases"]["quant_research"]["candidates"]
+        for item in state["roles"]["quant_research"]["candidates"]
         if item["provider"] == provider
     )
     result = probe(

@@ -1,4 +1,4 @@
-"""Argument parsing and dispatch for the phase-agent-state console command."""
+"""Argument parsing and dispatch for the agent-role-state console command."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ PREFIX = candidates.PREFIX
 
 def usage() -> None:
     print(
-        "Usage: phase-agent-state <init|state|account-dir PROVIDER ACCOUNT|validate PROVIDER MODEL EFFORT [ACCOUNT]|resolve PHASE|set PHASE PROVIDER MODEL EFFORT [ACCOUNT]|candidate-set PHASE INDEX PROVIDER MODEL EFFORT [ACCOUNT]|reset PHASE|reset-all|pin PHASE PROVIDER [ACCOUNT]|auto PHASE|provider-on PROVIDER [ACCOUNT]|provider-off PROVIDER [REASON] [ACCOUNT]|provider-manual PROVIDER|provider-auto PROVIDER|provider-result PROVIDER RESULT [COOLDOWN_SECONDS] [ACCOUNT]|probe-due PROVIDER [ACCOUNT]>",
+        "Usage: agent-role-state <init|state|account-dir PROVIDER ACCOUNT|validate PROVIDER MODEL EFFORT [ACCOUNT]|resolve ROLE|set ROLE PROVIDER MODEL EFFORT [ACCOUNT]|candidate-set ROLE INDEX PROVIDER MODEL EFFORT [ACCOUNT]|reset ROLE|reset-all|pin ROLE PROVIDER [ACCOUNT]|auto ROLE|provider-on PROVIDER [ACCOUNT]|provider-off PROVIDER [REASON] [ACCOUNT]|provider-manual PROVIDER|provider-auto PROVIDER|provider-result PROVIDER RESULT [COOLDOWN_SECONDS] [ACCOUNT]|probe-due PROVIDER [ACCOUNT]>",
         file=sys.stderr,
     )
     raise SystemExit(2)
@@ -80,10 +80,10 @@ def main() -> int:
     if command == "resolve":
         if len(args) != 2:
             usage()
-        phase = candidates.normalize_phase(args[1])
+        role = candidates.normalize_role(args[1])
         current_lock, state = candidates.with_state()
         try:
-            candidates.resolve(phase, state)
+            candidates.resolve(role, state)
         finally:
             current_lock.release()
         return 0
@@ -91,11 +91,11 @@ def main() -> int:
         expected = {"set": {5, 6}, "candidate-set": {6, 7}}[command]
         if len(args) not in expected:
             usage()
-        phase = candidates.normalize_phase(args[1])
+        role = candidates.normalize_role(args[1])
         if command == "set":
             provider, model, effort = args[2:5]
             account = args[5] if len(args) == 6 else None
-            candidates.set_candidate(phase, provider, model, effort, account)
+            candidates.set_candidate(role, provider, model, effort, account)
         else:
             index = args[2]
             if not index.isdigit():
@@ -103,7 +103,7 @@ def main() -> int:
             provider, model, effort = args[3:6]
             account = args[6] if len(args) == 7 else None
             candidates.set_candidate(
-                phase, provider, model, effort, account, int(index)
+                role, provider, model, effort, account, int(index)
             )
         return 0
     if command in {

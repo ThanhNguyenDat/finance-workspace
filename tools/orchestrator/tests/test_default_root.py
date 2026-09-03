@@ -13,7 +13,7 @@ def _repository_root() -> Path:
 
 
 def test_default_roots_resolve_to_repository_root(monkeypatch):
-    for variable in ("OPS_ROOT", "QUANT_RESEARCH_ROOT", "PHASE_AGENT_ROOT"):
+    for variable in ("OPS_ROOT", "QUANT_RESEARCH_ROOT", "AGENT_ROLE_ROOT"):
         monkeypatch.delenv(variable, raising=False)
 
     expected = _repository_root()

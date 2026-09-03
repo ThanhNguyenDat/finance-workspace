@@ -224,8 +224,8 @@ def _candidate(
     if not model or not effort:
         current_lock, state = candidates.with_state()
         try:
-            phase_state = state["phases"][candidates.normalize_phase(phase)]
-            for option in phase_state["candidates"]:
+            role_state = state["roles"][candidates.normalize_role(phase)]
+            for option in role_state["candidates"]:
                 option_account = option.get("account", "")
                 available = state["providers"][option["provider"]].get(
                     "available", True
@@ -413,11 +413,11 @@ def run(provider: str, argv: list[str]) -> int:
     if not model or not effort:
         current_lock, candidates_state = candidates.with_state()
         try:
-            phase_state = candidates_state["phases"][candidates.normalize_phase(phase)]
+            role_state = candidates_state["roles"][candidates.normalize_role(phase)]
             selected = next(
                 (
                     item
-                    for item in phase_state["candidates"]
+                    for item in role_state["candidates"]
                     if item["provider"] == provider
                     and (
                         candidates_state["providers"][provider]

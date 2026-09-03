@@ -34,7 +34,7 @@ easy to get wrong. Always:
 
 - Logical agents own PLAN, IMPLEMENT, VERIFY, FIX and FINAL_VERIFY; ordered
   Codex/Claude candidates are configured by
-  `uv run --project tools/orchestrator configure-phase-agents`.
+  `uv run --project tools/orchestrator configure-agent-roles`.
 - Exactly one attempt owns the phase lease and repository lock. A provider/model
   cannot change while that attempt is alive.
 - Confirmed global quota/model availability may select another candidate only

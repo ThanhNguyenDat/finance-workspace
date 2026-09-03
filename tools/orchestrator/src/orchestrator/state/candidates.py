@@ -1,4 +1,4 @@
-"""Candidate profiles, provider health, and phase-agent state."""
+"""Candidate profiles, provider health, and agent-role state."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from ..accounts.registry import (
 from ..core.io import CLIError, atomic_write_json, die, json_text, utc_after, utc_now
 from ..locks.directory_lock import PidDirectoryLock
 
-PREFIX = "phase-agent-state"
+PREFIX = "agent-role-state"
 ROLES = (
     "quant_research",
     "plan",
@@ -31,13 +31,13 @@ SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9._:-]+$")
 
 
 def root_dir() -> Path:
-    return Path(os.environ.get("PHASE_AGENT_ROOT", Path(__file__).resolve().parents[5]))
+    return Path(os.environ.get("AGENT_ROLE_ROOT", Path(__file__).resolve().parents[5]))
 
 
 def state_dir() -> Path:
     return Path(
         os.environ.get(
-            "PHASE_AGENT_STATE_DIR", root_dir() / ".ops/runtime/phase-agents"
+            "AGENT_ROLE_STATE_DIR", root_dir() / ".ops/runtime/agent-roles"
         )
     )
 
@@ -50,14 +50,14 @@ def lock() -> PidDirectoryLock:
     return PidDirectoryLock(state_dir() / ".lock", PREFIX)
 
 
-def valid_phase(value: str) -> bool:
+def valid_role(value: str) -> bool:
     return value in ROLES
 
 
-def normalize_phase(value: str) -> str:
+def normalize_role(value: str) -> str:
     normalized = value.replace("-", "_").lower()
-    if not valid_phase(normalized):
-        die(PREFIX, f"unsupported phase agent: {value}")
+    if not valid_role(normalized):
+        die(PREFIX, f"unsupported agent role: {value}")
     return normalized
 
 
@@ -100,7 +100,7 @@ def candidate(
 def default_state() -> dict[str, Any]:
     return {
         "schema_version": 1,
-        "phases": {
+        "roles": {
             "quant_research": {
                 "mode": "auto",
                 "pinned_provider": None,
@@ -197,16 +197,16 @@ def is_string(value: Any) -> bool:
 def state_valid(value: Any) -> bool:
     if not isinstance(value, dict) or value.get("schema_version") != 1:
         return False
-    phases, providers = value.get("phases"), value.get("providers")
+    roles, providers = value.get("roles"), value.get("providers")
     if (
-        not isinstance(phases, dict)
-        or set(phases) != set(ROLES)
+        not isinstance(roles, dict)
+        or set(roles) != set(ROLES)
         or not isinstance(providers, dict)
         or set(providers) != set(PROVIDERS)
     ):
         return False
-    for phase in ROLES:
-        item = phases[phase]
+    for role in ROLES:
+        item = roles[role]
         if not isinstance(item, dict) or item.get("mode") not in {"auto", "manual"}:
             return False
         if (
@@ -327,13 +327,13 @@ def load_json(path: Path) -> Any:
 def import_legacy(state: dict[str, Any]) -> dict[str, Any]:
     quant = Path(
         os.environ.get(
-            "PHASE_AGENT_LEGACY_QUANT_STATE",
+            "AGENT_ROLE_LEGACY_QUANT_STATE",
             root_dir() / ".ops/runtime/quant-research/state.json",
         )
     )
     claude = Path(
         os.environ.get(
-            "PHASE_AGENT_LEGACY_CLAUDE_STATE",
+            "AGENT_ROLE_LEGACY_CLAUDE_STATE",
             root_dir() / ".ops/runtime/claude-workers/state.json",
         )
     )
@@ -344,16 +344,16 @@ def import_legacy(state: dict[str, Any]) -> dict[str, Any]:
     if isinstance(old, dict) and isinstance(old.get("codex_profiles"), dict):
         if "codex_available" in old:
             state["providers"]["codex"]["available"] = old["codex_available"]
-        for phase, role in (("implement", "implement"), ("fix", "fix")):
-            profile = old["codex_profiles"].get(role)
+        for role_key, legacy_role in (("implement", "implement"), ("fix", "fix")):
+            profile = old["codex_profiles"].get(legacy_role)
             if isinstance(profile, dict):
-                state["phases"][phase]["candidates"][0] = {
+                state["roles"][role_key]["candidates"][0] = {
                     **profile,
                     "provider": "codex",
                 }
         profile = old["codex_profiles"].get("fix_fallback")
         if isinstance(profile, dict):
-            state["phases"]["fix"]["candidates"][1] = {**profile, "provider": "codex"}
+            state["roles"]["fix"]["candidates"][1] = {**profile, "provider": "codex"}
     try:
         old = load_json(claude) if claude.is_file() else None
     except CLIError:
@@ -367,8 +367,8 @@ def import_legacy(state: dict[str, Any]) -> dict[str, Any]:
             ("fix", "fallback_fix"),
             ("final_verify", "final_verify"),
         )
-        for phase, role in mappings:
-            profile = old["profiles"].get(role)
+        for role_key, legacy_role in mappings:
+            profile = old["profiles"].get(legacy_role)
             if isinstance(profile, dict):
                 index = {
                     "quant_research": 0,
@@ -377,8 +377,8 @@ def import_legacy(state: dict[str, Any]) -> dict[str, Any]:
                     "verify": 0,
                     "fix": 2,
                     "final_verify": 0,
-                }[phase]
-                state["phases"][phase]["candidates"][index] = {
+                }[role_key]
+                state["roles"][role_key]["candidates"][index] = {
                     **profile,
                     "provider": "claude",
                 }
@@ -414,8 +414,8 @@ def rotate_claude_accounts(state: dict[str, Any]) -> dict[str, Any]:
     if not {"personal", "personal-02"}.issubset(accounts):
         return state
     changed = False
-    for phase in ROLES:
-        options = state["phases"][phase]["candidates"]
+    for role in ROLES:
+        options = state["roles"][role]["candidates"]
         claude_index = next(
             (
                 index
@@ -461,8 +461,8 @@ def emit(state: dict[str, Any]) -> None:
     print(json_text(state))
 
 
-def resolve(phase: str, state: dict[str, Any]) -> None:
-    item = state["phases"][phase]
+def resolve(role: str, state: dict[str, Any]) -> None:
+    item = state["roles"][role]
     for option in item["candidates"]:
         provider = option["provider"]
         account = option.get("account")
@@ -488,7 +488,7 @@ def resolve(phase: str, state: dict[str, Any]) -> None:
 
 
 def set_candidate(
-    phase: str,
+    role: str,
     provider: str,
     model: str,
     effort: str,
@@ -499,15 +499,15 @@ def set_candidate(
     current_lock, state = with_state()
     try:
         if index is None:
-            state["phases"][phase]["candidates"] = [
+            state["roles"][role]["candidates"] = [
                 candidate(provider, model, effort, account)
             ] + [
                 item
-                for item in state["phases"][phase]["candidates"]
+                for item in state["roles"][role]["candidates"]
                 if item["provider"] != provider
             ]
         else:
-            candidates = state["phases"][phase]["candidates"]
+            candidates = state["roles"][role]["candidates"]
             if index >= len(candidates):
                 die(PREFIX, "candidate index is out of range")
             candidates[index] = candidate(provider, model, effort, account)
@@ -548,15 +548,15 @@ def probe_due(provider: str, account: str | None) -> int:
 
 def mutate(command: str, args: list[str]) -> int:
     if command == "reset":
-        phase = normalize_phase(args[1])
+        role = normalize_role(args[1])
     elif command == "reset-all":
-        phase = ""
+        role = ""
     elif command == "pin":
-        phase = normalize_phase(args[1])
+        role = normalize_role(args[1])
         provider = args[2]
         account = args[3] if len(args) == 4 else None
     elif command == "auto":
-        phase = normalize_phase(args[1])
+        role = normalize_role(args[1])
     else:
         provider, result = (
             (args[1], args[2]) if command == "provider-result" else (args[1], "")
@@ -566,31 +566,31 @@ def mutate(command: str, args: list[str]) -> int:
     try:
         changed = True
         if command == "reset":
-            state["phases"][phase] = copy.deepcopy(default_state()["phases"][phase])
+            state["roles"][role] = copy.deepcopy(default_state()["roles"][role])
         elif command == "reset-all":
             state = default_state()
             state["legacy_imported"] = True
         elif command == "pin":
             if not any(
                 item["provider"] == provider
-                for item in state["phases"][phase]["candidates"]
+                for item in state["roles"][role]["candidates"]
             ):
-                die(PREFIX, "provider has no candidate for phase")
+                die(PREFIX, "provider has no candidate for role")
             if account is not None:
                 normalized, _ = resolve_account_dir(provider, account, PREFIX)
                 if not any(
                     item["provider"] == provider and item.get("account") == normalized
-                    for item in state["phases"][phase]["candidates"]
+                    for item in state["roles"][role]["candidates"]
                 ):
-                    die(PREFIX, "account has no candidate for phase")
+                    die(PREFIX, "account has no candidate for role")
                 account = normalized
-            state["phases"][phase]["mode"] = "manual"
-            state["phases"][phase]["pinned_provider"] = provider
-            state["phases"][phase]["pinned_account"] = account
+            state["roles"][role]["mode"] = "manual"
+            state["roles"][role]["pinned_provider"] = provider
+            state["roles"][role]["pinned_account"] = account
         elif command == "auto":
-            state["phases"][phase]["mode"] = "auto"
-            state["phases"][phase]["pinned_provider"] = None
-            state["phases"][phase]["pinned_account"] = None
+            state["roles"][role]["mode"] = "auto"
+            state["roles"][role]["pinned_provider"] = None
+            state["roles"][role]["pinned_account"] = None
         elif command == "provider-on":
             account_arg = args[2] if len(args) == 3 else None
             if account_arg is None:

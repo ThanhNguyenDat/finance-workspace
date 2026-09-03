@@ -1,4 +1,4 @@
-"""Operator CLI for phase-agent candidate and provider configuration."""
+"""Operator CLI for agent-role candidate and provider configuration."""
 
 from __future__ import annotations
 
@@ -8,19 +8,19 @@ from typing import NoReturn
 from ..core.io import CLIError, run_cli
 from ..state import candidates
 
-PREFIX = "configure-phase-agents"
+PREFIX = "configure-agent-roles"
 
 
 def show() -> None:
     current_lock, state = candidates.with_state()
     try:
         print(
-            f"{'PHASE':<16} {'MODE':<8} {'PROVIDER':<8} {'MODEL':<24} {'ACCOUNT':<12} EFFORT"
+            f"{'ROLE':<16} {'MODE':<8} {'PROVIDER':<8} {'MODEL':<24} {'ACCOUNT':<12} EFFORT"
         )
-        for phase, item in state["phases"].items():
+        for role, item in state["roles"].items():
             for option in item["candidates"]:
                 print(
-                    f"{phase:<16} {item['mode']:<8} {option['provider']:<8} "
+                    f"{role:<16} {item['mode']:<8} {option['provider']:<8} "
                     f"{option['model']:<24} {option.get('account', '-'):<12} {option['effort']}"
                 )
         print()
@@ -35,7 +35,7 @@ def show() -> None:
 
 def usage() -> None:
     print(
-        "usage: configure-phase-agents <show|set PHASE PROVIDER MODEL EFFORT [ACCOUNT]|candidate-set PHASE INDEX PROVIDER MODEL EFFORT [ACCOUNT]|reset PHASE|reset-all|pin PHASE PROVIDER [ACCOUNT]|auto PHASE|provider-on PROVIDER [ACCOUNT]|provider-off PROVIDER [REASON] [ACCOUNT]|provider-manual PROVIDER|provider-auto PROVIDER>",
+        "usage: configure-agent-roles <show|set ROLE PROVIDER MODEL EFFORT [ACCOUNT]|candidate-set ROLE INDEX PROVIDER MODEL EFFORT [ACCOUNT]|reset ROLE|reset-all|pin ROLE PROVIDER [ACCOUNT]|auto ROLE|provider-on PROVIDER [ACCOUNT]|provider-off PROVIDER [REASON] [ACCOUNT]|provider-manual PROVIDER|provider-auto PROVIDER>",
         file=sys.stderr,
     )
     raise CLIError(f"{PREFIX}: invalid usage")
@@ -50,18 +50,18 @@ def main(argv: list[str] | None = None) -> int:
         show()
         return 0
     if command == "set" and len(args) in {5, 6}:
-        phase = candidates.normalize_phase(args[1])
+        role = candidates.normalize_role(args[1])
         candidates.set_candidate(
-            phase, args[2], args[3], args[4], args[5] if len(args) == 6 else None
+            role, args[2], args[3], args[4], args[5] if len(args) == 6 else None
         )
         show()
         return 0
     if command == "candidate-set" and len(args) in {6, 7}:
-        phase = candidates.normalize_phase(args[1])
+        role = candidates.normalize_role(args[1])
         if not args[2].isdigit():
             raise CLIError(f"{PREFIX}: candidate index must be non-negative")
         candidates.set_candidate(
-            phase,
+            role,
             args[3],
             args[4],
             args[5],

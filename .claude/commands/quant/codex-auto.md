@@ -5,7 +5,7 @@ description: "Tự phát hiện Codex availability cho mỗi vòng quant researc
 Chạy tuần tự đúng một lần mỗi lệnh:
 
 ```bash
-uv run --project tools/orchestrator phase-agent-state provider-auto codex
+uv run --project tools/orchestrator agent-role-state provider-auto codex
 uv run --project tools/orchestrator detect-provider-availability codex
 ```
 

@@ -57,8 +57,8 @@ def _environment(values: dict[str, str]) -> Iterator[None]:
 def _state_and_candidates(phase: str) -> tuple[dict, list[dict]]:
     current_lock, state = candidates.with_state()
     try:
-        phase_state = state["phases"][phase.lower()]
-        return state, list(phase_state["candidates"])
+        role_state = state["roles"][phase.lower()]
+        return state, list(role_state["candidates"])
     finally:
         current_lock.release()
 
@@ -105,8 +105,8 @@ def _probe_if_due(provider: str, state: dict) -> None:
     options = next(
         (
             item
-            for phase in state["phases"].values()
-            for item in phase["candidates"]
+            for role in state["roles"].values()
+            for item in role["candidates"]
             if item["provider"] == provider
         ),
         None,
@@ -360,11 +360,11 @@ def run(argv: list[str]) -> int:
                 item["provider"], item["model"], item["effort"], item.get("account")
             )
             current_state, _ = _state_and_candidates(phase.lower())
-            phase_state = current_state["phases"][phase.lower()]
+            role_state = current_state["roles"][phase.lower()]
             if (
                 override is None
-                and phase_state["mode"] == "manual"
-                and phase_state.get("pinned_provider") != item["provider"]
+                and role_state["mode"] == "manual"
+                and role_state.get("pinned_provider") != item["provider"]
             ):
                 continue
             if not _available(current_state, item) and not item.get("account"):

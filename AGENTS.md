@@ -25,8 +25,8 @@ IMPLEMENT / FIX              = Codex first, Claude fallback
 ORCHESTRATE                   = deterministic OPS shell state
 ```
 
-`uv run --project tools/orchestrator phase-agent-state` is authoritative for current candidate order and
-provider health. A fallback provider inherits the phase's complete scope,
+`uv run --project tools/orchestrator agent-role-state` is authoritative for current candidate order and
+provider health. A fallback provider inherits the role's complete scope,
 tests, safety and evidence obligations. Same-provider process separation must
 not be described as provider-independent verification.
 

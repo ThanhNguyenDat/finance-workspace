@@ -7,7 +7,7 @@ dependencies are selected consistently:
 
 ```bash
 uv run --project tools/orchestrator ops-runtime state <change>
-uv run --project tools/orchestrator phase-agent-state state
+uv run --project tools/orchestrator agent-role-state state
 uv run --project tools/orchestrator run-phase-agent <change> <repo> IMPLEMENT
 uv run --project tools/orchestrator run-phase-agent-command quant-research
 uv run --project tools/orchestrator e2e <change> "<prompt>"

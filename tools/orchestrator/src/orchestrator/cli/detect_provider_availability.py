@@ -14,8 +14,8 @@ PREFIX = "detect-provider-availability"
 
 
 def _candidate(state: dict, provider: str) -> tuple[str, str]:
-    for phase in state["phases"].values():
-        for option in phase["candidates"]:
+    for role in state["roles"].values():
+        for option in role["candidates"]:
             if option["provider"] == provider:
                 return option["model"], option["effort"]
     raise CLIError(f"{PREFIX}: missing-candidate")

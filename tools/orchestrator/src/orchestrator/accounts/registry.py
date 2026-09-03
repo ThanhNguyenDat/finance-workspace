@@ -96,7 +96,7 @@ def configured_accounts(provider: str) -> list[str]:
         if not isinstance(name, str) or not isinstance(directory, str):
             continue
         try:
-            normalized = normalize_account(name, "phase-agent-state")
+            normalized = normalize_account(name, "agent-role-state")
         except CLIError:
             continue
         if Path(directory).expanduser().is_dir():

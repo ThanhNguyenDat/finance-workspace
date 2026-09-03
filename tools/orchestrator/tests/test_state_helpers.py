@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 from orchestrator.accounts import registry
-from orchestrator.cli import phase_agent_state as phase_cli
+from orchestrator.cli import agent_role_state as role_cli
 from orchestrator.core import io
 from orchestrator.locks import account_lock, change_lock, pid_liveness
 from orchestrator.state import candidates
@@ -127,14 +127,14 @@ def test_account_registry_rejects_unset_and_missing_directories(
     accounts_file = tmp_path / "accounts.yaml"
     monkeypatch.setenv("PHASE_AGENT_ACCOUNTS_FILE", str(accounts_file))
     with pytest.raises(io.CLIError, match="accounts registry file does not exist"):
-        registry.resolve_account_dir(provider, "work", "phase-agent-state")
+        registry.resolve_account_dir(provider, "work", "agent-role-state")
 
     other_provider = "codex" if provider == "claude" else "claude"
     configure_accounts(tmp_path, monkeypatch, {other_provider: {"work": str(tmp_path)}})
     with pytest.raises(
         io.CLIError, match=f"no accounts configured for provider {provider}"
     ):
-        registry.resolve_account_dir(provider, "work", "phase-agent-state")
+        registry.resolve_account_dir(provider, "work", "agent-role-state")
 
     account_dir = tmp_path / "account"
     account_dir.mkdir()
@@ -144,12 +144,12 @@ def test_account_registry_rejects_unset_and_missing_directories(
     with pytest.raises(
         io.CLIError, match=f"account 'work' not found under provider {provider}"
     ):
-        registry.resolve_account_dir(provider, "work", "phase-agent-state")
+        registry.resolve_account_dir(provider, "work", "agent-role-state")
 
     missing = tmp_path / "missing-account"
     configure_accounts(tmp_path, monkeypatch, {provider: {"work": str(missing)}})
     with pytest.raises(io.CLIError, match="account 'work'.*directory does not exist"):
-        registry.resolve_account_dir(provider, "WORK", "phase-agent-state")
+        registry.resolve_account_dir(provider, "WORK", "agent-role-state")
 
 
 def test_account_lock_rejects_live_owner_and_reclaims_dead_owner(
@@ -221,7 +221,7 @@ def test_account_candidate_validation_pin_and_resolution(
         monkeypatch,
         {"claude": {"work": str(work), "personal": str(personal)}},
     )
-    monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(tmp_path / "phase-state"))
+    monkeypatch.setenv("AGENT_ROLE_STATE_DIR", str(tmp_path / "role-state"))
 
     with pytest.raises(
         io.CLIError, match="account 'unknown' not found under provider claude"
@@ -229,16 +229,16 @@ def test_account_candidate_validation_pin_and_resolution(
         candidates.validate_candidate("claude", "sonnet", "high", "unknown")
 
     monkeypatch.setattr(
-        phase_cli.sys,
+        role_cli.sys,
         "argv",
-        ["phase-agent-state", "set", "implement", "claude", "sonnet", "high", "work"],
+        ["agent-role-state", "set", "implement", "claude", "sonnet", "high", "work"],
     )
-    phase_cli.main()
+    role_cli.main()
     monkeypatch.setattr(
-        phase_cli.sys,
+        role_cli.sys,
         "argv",
         [
-            "phase-agent-state",
+            "agent-role-state",
             "set",
             "implement",
             "claude",
@@ -250,12 +250,12 @@ def test_account_candidate_validation_pin_and_resolution(
     with pytest.raises(
         io.CLIError, match="account 'unknown' not found under provider claude"
     ):
-        phase_cli.main()
+        role_cli.main()
     monkeypatch.setattr(
-        phase_cli.sys,
+        role_cli.sys,
         "argv",
         [
-            "phase-agent-state",
+            "agent-role-state",
             "candidate-set",
             "implement",
             "1",
@@ -265,12 +265,12 @@ def test_account_candidate_validation_pin_and_resolution(
             "personal",
         ],
     )
-    phase_cli.main()
+    role_cli.main()
     monkeypatch.setattr(
-        phase_cli.sys,
+        role_cli.sys,
         "argv",
         [
-            "phase-agent-state",
+            "agent-role-state",
             "candidate-set",
             "implement",
             "1",
@@ -283,31 +283,31 @@ def test_account_candidate_validation_pin_and_resolution(
     with pytest.raises(
         io.CLIError, match="account 'unknown' not found under provider claude"
     ):
-        phase_cli.main()
+        role_cli.main()
     monkeypatch.setattr(
-        phase_cli.sys,
+        role_cli.sys,
         "argv",
-        ["phase-agent-state", "pin", "implement", "claude", "unknown"],
+        ["agent-role-state", "pin", "implement", "claude", "unknown"],
     )
     with pytest.raises(
         io.CLIError, match="account 'unknown' not found under provider claude"
     ):
-        phase_cli.main()
+        role_cli.main()
     monkeypatch.setattr(
-        phase_cli.sys,
+        role_cli.sys,
         "argv",
-        ["phase-agent-state", "pin", "implement", "claude", "work"],
+        ["agent-role-state", "pin", "implement", "claude", "work"],
     )
-    phase_cli.main()
+    role_cli.main()
     monkeypatch.setattr(
-        phase_cli.sys, "argv", ["phase-agent-state", "auto", "implement"]
+        role_cli.sys, "argv", ["agent-role-state", "auto", "implement"]
     )
-    phase_cli.main()
+    role_cli.main()
     monkeypatch.setattr(
-        phase_cli.sys,
+        role_cli.sys,
         "argv",
         [
-            "phase-agent-state",
+            "agent-role-state",
             "provider-result",
             "claude",
             "global-quota-exhausted",
@@ -315,13 +315,13 @@ def test_account_candidate_validation_pin_and_resolution(
             "0",
         ],
     )
-    phase_cli.main()
+    role_cli.main()
     monkeypatch.setattr(
-        phase_cli.sys, "argv", ["phase-agent-state", "resolve", "implement"]
+        role_cli.sys, "argv", ["agent-role-state", "resolve", "implement"]
     )
-    phase_cli.main()
+    role_cli.main()
     assert capsys.readouterr().out.strip() == "claude\tsonnet\thigh\tpersonal"
-    state = json.loads((tmp_path / "phase-state/state.json").read_text())
+    state = json.loads((tmp_path / "role-state/state.json").read_text())
     assert state["providers"]["claude"]["available"] is True
     assert state["providers"]["claude"]["accounts"]["work"]["available"] is False
     assert (
@@ -343,21 +343,21 @@ def test_account_provider_result_does_not_disable_provider_or_sibling(
     configure_accounts(
         tmp_path, monkeypatch, {"codex": {"work": str(work), "personal": str(personal)}}
     )
-    monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(tmp_path / "phase-state"))
+    monkeypatch.setenv("AGENT_ROLE_STATE_DIR", str(tmp_path / "role-state"))
 
-    monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "init"])
-    phase_cli.main()
+    monkeypatch.setattr(role_cli.sys, "argv", ["agent-role-state", "init"])
+    role_cli.main()
     monkeypatch.setattr(
-        phase_cli.sys,
+        role_cli.sys,
         "argv",
-        ["phase-agent-state", "provider-result", "codex", "success", "personal"],
+        ["agent-role-state", "provider-result", "codex", "success", "personal"],
     )
-    phase_cli.main()
+    role_cli.main()
     monkeypatch.setattr(
-        phase_cli.sys,
+        role_cli.sys,
         "argv",
         [
-            "phase-agent-state",
+            "agent-role-state",
             "provider-result",
             "codex",
             "global-quota-exhausted",
@@ -365,8 +365,8 @@ def test_account_provider_result_does_not_disable_provider_or_sibling(
             "0",
         ],
     )
-    phase_cli.main()
-    state = json.loads((tmp_path / "phase-state/state.json").read_text())
+    role_cli.main()
+    state = json.loads((tmp_path / "role-state/state.json").read_text())
     assert state["providers"]["codex"]["available"] is True
     assert state["providers"]["codex"]["accounts"]["work"]["available"] is False
     assert state["providers"]["codex"]["accounts"]["personal"]["available"] is True
@@ -375,12 +375,12 @@ def test_account_provider_result_does_not_disable_provider_or_sibling(
 def test_state_validation_tolerates_unresolvable_historical_account(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    state_dir = tmp_path / "phase-state"
-    monkeypatch.setenv("PHASE_AGENT_STATE_DIR", str(state_dir))
+    state_dir = tmp_path / "role-state"
+    monkeypatch.setenv("AGENT_ROLE_STATE_DIR", str(state_dir))
     monkeypatch.delenv("PHASE_AGENT_ACCOUNTS_FILE", raising=False)
 
-    monkeypatch.setattr(phase_cli.sys, "argv", ["phase-agent-state", "init"])
-    phase_cli.main()
+    monkeypatch.setattr(role_cli.sys, "argv", ["agent-role-state", "init"])
+    role_cli.main()
     state_path = state_dir / "state.json"
     state = json.loads(state_path.read_text())
     state["providers"]["claude"]["accounts"] = {
@@ -390,13 +390,13 @@ def test_state_validation_tolerates_unresolvable_historical_account(
 
     assert candidates.state_valid(json.loads(state_path.read_text()))
     for argv in (
-        ["phase-agent-state", "state"],
-        ["phase-agent-state", "auto", "plan"],
-        ["phase-agent-state", "set", "plan", "codex", "safe-model", "high"],
-        ["phase-agent-state", "pin", "plan", "codex"],
+        ["agent-role-state", "state"],
+        ["agent-role-state", "auto", "plan"],
+        ["agent-role-state", "set", "plan", "codex", "safe-model", "high"],
+        ["agent-role-state", "pin", "plan", "codex"],
     ):
-        monkeypatch.setattr(phase_cli.sys, "argv", argv)
-        assert phase_cli.main() == 0
+        monkeypatch.setattr(role_cli.sys, "argv", argv)
+        assert role_cli.main() == 0
 
     assert (
         "stale" in json.loads(state_path.read_text())["providers"]["claude"]["accounts"]
