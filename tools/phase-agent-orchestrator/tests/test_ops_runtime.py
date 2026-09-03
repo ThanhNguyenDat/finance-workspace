@@ -12,7 +12,7 @@ from phase_agent_orchestrator.state import ops_transaction
 
 
 def test_transition_matrix_preserves_all_allowed_and_rejected_edges() -> None:
-    accepted = {"PLAN:IMPLEMENT", "IMPLEMENT:VERIFY", "VERIFY:FINAL_VERIFY", "FIX:VERIFY", "FINAL_VERIFY:RELEASE", "FINAL_VERIFY:ARCHIVE", "RELEASE:DEPLOY_VERIFY", "RELEASE:ARCHIVE", "DEPLOY_VERIFY:ARCHIVE"}
+    accepted = {"PLAN:BRAINSTORM", "BRAINSTORM:IMPLEMENT", "PLAN:IMPLEMENT", "IMPLEMENT:VERIFY", "VERIFY:FINAL_VERIFY", "FIX:VERIFY", "FINAL_VERIFY:RELEASE", "FINAL_VERIFY:ARCHIVE", "RELEASE:DEPLOY_VERIFY", "RELEASE:ARCHIVE", "DEPLOY_VERIFY:ARCHIVE"}
     assert ops_transaction.TRANSITIONS == accepted
     all_phases = sorted(ops_transaction.PHASES)
     for source in all_phases:

@@ -1,22 +1,8 @@
-"""CLI entry point for a Claude SDK-backed phase adapter."""
+"""Compatibility imports for the Claude phase CLI."""
 
-from __future__ import annotations
+from .cli.run_claude_phase import PREFIX, cli, main
 
-import sys
-from typing import NoReturn
-
-from .io import run_cli
-from .phase_adapter import run
-
-PREFIX = "run-claude-phase"
-
-
-def main(argv: list[str] | None = None) -> int:
-    return run("claude", list(argv if argv is not None else sys.argv[1:]))
-
-
-def cli() -> NoReturn:
-    run_cli(lambda: main(), PREFIX)
+__all__ = ["PREFIX", "cli", "main"]
 
 
 if __name__ == "__main__":

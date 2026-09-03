@@ -6,15 +6,31 @@ Defines Codex as a bounded provider adapter within provider-neutral Finance phas
 
 ## Requirements
 
-### Requirement: Worker phases select explicit role-specific profiles
+### Requirement: Codex model profiles are phase-specific
 
-Every Codex attempt SHALL receive the model and reasoning effort from the
-candidate selected for `quant_research`, PLAN, IMPLEMENT, VERIFY, FIX, or
-FINAL_VERIFY. Invocation-scoped provider/model/effort overrides SHALL take
-precedence after the same safety validation as persisted candidates. Codex
-SHALL use its supported approval-and-sandbox bypass; Claude adapters in the
-same orchestration scope SHALL use `--dangerously-skip-permissions`. VERIFY and
-FINAL_VERIFY SHALL remain read-only regardless of selected provider.
+The Codex phase runner SHALL resolve the `implement` profile for IMPLEMENT, the
+`fix` profile for the primary FIX attempt, and the `fix_fallback` profile only
+for an eligible fallback. Persisted profiles SHALL override built-in defaults,
+while explicit phase-runner environment overrides SHALL retain precedence.
+The availability detector SHALL use only the `probe` profile. Every worker
+attempt SHALL record its effective model and reasoning effort. VERIFY and
+FINAL_VERIFY SHALL remain independent Claude phases and SHALL NOT be routed to
+a Codex profile.
+
+#### Scenario: Implementation uses only its profile
+
+- **WHEN** an IMPLEMENT phase starts without an explicit environment override
+- **THEN** the worker receives the persisted implementation model and effort and no fix profile value affects the invocation
+
+#### Scenario: Eligible fix fallback uses its own effort
+
+- **WHEN** primary FIX returns model-unavailable or model-specific-limit
+- **THEN** the fallback invocation uses both the persisted fix-fallback model and its persisted fix-fallback effort
+
+#### Scenario: Verification remains independent
+
+- **WHEN** Codex completes IMPLEMENT or FIX successfully
+- **THEN** the next required VERIFY or FINAL_VERIFY phase is executed by Claude rather than by any configured Codex profile
 
 #### Scenario: IMPLEMENT uses Luna high
 
@@ -30,11 +46,6 @@ FINAL_VERIFY SHALL remain read-only regardless of selected provider.
 
 - **WHEN** an operator changes a later FIX candidate
 - **THEN** no primary FIX, IMPLEMENT, or other phase candidate is changed
-
-#### Scenario: Verification remains independent
-
-- **WHEN** VERIFY or FINAL_VERIFY starts
-- **THEN** it runs as a fresh read-only process and its actual provider relationship to the latest mutator is derived from evidence
 
 #### Scenario: Claude worker bypass is explicit
 
@@ -87,28 +98,35 @@ quota exhaustion.
 
 ### Requirement: Global quota disables only future Codex selection
 
-On `global-quota-exhausted`, Codex health SHALL become unavailable atomically
-without rewriting the completed attempt or changing automatic/manual phase
-selection. After the old process exits, the current phase MAY continue through
-the next eligible provider candidate. In automatic provider mode a successful
-bounded probe after cooldown SHALL restore future eligibility; authentication
-failure SHALL require manual attention. Inconclusive probes SHALL preserve the
-previous availability.
+On `global-quota-exhausted`, the worker SHALL atomically invoke the quant state
+helper's `codex-off` operation, SHALL NOT attempt another model, and SHALL exit
+nonzero so orchestration can perform terminal cleanup. It SHALL NOT mutate the
+active transaction's persisted backend. When persistent auto mode is selected,
+the global-quota result SHALL preserve that mode while updating the resolved
+availability to false so a later iteration can detect recovery. Re-enabling
+Codex SHALL require either an explicit `/quant:codex-on` override or a
+successful probe while auto mode is selected. An inconclusive auto probe SHALL
+NOT change the last resolved availability.
 
 #### Scenario: Primary FIX exhausts global quota
 
-- **WHEN** the first Codex FIX candidate reports global quota exhaustion
-- **THEN** future selection skips Codex and the current FIX round may continue through the next eligible non-Codex candidate
+- **WHEN** Terra reports global quota exhaustion
+- **THEN** no Sol attempt runs, future quant transactions observe Codex disabled, and the active backend remains `codex`
 
 #### Scenario: Fallback FIX exhausts global quota
 
-- **WHEN** a later Codex FIX candidate reports global quota exhaustion
-- **THEN** no additional Codex model is selected while its circuit is open
+- **WHEN** Sol reports global quota exhaustion after an eligible Terra fallback
+- **THEN** future quant transactions observe Codex disabled and no additional model is attempted
 
 #### Scenario: Successful auto probe re-enables future selection
 
-- **WHEN** automatic Codex health is unavailable, cooldown has elapsed, and the bounded probe succeeds
-- **THEN** later attempts may select Codex without rewriting any active or completed attempt
+- **WHEN** Codex is unavailable, auto mode is selected, and a bounded probe succeeds
+- **THEN** future quant transactions observe Codex enabled without changing any active transaction backend
+
+#### Scenario: Ambiguous probe cannot re-enable Codex
+
+- **WHEN** auto mode is selected and a probe produces any result other than success or explicit global quota exhaustion
+- **THEN** future quant transactions retain the last resolved Codex availability
 
 ### Requirement: FIX consumes round-specific Claude findings
 

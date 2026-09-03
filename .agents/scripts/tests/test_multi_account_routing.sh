@@ -87,6 +87,6 @@ jq -e '.iteration == 1' "$quant_state" >/dev/null || fail 'quant iteration was n
 jq -e '.providers.claude.available == true and .providers.claude.accounts.work.available == false' "$PHASE_AGENT_STATE_DIR/state.json" >/dev/null || fail 'account-specific quota state was not isolated'
 grep -Fqx -- "$tmp/claude-work" "$trace/claude.config-dir" || fail 'work account was not attempted'
 grep -Fqx -- "$tmp/claude-personal" "$trace/claude.config-dir" || fail 'personal account was not used for continuation'
-find "$workspace/.ops/runtime/phase-agents/quant-runs/iteration-1" -name '*.meta.json' -print0 | sort -z -V | xargs -0 jq -s -e 'length == 2 and .[0].account == "work" and .[0].result_class == "global-quota-exhausted" and .[1].account == "personal" and .[1].result_class == "success"' >/dev/null || fail 'same-provider account failover evidence is invalid'
+find "$workspace/.ops/runtime/phase-agents/quant-runs" -mindepth 2 -maxdepth 2 -name '*.meta.json' -print0 | sort -z -V | xargs -0 jq -s -e 'length == 2 and .[0].account == "work" and .[0].result_class == "global-quota-exhausted" and .[1].account == "personal" and .[1].result_class == "success"' >/dev/null || fail 'same-provider account failover evidence is invalid'
 
 printf '%s\n' 'test_multi_account_routing: all checks passed'

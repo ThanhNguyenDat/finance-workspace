@@ -13,16 +13,17 @@ from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from openai_codex import ApprovalMode, CodexConfig, Sandbox
 
 from .accounts.registry import resolve_account_dir
-from .classify_result import classify_sdk_result
+from .providers.results import classify_sdk_result
 from .fingerprint import fingerprint
 from .io import CLIError
 from .locks import account_lock, change_lock
-from .provider_sdk import append_jsonl, child_environment, executable, jsonable, start_codex
+from .providers.sdk import append_jsonl, child_environment, executable, jsonable, start_codex
+from .redaction import redact_text
 from .state import candidates, ops_transaction
 from .subprocess_supervision import hard_kill_claude_client, supervise_claude_turn, supervise_codex_turn
 
 PREFIXES = {"claude": "run-claude-phase", "codex": "run-codex-phase"}
-PHASES = {"PLAN", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
+PHASES = {"PLAN", "BRAINSTORM", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"}
 SAFE_CHANGE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9._:-]+$")
 
@@ -65,8 +66,10 @@ def build_prompt(change: str, repository: Path, phase: str, continuation: bool, 
     )
     if phase == "PLAN":
         prompt += "\nPlan/reconcile OpenSpec only; do not implement runtime code."
+    elif phase == "BRAINSTORM":
+        prompt += "\nExplore implementation options and record one actionable direction; do not modify runtime code or commit. End with exactly one machine-readable line: BRAINSTORM_CHECKPOINT: APPROVED or BRAINSTORM_CHECKPOINT: EMPTY."
     elif phase == "IMPLEMENT":
-        prompt += "\nImplement the approved scope, add tests and run bounded local checks."
+        prompt += "\nRead the current BRAINSTORM checkpoint before implementing the approved scope; add tests and run bounded local checks."
     elif phase in {"VERIFY", "FINAL_VERIFY"}:
         prompt += "\nRead-only verification: do not edit, format, stage or commit. Report severity with exact evidence."
     elif phase == "FIX":
@@ -90,7 +93,7 @@ def _validate_common(change: str, repository: str, phase: str, provider: str) ->
         raise CLIError(f"{PREFIXES[provider]}: runtime phase mismatch")
     if state.get("routing_policy_version") != 1:
         backend = state.get("implementation_backend", "codex")
-        valid = (provider == "claude" and (phase in {"PLAN", "VERIFY", "FINAL_VERIFY"} or (phase in {"IMPLEMENT", "FIX"} and backend == "claude-fallback"))) or (provider == "codex" and phase in {"IMPLEMENT", "FIX"} and backend == "codex")
+        valid = (provider == "claude" and (phase in {"PLAN", "BRAINSTORM", "VERIFY", "FINAL_VERIFY"} or (phase in {"IMPLEMENT", "FIX"} and backend == "claude-fallback"))) or (provider == "codex" and phase in {"IMPLEMENT", "FIX"} and backend == "codex")
         if not valid:
             raise CLIError(f"{PREFIXES[provider]}: legacy runtime does not select {provider.title()} for this phase")
     repository_root = _git_root(repository, PREFIXES[provider])
@@ -130,7 +133,7 @@ def _write_last_message(path: Path, result: Any) -> None:
         error = getattr(result, "error", None)
         text = getattr(error, "message", None) or (str(error) if error else "")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(str(text), encoding="utf-8")
+    path.write_text(redact_text(str(text)), encoding="utf-8")
 
 
 async def _run_claude_sdk(prompt: str, model: str, effort: str, workspace: Path, repository: Path, account_dir: Path | None, stdout: Path, timeout_seconds: float) -> tuple[int, str, Any]:

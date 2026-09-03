@@ -71,6 +71,6 @@ rm -rf -- "$PHASE_AGENT_STATE_DIR/.lock"
 $STATE reset plan >/dev/null
 [[ "$($STATE resolve plan)" == $'claude\topus\tmedium' ]] || fail 'phase reset failed'
 $STATE reset-all >/dev/null
-jq -e '.legacy_imported and (.phases|length==6)' "$PHASE_AGENT_STATE_DIR/state.json" >/dev/null || fail 'reset-all failed'
+jq -e '.legacy_imported and (.phases|length==7) and .phases.brainstorm' "$PHASE_AGENT_STATE_DIR/state.json" >/dev/null || fail 'reset-all failed'
 
 printf '%s\n' 'test_phase_agent_state: all checks passed'

@@ -17,8 +17,8 @@ from ..locks import change_lock
 PREFIX = "ops-runtime"
 SAFE_CHANGE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SAFE_ARTIFACT = re.compile(r"^[A-Za-z0-9._/-]+$")
-PHASES = {"PLAN", "IMPLEMENT", "VERIFY", "FINAL_VERIFY", "FIX", "RELEASE", "DEPLOY_VERIFY", "ARCHIVE"}
-TRANSITIONS = {"PLAN:IMPLEMENT", "IMPLEMENT:VERIFY", "VERIFY:FINAL_VERIFY", "FIX:VERIFY", "FINAL_VERIFY:RELEASE", "FINAL_VERIFY:ARCHIVE", "RELEASE:DEPLOY_VERIFY", "RELEASE:ARCHIVE", "DEPLOY_VERIFY:ARCHIVE"}
+PHASES = {"PLAN", "BRAINSTORM", "IMPLEMENT", "VERIFY", "FINAL_VERIFY", "FIX", "RELEASE", "DEPLOY_VERIFY", "ARCHIVE"}
+TRANSITIONS = {"PLAN:BRAINSTORM", "BRAINSTORM:IMPLEMENT", "PLAN:IMPLEMENT", "IMPLEMENT:VERIFY", "VERIFY:FINAL_VERIFY", "FIX:VERIFY", "FINAL_VERIFY:RELEASE", "FINAL_VERIFY:ARCHIVE", "RELEASE:DEPLOY_VERIFY", "RELEASE:ARCHIVE", "DEPLOY_VERIFY:ARCHIVE"}
 
 
 class _ReturnStatus(Exception):
@@ -265,7 +265,7 @@ def record_attempt(change: str, session_id: str, attempt_file: str) -> None:
         die(PREFIX, f"attempt record not found: {attempt_file}")
     record = read_json(path)
     required = {"attempt", "phase", "round", "provider", "model", "effort", "continuation", "result_class", "exit_status", "worktree_changed", "objective_gates_passed", "process_id", "evidence_base"}
-    if not isinstance(record, dict) or not required.issubset(record) or not (is_number(record.get("attempt")) and record["attempt"] >= 1 and record.get("phase") in {"PLAN", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"} and is_number(record.get("round")) and record.get("provider") in {"codex", "claude"} and isinstance(record.get("model"), str) and isinstance(record.get("effort"), str) and isinstance(record.get("continuation"), bool) and isinstance(record.get("result_class"), str) and is_number(record.get("exit_status")) and isinstance(record.get("worktree_changed"), bool) and isinstance(record.get("objective_gates_passed"), bool) and is_number(record.get("process_id")) and isinstance(record.get("evidence_base"), str)):
+    if not isinstance(record, dict) or not required.issubset(record) or not (is_number(record.get("attempt")) and record["attempt"] >= 1 and record.get("phase") in {"PLAN", "BRAINSTORM", "IMPLEMENT", "VERIFY", "FIX", "FINAL_VERIFY"} and is_number(record.get("round")) and record.get("provider") in {"codex", "claude"} and isinstance(record.get("model"), str) and isinstance(record.get("effort"), str) and isinstance(record.get("continuation"), bool) and isinstance(record.get("result_class"), str) and is_number(record.get("exit_status")) and isinstance(record.get("worktree_changed"), bool) and isinstance(record.get("objective_gates_passed"), bool) and is_number(record.get("process_id")) and isinstance(record.get("evidence_base"), str)):
         die(PREFIX, "attempt record failed validation")
     attempts = state.get("attempts")
     if state.get("routing_policy_version") != 1 or not isinstance(attempts, list) or record.get("phase") != state.get("phase") or record.get("round") != state.get("round") or any(isinstance(item, dict) and item.get("attempt") == record.get("attempt") for item in attempts):

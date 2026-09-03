@@ -21,7 +21,7 @@ grep -Fq 'Continue quant iteration 1' "$trace/sdk.jsonl" || fail 'Codex continua
 grep -Fq 'CANONICAL QUANT PROMPT' "$trace/sdk.jsonl" || fail 'canonical prompt missing'
 grep -Fq '"type": "user"' "$trace/sdk.jsonl" || fail 'Claude SDK turn missing'
 grep -Fq '"method": "turn/start"' "$trace/sdk.jsonl" || fail 'Codex SDK turn missing'
-find "$workspace/.ops/runtime/phase-agents/quant-runs/iteration-1" -name '*.meta.json' | wc -l | grep -Fqx 2 || { find "$workspace/.ops" -type f -print >&2; fail 'quant attempt evidence missing'; }
+find "$workspace/.ops/runtime/phase-agents/quant-runs" -mindepth 2 -maxdepth 2 -name '*.meta.json' | wc -l | grep -Fqx 2 || { find "$workspace/.ops" -type f -print >&2; fail 'quant attempt evidence missing'; }
 
 set +e; (cd "$workspace" && PHASE_AGENT_QUANT_RESEARCH_PROVIDER=claude PHASE_AGENT_QUANT_RESEARCH_MODEL=opus PHASE_AGENT_QUANT_RESEARCH_EFFORT=low ./.agents/scripts/run-phase-agent-command.sh quant-research) >/dev/null 2>&1; invalid_status=$?; set -e
 [[ "$invalid_status" -ne 0 ]] || fail 'invalid quant override was accepted'
@@ -31,15 +31,17 @@ jq -e '.iteration==1' "$QUANT_RESEARCH_STATE_DIR/state.json" >/dev/null || fail 
 set +e
 (cd "$workspace" && FAKE_CLAUDE_MODE=quota-delay PHASE_AGENT_QUANT_TIMEOUT_SECONDS=10 ./.agents/scripts/run-phase-agent-command.sh quant-research) >/dev/null 2>&1 & first_pid=$!
 set -e
-for _ in $(seq 1 50); do [[ -f "$workspace/.ops/runtime/phase-agents/.quant-research-lock/pid" ]] && break; sleep 0.1; done
-[[ -f "$workspace/.ops/runtime/phase-agents/.quant-research-lock/pid" ]] || fail 'quant lease was not acquired'
+for _ in $(seq 1 50); do [[ -f "$workspace/.ops/runtime/coordinator/coordinator.db" ]] && break; sleep 0.1; done
+[[ -f "$workspace/.ops/runtime/coordinator/coordinator.db" ]] || fail 'coordinator database was not created'
 set +e; (cd "$workspace" && ./.agents/scripts/run-phase-agent-command.sh quant-research) >/dev/null 2>&1; concurrent_status=$?; wait "$first_pid"; first_status=$?; set -e
-[[ "$concurrent_status" -ne 0 ]] || fail 'concurrent quant launcher was accepted'
+[[ "$concurrent_status" -ne 0 ]] || fail 'quota-only concurrent quant launcher unexpectedly completed'
 [[ "$first_status" -ne 0 ]] || fail 'quota-only fixture unexpectedly completed'
-jq -e '.iteration==2' "$QUANT_RESEARCH_STATE_DIR/state.json" >/dev/null || fail 'concurrent launch changed iteration count'
+[[ ! -e "$workspace/.ops/runtime/phase-agents/.quant-research-lock" ]] || fail 'legacy global quant lease remains'
+jq -e '.iteration==3' "$QUANT_RESEARCH_STATE_DIR/state.json" >/dev/null || fail 'concurrent launches changed iteration count'
+find "$workspace/.ops/runtime/phase-agents/quant-runs" -mindepth 1 -maxdepth 1 -type d | wc -l | grep -Fqx 3 || fail 'concurrent sessions did not get isolated namespaces'
 
 "$STATE" provider-on claude >/dev/null
 set +e; (cd "$workspace" && FAKE_CLAUDE_MODE=delay FAKE_SDK_DELAY_SECONDS=2 PHASE_AGENT_QUANT_TIMEOUT_SECONDS=1 ./.agents/scripts/run-phase-agent-command.sh quant-research) >/dev/null 2>&1; status=$?; set -e
 [[ "$status" -ne 0 ]] || fail 'SDK timeout did not propagate'
-jq -e '.iteration==3' "$QUANT_RESEARCH_STATE_DIR/state.json" >/dev/null || fail 'timed out iteration count invalid'
+jq -e '.iteration==4' "$QUANT_RESEARCH_STATE_DIR/state.json" >/dev/null || fail 'timed out iteration count invalid'
 printf '%s\n' 'test_phase_agent_quant_launcher: all checks passed'

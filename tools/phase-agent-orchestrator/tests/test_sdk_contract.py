@@ -15,6 +15,7 @@ from openai_codex import TurnResult
 from openai_codex.generated.v2_all import TurnStatus
 
 from phase_agent_orchestrator.classify_result import classify_sdk_result
+from phase_agent_orchestrator.coordinator import CoordinatorDB, events_since
 from phase_agent_orchestrator.fingerprint import fingerprint
 from phase_agent_orchestrator.phase_adapter import build_prompt
 from phase_agent_orchestrator.phase_adapter import _run_claude_sdk
@@ -22,6 +23,7 @@ from phase_agent_orchestrator.state import candidates
 from phase_agent_orchestrator import run_phase_agent_command
 from phase_agent_orchestrator.run_phase_agent_command import _codex
 from phase_agent_orchestrator import run_phase_agent
+from phase_agent_orchestrator.run_phase_agent import _brainstorm_checkpoint
 from phase_agent_orchestrator.locks import change_lock
 from phase_agent_orchestrator.state import ops_transaction
 from phase_agent_orchestrator import configure_phase_agents, detect_codex_availability, detect_provider_availability
@@ -47,6 +49,19 @@ def test_prompt_construction_is_stable() -> None:
         "Read AGENTS.md, applicable rules/skills, the active change, OPS state and repository-local instructions. Preserve locks, scope, tests, safety and secrets. Do not push or launch another model process.\n"
         "Plan/reconcile OpenSpec only; do not implement runtime code."
     )
+
+
+def test_brainstorm_prompt_requires_one_explicit_checkpoint() -> None:
+    prompt = build_prompt("change-name", Path("/tmp/repo"), "BRAINSTORM", False)
+    assert "BRAINSTORM_CHECKPOINT: APPROVED or BRAINSTORM_CHECKPOINT: EMPTY" in prompt
+
+
+def test_brainstorm_checkpoint_accepts_exactly_one_terminal_marker(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "last-message.md"
+    checkpoint.write_text("direction\nBRAINSTORM_CHECKPOINT: APPROVED\n", encoding="utf-8")
+    assert _brainstorm_checkpoint(checkpoint) == "APPROVED"
+    checkpoint.write_text("BRAINSTORM_CHECKPOINT: APPROVED\nBRAINSTORM_CHECKPOINT: EMPTY\n", encoding="utf-8")
+    assert _brainstorm_checkpoint(checkpoint) is None
 
 
 def test_fingerprint_matches_legacy_byte_stream(tmp_path: Path) -> None:
@@ -166,9 +181,18 @@ def test_quant_claude_rotates_from_personal_02_to_personal(tmp_path: Path, monke
         assert account_state["available"] is expected_available
     finally:
         current_lock.release()
-    metas = sorted((root / ".ops/runtime/phase-agents/quant-runs/iteration-1").glob("*.meta.json"))
+    run_namespaces = [path for path in (root / ".ops/runtime/phase-agents/quant-runs").iterdir() if path.is_dir()]
+    assert len(run_namespaces) == 1
+    metas = sorted(run_namespaces[0].glob("*.meta.json"))
     assert [json.loads(path.read_text(encoding="utf-8"))["account"] for path in metas] == ["personal-02", "personal"]
     assert json.loads(metas[0].read_text(encoding="utf-8"))["result_class"] == first_result
+    db = CoordinatorDB(root=root)
+    session_rows = db.read("SELECT id FROM sessions WHERE change_name = 'quant-research'")
+    assert len(session_rows) == 1
+    event_types = [event["event_type"] for event in events_since(session_rows[0]["id"], db=db)]
+    assert event_types[:3] == ["session.created", "session.admitted", "provider.attempt.started"]
+    assert "provider.attempt.completed" in event_types
+    assert event_types[-1] == "session.completed"
 
 
 def test_codex_sdk_adapter_completes_with_protocol_fixture(tmp_path: Path, monkeypatch) -> None:
@@ -198,6 +222,8 @@ quant_research   auto     claude   sonnet                   -            high
 quant_research   auto     codex    gpt-5.6-luna             -            high
 plan             auto     claude   opus                     -            medium
 plan             auto     codex    gpt-5.6-terra            -            high
+brainstorm       auto     claude   sonnet                   -            high
+brainstorm       auto     codex    gpt-5.6-terra            -            high
 implement        auto     codex    gpt-5.6-luna             -            high
 implement        auto     claude   sonnet                   -            high
 verify           auto     claude   opus                     -            medium

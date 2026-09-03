@@ -14,7 +14,7 @@ from ..io import CLIError, atomic_write_json, die, json_text, utc_after, utc_now
 from ..locks.directory_lock import PidDirectoryLock
 
 PREFIX = "phase-agent-state"
-PHASES = ("quant_research", "plan", "implement", "verify", "fix", "final_verify")
+PHASES = ("quant_research", "plan", "brainstorm", "implement", "verify", "fix", "final_verify")
 PROVIDERS = ("codex", "claude")
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9._:-]+$")
 
@@ -75,6 +75,7 @@ def default_state() -> dict[str, Any]:
     return {"schema_version": 1, "phases": {
         "quant_research": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "sonnet", "high"), candidate("codex", "gpt-5.6-luna", "high")]},
         "plan": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "opus", "medium"), candidate("codex", "gpt-5.6-terra", "high")]},
+        "brainstorm": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "sonnet", "high"), candidate("codex", "gpt-5.6-terra", "high")]},
         "implement": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("codex", "gpt-5.6-luna", "high"), candidate("claude", "sonnet", "high")]},
         "verify": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("claude", "opus", "medium"), candidate("codex", "gpt-5.6-terra", "high")]},
         "fix": {"mode": "auto", "pinned_provider": None, "candidates": [candidate("codex", "gpt-5.6-terra", "high"), candidate("codex", "gpt-5.6-sol", "high"), candidate("claude", "opus", "high")]},

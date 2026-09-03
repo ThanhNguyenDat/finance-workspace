@@ -83,6 +83,13 @@ easy to get wrong. Always:
    uv run --project tools/phase-agent-orchestrator ops-runtime trace-origin <change> <session-id> <research-iteration> <instrument> <research-artifact>...
    ```
 
+6. Advance the shared lifecycle through BRAINSTORM before implementation:
+
+   ```text
+   uv run --project tools/phase-agent-orchestrator ops-runtime phase <change> <session-id> BRAINSTORM
+   uv run --project tools/phase-agent-orchestrator run-phase-agent <change> <repository> BRAINSTORM
+   ```
+
 ## IMPLEMENT, VERIFY, FIX
 
 Run each model phase sequentially through the same resolver:

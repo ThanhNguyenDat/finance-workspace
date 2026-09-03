@@ -1,22 +1,8 @@
-"""CLI entry point for a Codex SDK-backed phase adapter."""
+"""Compatibility imports for the Codex phase CLI."""
 
-from __future__ import annotations
+from .cli.run_codex_phase import PREFIX, cli, main
 
-import sys
-from typing import NoReturn
-
-from .io import run_cli
-from .phase_adapter import run
-
-PREFIX = "run-codex-phase"
-
-
-def main(argv: list[str] | None = None) -> int:
-    return run("codex", list(argv if argv is not None else sys.argv[1:]))
-
-
-def cli() -> NoReturn:
-    run_cli(lambda: main(), PREFIX)
+__all__ = ["PREFIX", "cli", "main"]
 
 
 if __name__ == "__main__":
