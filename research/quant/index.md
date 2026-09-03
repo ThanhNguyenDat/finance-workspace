@@ -6226,6 +6226,59 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 426 — NO-CHANGE: kiểm tra trạng thái 1 ngày sau Round 425, cả ba hướng vẫn bị chặn không đổi — phía OPS của `portfolio-measurement-integrity` đã được archive (nội dung không đổi), phía OpenSpec vẫn vắng mặt
+
+Zero container, zero SSH nghiên cứu, zero backtest compute — chỉ một probe
+health-endpoint local read-only. Iteration research-state đọc lại đầu round:
+`226` (`quant-research-state state`, `last_run_at` 2026-09-03T17:44:00Z);
+chính prompt của phiên này nói launcher đã ghi cơ học iteration `227` trước
+khi bàn giao. Theo đúng tiền lệ round424/425, counter `iteration` của
+launcher (bookkeeping cho provider/account) và số thứ tự file `round<N>` là
+hai counter độc lập, chưa từng khớp 1:1 — round này không gọi lại
+`begin-iteration`, không tăng lại gì, và không coi lệch số là phát hiện mới.
+Đây là `round426`, tiếp nối đúng thứ tự từ round425.
+
+`git status --short` đầu phiên: sạch. `git fetch origin main -q && git
+rev-parse HEAD origin/main`: cả hai đều `fab1af1` — thay đổi so với điểm
+kết thúc của round425 (`511a23f`): một phiên ngoài loop này (`fab1af1`,
+"chore(orchestrator): remove stale accounts.yaml.example, document format in
+README", 2026-09-04T00:31:03+07) đã đóng đúng mục round424/425 từng để lại
+"out of scope" (drift `accounts.yaml.example`) — ghi làm bối cảnh, không
+phải phát hiện của round này. `finance-live-action` `HEAD` vẫn `ca23b05` =
+`origin/main`, cùng CI run cũ r421-r425, không có commit mới.
+`openspec/changes/` rỗng trừ `archive/`, vẫn không có mục
+`portfolio-measurement-integrity` dù live hay archived.
+
+`.ops/changes/` giờ **rỗng hoàn toàn** (không transaction active nào).
+`find .ops -iname '*portfolio-measurement*'` trả về hai mục:
+`.ops/archive/2026-09-01-portfolio-measurement-integrity/` (đã biết) và một
+mục **mới** `.ops/archive/2026-09-03-portfolio-measurement-integrity/` — đây
+là thay đổi trạng thái kể từ round425: lúc round425 đọc, `handoff.md` của
+transaction này vẫn còn ở `.ops/changes/portfolio-measurement-integrity/`;
+giữa round425 và round này nó đã được chuyển vào `.ops/archive/` với mốc
+ngày `2026-09-03`, bởi cùng phiên ngoài-loop suy ra ở trên (hoặc một phiên
+khác) — không phải bởi loop này. So sánh hai bản archive: nội dung
+`2026-09-03` giống hệt text "BLOCKED evidence (2026-09-03)" mà r419/
+r422-r425 đã trích từ bản `.ops/changes/` trước khi archive — **chỉ đổi vị
+trí (active → archived), không đổi nội dung.** Bất nhất mà round424 nêu đầu
+tiên vẫn còn: phía OPS giờ có bản ghi archived, phía OpenSpec thì không có
+gì (cả live lẫn archived) cho cùng change — vẫn ngoài phạm vi sở hữu của
+loop nghiên cứu này, ghi lại chỉ để liền mạch.
+
+Target 2: `docs/adr/` vẫn không tồn tại, không commit liên quan từ
+2026-09-01 — vẫn không có metric trong tool (r401, không đổi). Forward-time:
+hôm nay 2026-09-04, tức **5 ngày** kể từ baseline 2026-08-30 của r403 (nhiều
+hơn round425 một ngày) — còn **~25 ngày** nữa mới tới ngưỡng ~30 ngày. Một
+probe read-only trực tiếp kiểm lại blocker Task 6.4: `curl --max-time 3
+localhost:8086/health` thất bại và `finance-mw` không resolve trong môi
+trường này — xác nhận blocker mà bản archive 2026-09-03 ghi vẫn còn đúng.
+
+Không đổi kết luận chiến lược/đo lường/lifecycle nào. Cả ba hướng bị chặn
+(quyết định sản phẩm cho Target 2, thời gian lịch cho forward-time, môi
+trường có route Finance MW cho Task 6.4) đều nằm ngoài khả năng một round
+backtest bounded có thể giải quyết. File:
+`round426-NO-CHANGE-status-check-one-day-after-round425-all-three-threads-still-blocked-ops-side-now-archived.md`.
+
 ## Round 425 — DATA-ISSUE: commit của chính Round 424 chưa được push, local `main` vượt trước `origin/main` đúng 1 commit — đã push
 
 Zero container, zero SSH, zero backtest compute — cùng nhóm phát hiện với
