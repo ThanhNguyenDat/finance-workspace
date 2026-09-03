@@ -19,7 +19,7 @@
 - [x] 3.1 Implement `submit`, `resume`, `status`, `recover`, `cancel`, `attach` and `answer` operations and a common session contract; verify a new prompt starts at PLAN and repeated invocation resumes idempotently.
 - [x] 3.2 Route `.e2e.sh`, Claude and Codex terminal commands through the coordinator while preserving compatibility arguments/output; verify they attach to the same session/change without provider-specific lifecycle state.
 - [x] 3.3 Move quant launcher iteration allocation and run artifacts to session namespaces; remove the workspace-global `.quant-research-lock` only after concurrency tests pass.
-- [ ] 3.4 Route `/loop 20m /quant-research` through session resume/checkpoints; verify repeated bounded iterations do not duplicate work or reopen unrelated lifecycle phases.
+- [x] 3.4 Route `/loop 20m /quant-research` through session resume/checkpoints; verify repeated bounded iterations do not duplicate work or reopen unrelated lifecycle phases.
 
 ## 4. Model phases and continuation
 

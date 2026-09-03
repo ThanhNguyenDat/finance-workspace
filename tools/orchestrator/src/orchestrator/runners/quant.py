@@ -24,6 +24,7 @@ from ..coordinator import (
     record_attempt,
     release_admission,
     release_resource,
+    reopen_quant_session,
     seed_quant_iteration_floor,
     update_attempt,
     update_checkpoint,
@@ -203,20 +204,41 @@ def run(argv: list[str]) -> int:
     finally:
         compatibility_lock.release()
     seed_quant_iteration_floor(compatibility_iteration, db=coordinator)
-    session = create_quant_session(
-        {
-            "request": "quant-research",
-            "prompt_file": str(prompt_file),
-            "repository": str(root),
-        },
-        db=coordinator,
-        run_root=root / ".ops/runtime/phase-agents/quant-runs",
-    )
+    current_lock, current_state = quant_research.with_state()
+    try:
+        bound_session_id = current_state.get("coordinator_session_id")
+    finally:
+        current_lock.release()
+    session = None
+    resumed = False
+    if isinstance(bound_session_id, str):
+        existing = get_session(bound_session_id, db=coordinator)
+        if existing is not None and existing["status"] == "COMPLETED":
+            session = reopen_quant_session(bound_session_id, db=coordinator)
+            resumed = True
+        elif existing is not None and existing["status"] in {
+            "RUNNING",
+            "QUEUED",
+            "PAUSED",
+        }:
+            session = existing
+            resumed = True
+    if session is None:
+        session = create_quant_session(
+            {
+                "request": "quant-research",
+                "prompt_file": str(prompt_file),
+                "repository": str(root),
+            },
+            db=coordinator,
+            run_root=root / ".ops/runtime/phase-agents/quant-runs",
+        )
+        quant_research.set_coordinator_session_id(session["id"])
     session_id = session["id"]
     append_event(
         session_id,
         phase="PLAN",
-        event_type="session.created",
+        event_type="session.resumed" if resumed else "session.created",
         safe_payload={
             "iteration": session["quant_iteration"],
             "namespace": session["worktree"],
@@ -301,7 +323,12 @@ def run(argv: list[str]) -> int:
         run_dir.mkdir(parents=True, exist_ok=True)
         continuation = False
         last_status = 1
-        for index, item in enumerate(options, start=1):
+        previous_attempts = coordinator.read(
+            "SELECT COALESCE(MAX(attempt_no), 0) AS attempt_no FROM attempts WHERE session_id = ? AND phase = 'PLAN'",
+            (session_id,),
+        )
+        attempt_offset = int(previous_attempts[0]["attempt_no"])
+        for index, item in enumerate(options, start=attempt_offset + 1):
             provider, model, effort = item["provider"], item["model"], item["effort"]
             account = item.get("account", "")
             current_lock, current_state = candidates.with_state()
@@ -471,8 +498,8 @@ def run(argv: list[str]) -> int:
             current_session = get_session(session_id, db=coordinator)
             if current_session is None:
                 raise CLIError(f"{PREFIX}: coordinator session disappeared")
-            update_checkpoint(
-                session_id,
+            checkpoint = dict(current_session["checkpoint"])
+            checkpoint.update(
                 {
                     "iteration": iteration,
                     "attempt": index,
@@ -482,7 +509,11 @@ def run(argv: list[str]) -> int:
                     "continuation": continuation,
                     "worktree_fingerprint_before": fingerprint_before,
                     "worktree_fingerprint_after": fingerprint_after,
-                },
+                }
+            )
+            update_checkpoint(
+                session_id,
+                checkpoint,
                 expected_version=current_session["version"],
                 fencing_token=admission_token,
                 db=coordinator,

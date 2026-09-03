@@ -247,6 +247,54 @@ def create_quant_session(
     return result
 
 
+def reopen_quant_session(
+    session_id: str, *, db: CoordinatorDB | None = None
+) -> dict[str, Any]:
+    """Start the next bounded quant iteration on an existing session namespace."""
+
+    session_id = _id(session_id)
+    coordinator = _db(db)
+    with coordinator.transaction() as connection:
+        current = connection.execute(
+            "SELECT * FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+        if current is None:
+            raise CoordinatorError(f"session not found: {session_id}")
+        if current["change_name"] != "quant-research":
+            raise IllegalTransitionError("only quant sessions can be reopened")
+        if current["status"] != "COMPLETED":
+            raise IllegalTransitionError("quant session is not completed")
+        counter = connection.execute(
+            "SELECT value FROM coordinator_counters WHERE name = 'quant_iteration'"
+        ).fetchone()
+        iteration = (int(counter[0]) if counter else 0) + 1
+        connection.execute(
+            "INSERT INTO coordinator_counters(name, value) VALUES ('quant_iteration', ?) ON CONFLICT(name) DO UPDATE SET value = excluded.value",
+            (iteration,),
+        )
+        checkpoint = dict(_row(current)["checkpoint"])
+        history = list(checkpoint.get("iteration_history", []))
+        history.append(current["quant_iteration"])
+        checkpoint.update(
+            {
+                "iteration": iteration,
+                "iteration_history": history,
+                "resumed_from_iteration": current["quant_iteration"],
+            }
+        )
+        updated = connection.execute(
+            "UPDATE sessions SET phase = 'PLAN', round = 0, quant_iteration = ?, status = 'RUNNING', lease_owner = NULL, lease_expires_at = NULL, fencing_token = NULL, checkpoint = ?, version = version + 1, updated_at = datetime('now') WHERE id = ? AND status = 'COMPLETED'",
+            (iteration, _json(checkpoint, "checkpoint"), session_id),
+        )
+        if updated.rowcount != 1:
+            raise StaleVersionError("quant session changed during reopen")
+        row = connection.execute(
+            "SELECT * FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+    assert row is not None
+    return _row(row) or {}
+
+
 def seed_quant_iteration_floor(value: int, *, db: CoordinatorDB | None = None) -> int:
     """Migrate a legacy compatibility counter without decreasing coordinator state."""
 

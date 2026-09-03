@@ -243,3 +243,15 @@ def begin_iteration() -> None:
         emit(state)
     finally:
         current_lock.release()
+
+
+def set_coordinator_session_id(session_id: str) -> None:
+    if not session_id or not SAFE_IDENTIFIER.fullmatch(session_id):
+        die(PREFIX, "invalid coordinator session id")
+    current_lock, state = with_state()
+    try:
+        state["coordinator_session_id"] = session_id
+        state["updated_at"] = utc_now()
+        write(state)
+    finally:
+        current_lock.release()

@@ -273,6 +273,19 @@ def test_quant_claude_rotates_from_personal_02_to_personal(
         for event in events_since(session_rows[0]["id"], db=db)
         if event["event_type"].startswith("provider.")
     )
+    assert run_phase_agent_command.run(["quant-research"]) == 0
+    repeated_rows = db.read(
+        "SELECT id, quant_iteration FROM sessions WHERE change_name = 'quant-research'"
+    )
+    assert len(repeated_rows) == 1
+    repeated = __import__(
+        "orchestrator.coordinator", fromlist=["session_status"]
+    ).session_status(session_rows[0]["id"], db=db)
+    assert repeated["session"]["quant_iteration"] == 2
+    assert repeated["session"]["checkpoint"]["iteration_history"] == [1]
+    assert "session.resumed" in [
+        event["event_type"] for event in events_since(session_rows[0]["id"], db=db)
+    ]
 
 
 def test_codex_sdk_adapter_completes_with_protocol_fixture(
