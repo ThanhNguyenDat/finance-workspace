@@ -480,6 +480,100 @@ def update_attempt(
     return dict(row)
 
 
+def interrupt_session(
+    session_id: str,
+    *,
+    expected_version: int,
+    fencing_token: str,
+    safe_boundary: bool,
+    reason: str = "operator-interrupt",
+    db: CoordinatorDB | None = None,
+) -> dict[str, Any]:
+    """Close the active attempt and pause only after the process is confirmed exited."""
+
+    session_id = _id(session_id)
+    if (
+        not isinstance(expected_version, int)
+        or isinstance(expected_version, bool)
+        or expected_version < 1
+        or not fencing_token
+        or not isinstance(safe_boundary, bool)
+    ):
+        raise CoordinatorError("interruption version, token and boundary are required")
+    reason = redact_text(reason) or "operator-interrupt"
+    coordinator = _db(db)
+    with coordinator.transaction() as connection:
+        session = connection.execute(
+            "SELECT * FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+        if session is None:
+            raise CoordinatorError(f"session not found: {session_id}")
+        if session["status"] not in {"RUNNING", "PAUSED"}:
+            raise IllegalTransitionError("interrupt requires an active session")
+        if session["version"] != expected_version:
+            raise StaleVersionError(
+                f"session version is {session['version']}, expected {expected_version}"
+            )
+        if session["fencing_token"] != fencing_token:
+            raise StaleVersionError("interruption fencing token is stale")
+        attempt = connection.execute(
+            "SELECT * FROM attempts WHERE session_id = ? AND status = 'RUNNING' ORDER BY started_at DESC, rowid DESC LIMIT 1",
+            (session_id,),
+        ).fetchone()
+        if attempt is None:
+            raise CoordinatorError("interrupt requires a running attempt")
+        now = utc_now()
+        checkpoint = dict(_row(session)["checkpoint"])
+        checkpoint.update(
+            {
+                "safe_boundary": safe_boundary,
+                "interruption_reason": reason,
+            }
+        )
+        connection.execute(
+            "UPDATE attempts SET status = 'INTERRUPTED', result_class = 'timeout', completed_at = ? WHERE id = ? AND session_id = ? AND status = 'RUNNING'",
+            (now, attempt["id"], session_id),
+        )
+        if safe_boundary:
+            connection.execute(
+                "DELETE FROM admission_slots WHERE session_id = ?", (session_id,)
+            )
+            connection.execute(
+                "DELETE FROM resource_leases WHERE session_id = ?", (session_id,)
+            )
+        connection.execute(
+            "UPDATE sessions SET status = ?, lease_owner = ?, lease_expires_at = ?, fencing_token = ?, checkpoint = ?, version = version + 1, updated_at = ? WHERE id = ? AND version = ? AND fencing_token = ?",
+            (
+                "PAUSED" if safe_boundary else "BLOCKED",
+                None if safe_boundary else session["lease_owner"],
+                None if safe_boundary else session["lease_expires_at"],
+                None if safe_boundary else session["fencing_token"],
+                _json(checkpoint, "checkpoint"),
+                now,
+                session_id,
+                expected_version,
+                fencing_token,
+            ),
+        )
+        _append_event_in_transaction(
+            connection,
+            session_id,
+            phase=session["phase"],
+            event_type="provider.attempt.interrupted",
+            attempt_id=attempt["id"],
+            safe_payload={
+                "attempt_id": attempt["id"],
+                "safe_boundary": safe_boundary,
+                "reason": reason,
+            },
+        )
+        row = connection.execute(
+            "SELECT * FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+    assert row is not None
+    return _row(row) or {}
+
+
 def append_event(
     session_id: str,
     *,

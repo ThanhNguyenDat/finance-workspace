@@ -17,6 +17,7 @@ from ..coordinator import (
     cancel_session,
     create_session,
     events_since,
+    interrupt_session,
     record_verification_findings,
     recover_session,
     resume_session,
@@ -29,7 +30,7 @@ PREFIX = "coordinator"
 
 def usage() -> NoReturn:
     print(
-        "Usage: coordinator <submit CHANGE [CONTEXT_JSON]|resume SESSION|status SESSION|recover SESSION|cancel SESSION VERSION FENCING_TOKEN|attach SESSION [OFFSET]|monitor SESSION [OFFSET]|follow SESSION [OFFSET] [SECONDS]|findings SESSION VERSION FENCING_TOKEN FINDINGS_JSON|archive SESSION|answer SESSION QUESTION_ID FENCING_TOKEN RESPONSE>",
+        "Usage: coordinator <submit CHANGE [CONTEXT_JSON]|resume SESSION|status SESSION|recover SESSION|cancel SESSION VERSION FENCING_TOKEN|interrupt SESSION VERSION FENCING_TOKEN SAFE_BOUNDARY [REASON]|attach SESSION [OFFSET]|monitor SESSION [OFFSET]|follow SESSION [OFFSET] [SECONDS]|findings SESSION VERSION FENCING_TOKEN FINDINGS_JSON|archive SESSION|answer SESSION QUESTION_ID FENCING_TOKEN RESPONSE>",
         file=sys.stderr,
     )
     raise SystemExit(2)
@@ -95,6 +96,23 @@ def main() -> int:
                         args[1],
                         expected_version=int(args[2]),
                         fencing_token=args[3],
+                        db=db,
+                    )
+                )
+            )
+            return 0
+        if command == "interrupt" and 5 <= len(args) <= 6:
+            boundary = args[4].lower()
+            if boundary not in {"true", "false"}:
+                raise CLIError(f"{PREFIX}: safe boundary must be true or false")
+            print(
+                json_text(
+                    interrupt_session(
+                        args[1],
+                        expected_version=int(args[2]),
+                        fencing_token=args[3],
+                        safe_boundary=boundary == "true",
+                        reason=args[5] if len(args) == 6 else "operator-interrupt",
                         db=db,
                     )
                 )

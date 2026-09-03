@@ -27,7 +27,7 @@
 - [x] 4.2 Route PLAN, BRAINSTORM, IMPLEMENT, VERIFY and FIX through phase-specific SDK candidates; verify model, effort, account, prompt context and attempt history remain phase-specific.
 - [x] 4.3 Persist VERIFY findings and guarded FIX transitions with the current round only; verify P0/P1 findings require a fresh verifier and never bypass ARCHIVE gates.
 - [x] 4.4 Add session-local quota/account/provider continuation with old-attempt exit confirmation and worktree fingerprints; verify one session rotates without changing another session's candidate or lease.
-- [ ] 4.5 Add bounded process interruption and terminal reopen recovery; verify completed phases are not repeated and ambiguous side effects block automatic replacement.
+- [x] 4.5 Add bounded process interruption and terminal reopen recovery; verify completed phases are not repeated and ambiguous side effects block automatic replacement.
 - [ ] 4.6 Add guarded ARCHIVE transition and historical evidence move; verify missing attestation, failed gates, uncleared leases or blocked status prevent archive.
 
 ## 5. Events, monitor and operator control

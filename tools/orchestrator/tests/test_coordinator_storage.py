@@ -24,6 +24,7 @@ from orchestrator.coordinator import (
     events_since,
     get_session,
     heartbeat_session,
+    interrupt_session,
     process_start_identity,
     record_archive_attestation,
     record_attempt,
@@ -732,6 +733,122 @@ def test_recovery_blocks_an_interrupted_attempt_without_safe_boundary(tmp_path: 
         )[0][0]
         == 1
     )
+
+
+def test_safe_interrupt_pauses_and_reopens_without_repeating_attempt(tmp_path: Path):
+    db = make_db(tmp_path)
+    session = create_session("reopen", {"request": "reopen"}, db=db)
+    admitted = admit_session(session["id"], db=db)
+    lease = acquire_resource(
+        session["id"],
+        "change",
+        "change:reopen",
+        owner_pid=123,
+        owner_start_time="worker",
+        db=db,
+    )
+    completed_plan = record_attempt(
+        session["id"],
+        phase="PLAN",
+        round=0,
+        attempt_no=1,
+        provider="codex",
+        model="model",
+        effort="high",
+        continuation=False,
+        status="COMPLETED",
+        db=db,
+    )
+    transitioned = transition_session(
+        session["id"],
+        "BRAINSTORM",
+        expected_version=admitted["session"]["version"],
+        fencing_token=admitted["fencing_token"],
+        db=db,
+    )
+    attempt = record_attempt(
+        session["id"],
+        phase="BRAINSTORM",
+        round=0,
+        attempt_no=1,
+        provider="codex",
+        model="model",
+        effort="high",
+        continuation=False,
+        status="RUNNING",
+        db=db,
+    )
+    interrupted = interrupt_session(
+        session["id"],
+        expected_version=transitioned["version"],
+        fencing_token=admitted["fencing_token"],
+        safe_boundary=True,
+        reason="terminal reopened",
+        db=db,
+    )
+    assert interrupted["status"] == "PAUSED"
+    assert interrupted["checkpoint"]["safe_boundary"] is True
+    assert (
+        db.read("SELECT status FROM attempts WHERE id = ?", (attempt["id"],))[0][
+            "status"
+        ]
+        == "INTERRUPTED"
+    )
+    assert db.read("SELECT COUNT(*) FROM admission_slots")[0][0] == 0
+    assert db.read("SELECT COUNT(*) FROM resource_leases")[0][0] == 0
+    assert recovery_report(session["id"], db=db)["reason"] == "safe_boundary_ready"
+    reopened = recover_session(session["id"], db=db)
+    assert reopened["status"] == "QUEUED"
+    assert reopened["phase"] == "BRAINSTORM"
+    assert (
+        db.read("SELECT status FROM attempts WHERE id = ?", (completed_plan["id"],))[0][
+            "status"
+        ]
+        == "COMPLETED"
+    )
+    assert [event["event_type"] for event in events_since(session["id"], db=db)] == [
+        "provider.attempt.interrupted"
+    ]
+    assert lease["session_id"] == session["id"]
+
+
+def test_unsafe_interrupt_blocks_replacement_and_preserves_lease(tmp_path: Path):
+    db = make_db(tmp_path)
+    session = create_session("ambiguous", {"request": "ambiguous"}, db=db)
+    admitted = admit_session(session["id"], db=db)
+    acquire_resource(
+        session["id"],
+        "change",
+        "change:ambiguous",
+        owner_pid=123,
+        owner_start_time="worker",
+        db=db,
+    )
+    record_attempt(
+        session["id"],
+        phase="PLAN",
+        round=0,
+        attempt_no=1,
+        provider="codex",
+        model="model",
+        effort="high",
+        continuation=False,
+        status="RUNNING",
+        db=db,
+    )
+    interrupted = interrupt_session(
+        session["id"],
+        expected_version=admitted["session"]["version"],
+        fencing_token=admitted["fencing_token"],
+        safe_boundary=False,
+        db=db,
+    )
+    assert interrupted["status"] == "BLOCKED"
+    report = recovery_report(session["id"], db=db)
+    assert report["state"] == "INDETERMINATE"
+    with pytest.raises(CoordinatorError, match="indeterminate"):
+        recover_session(session["id"], db=db)
+    assert db.read("SELECT COUNT(*) FROM resource_leases")[0][0] == 1
 
 
 def test_coordinator_redacts_secret_bearing_context_and_events(tmp_path: Path):

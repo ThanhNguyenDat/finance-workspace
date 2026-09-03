@@ -425,6 +425,13 @@ def recovery_report(
         and session_value.get("checkpoint", {}).get("safe_boundary") is not True
     ):
         state, reason = "INDETERMINATE", "attempt_side_effects_ambiguous"
+    elif (
+        session_value["status"] == "PAUSED"
+        and latest_status == "INTERRUPTED"
+        and session_value.get("checkpoint", {}).get("safe_boundary") is True
+        and not leases
+    ):
+        state, reason = "RECOVERABLE", "safe_boundary_ready"
     return {
         "session": session_value,
         "state": state,

@@ -69,6 +69,48 @@ def test_coordinator_cli_answer_and_cancel_require_current_fencing(
     assert json.loads(capsys.readouterr().out)["status"] == "CANCELLED"
 
 
+def test_coordinator_cli_interrupt_and_recover_safe_boundary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    monkeypatch.setenv("OPS_ROOT", str(tmp_path))
+    db = CoordinatorDB(root=tmp_path)
+    from orchestrator.coordinator import admit_session, create_session
+
+    session = create_session("change-interrupt", {"request": "interrupt"}, db=db)
+    admitted = admit_session(session["id"], db=db)
+    record_attempt(
+        session["id"],
+        phase="PLAN",
+        round=0,
+        attempt_no=1,
+        provider="codex",
+        model="model",
+        effort="high",
+        continuation=False,
+        status="RUNNING",
+        db=db,
+    )
+    assert (
+        invoke(
+            monkeypatch,
+            [
+                "interrupt",
+                session["id"],
+                str(admitted["session"]["version"]),
+                admitted["fencing_token"],
+                "true",
+                "terminal closed",
+            ],
+        )
+        == 0
+    )
+    interrupted = json.loads(capsys.readouterr().out)
+    assert interrupted["status"] == "PAUSED"
+
+    assert invoke(monkeypatch, ["recover", session["id"]]) == 0
+    assert json.loads(capsys.readouterr().out)["status"] == "QUEUED"
+
+
 def test_coordinator_cli_monitor_is_redacted_and_session_scoped(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ):
