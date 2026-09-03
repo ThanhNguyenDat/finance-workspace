@@ -6226,6 +6226,49 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 425 — DATA-ISSUE: commit của chính Round 424 chưa được push, local `main` vượt trước `origin/main` đúng 1 commit — đã push
+
+Zero container, zero SSH, zero backtest compute — cùng nhóm phát hiện với
+round422 và round424, ba round liên tiếp cùng loại evidence-trail hygiene.
+Iteration research-state đọc lại đầu round: `225` (`quant-research-state
+state`, `last_run_at` 2026-09-03T15:34:49Z). Theo đúng tiền lệ round424 đã
+ghi lại, counter iteration của launcher và số thứ tự file round là hai
+counter độc lập; round này không gọi lại `begin-iteration` và không coi
+lệch số là phát hiện mới, chỉ nhắc lại ghi chú của round424 để liền mạch.
+
+`git status`, `git log --oneline -3`, và `git fetch origin main -q && git
+rev-parse HEAD origin/main` đầu phiên cho thấy local `main` ở `511a23f`
+(đúng commit của round424: "docs(research): round 424 — DATA-ISSUE, restore
+9 committed round files + index.md entries missing from working tree") nhưng
+`origin/main` vẫn ở `3b1315b` — "Your branch is ahead of 'origin/main' by 1
+commit". Commit của round424 đã tồn tại local nhưng chưa từng được push, khả
+năng do gián đoạn provider-quota (mà iteration này đang tiếp quản) rơi đúng
+giữa bước commit local và bước push của round424. `git show --stat 511a23f`
+xác nhận nội dung chỉ gồm tài liệu (`index.md`, CSV, file round424 `.md`),
+không đụng application/runtime code, nên đã push trực tiếp theo đúng chính
+sách solo-maintainer direct-to-main. `git push origin main` thành công
+(`3b1315b..511a23f main -> main`); xác minh lại `HEAD` và `origin/main` cùng
+về `511a23f`, working tree sạch trừ đúng `accounts.yaml.example` không liên
+quan đã ghi nhận từ round424.
+
+Rà lại 3 hướng như round422/423/424, cùng ngày 2026-09-03, không đổi:
+`finance-live-action` `HEAD` vẫn `ca23b05` = `origin/main`, cùng CI run cũ;
+Target 2 vẫn không có metric trong tool (r401, vẫn không có `docs/adr/`);
+forward-time vẫn ~4 ngày kể từ baseline 2026-08-30, ~26 ngày nữa mới tới
+ngưỡng ~30 ngày — không có thời gian lịch mới trôi qua kể từ round424; bất
+nhất lifecycle OpenSpec/OPS của `portfolio-measurement-integrity` (context
+only, ngoài phạm vi sở hữu loop này) vẫn y nguyên round424 đã ghi.
+
+Không đổi kết luận chiến lược nào — nội dung commit được push (các phát hiện
+của round424) vốn đã đúng, chỉ thay đổi khả năng nhìn thấy trên remote.
+Đóng lần thứ ba trong 4 round một lỗ hổng evidence-trail cùng họ (round422:
+local-vs-committed; round424: committed-vs-working-tree; round425:
+committed-vs-pushed) — mỗi round bắt đúng một dạng lệch khác nhau, gợi ý
+bước đóng round nên diff tường minh với `origin/main` chứ không chỉ `git
+status --short` với working tree local; ghi làm ứng viên skill-upsert, chưa
+hành động thêm ngoài việc push commit đã tìm thấy. File:
+`round425-DATA-ISSUE-round424s-own-commit-sat-unpushed-local-ahead-of-origin-main.md`.
+
 ## Round 424 — DATA-ISSUE: 9 round đã commit (412-415, 417-418, 420-421, 423) cùng mục lục `index.md` của chúng biến mất khỏi working tree, chưa commit — khôi phục từ HEAD
 
 Zero container, zero SSH, zero backtest compute — cùng nhóm phát hiện với
