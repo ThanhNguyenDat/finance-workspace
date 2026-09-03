@@ -404,6 +404,59 @@ def record_question(
     return _row(row) or {}
 
 
+def record_verification_findings(
+    session_id: str,
+    findings: list[dict[str, Any]],
+    *,
+    expected_version: int,
+    fencing_token: str,
+    db: CoordinatorDB | None = None,
+) -> dict[str, Any]:
+    """Persist the current VERIFY result before any FIX transition."""
+
+    session_id = _id(session_id)
+    if not isinstance(findings, list) or any(not isinstance(item, dict) for item in findings):
+        raise CoordinatorError("verification findings must be a list of JSON objects")
+    if not isinstance(expected_version, int) or isinstance(expected_version, bool) or expected_version < 1 or not fencing_token:
+        raise CoordinatorError("verification findings version and fencing token are required")
+    findings_json = _json(findings, "verification findings")
+    coordinator = _db(db)
+    with coordinator.transaction() as connection:
+        current = connection.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+        if current is None:
+            raise CoordinatorError(f"session not found: {session_id}")
+        current_value = _row(current) or {}
+        if current_value["phase"] != "VERIFY":
+            raise IllegalTransitionError("verification findings require VERIFY phase")
+        if current_value["version"] != expected_version:
+            raise StaleVersionError(f"session version is {current_value['version']}, expected {expected_version}")
+        if current_value["fencing_token"] != fencing_token:
+            raise StaleVersionError("verification findings fencing token is stale")
+        checkpoint = dict(current_value["checkpoint"])
+        blocking = any(item.get("severity") in {"P0", "P1"} for item in findings)
+        checkpoint.update(
+            {
+                "verification_findings": findings,
+                "verification_findings_round": current_value["round"],
+                "blocking_findings": blocking,
+                "fresh_verifier_required": False,
+            }
+        )
+        now = utc_now()
+        connection.execute(
+            "UPDATE sessions SET checkpoint = ?, version = version + 1, updated_at = ? WHERE id = ? AND version = ? AND fencing_token = ?",
+            (_json(checkpoint, "checkpoint"), now, session_id, expected_version, fencing_token),
+        )
+        latest = connection.execute("SELECT COALESCE(MAX(sequence), 0) FROM events WHERE session_id = ?", (session_id,)).fetchone()[0]
+        connection.execute(
+            "INSERT INTO events(session_id, sequence, phase, event_type, safe_payload, created_at) VALUES (?, ?, 'VERIFY', 'verification.findings', ?, ?)",
+            (session_id, int(latest) + 1, _json({"round": current_value["round"], "findings": findings, "blocking": blocking}, "event payload"), now),
+        )
+        updated = connection.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    assert updated is not None
+    return _row(updated) or {}
+
+
 def answer_question(
     session_id: str,
     question_id: str,
@@ -530,10 +583,21 @@ def transition_session(
             raise StaleVersionError(f"session version is {current['version']}, expected {expected_version}")
         if fencing_token is not None and current["fencing_token"] != fencing_token:
             raise StaleVersionError("session fencing token is stale")
+        checkpoint = dict(_row(current)["checkpoint"])
+        if current_phase == "VERIFY" and next_phase == "FIX":
+            if checkpoint.get("verification_findings_round") != current["round"] or checkpoint.get("blocking_findings") is not True:
+                raise IllegalTransitionError("FIX requires current-round P0/P1 verification findings")
+        if current_phase == "VERIFY" and next_phase == "ARCHIVE" and checkpoint.get("blocking_findings") is True:
+            raise IllegalTransitionError("ARCHIVE is blocked by current-round P0/P1 findings")
+        if current_phase == "FIX" and next_phase == "VERIFY":
+            checkpoint.pop("verification_findings", None)
+            checkpoint.pop("verification_findings_round", None)
+            checkpoint.pop("blocking_findings", None)
+            checkpoint["fresh_verifier_required"] = True
         now = utc_now()
         updated = connection.execute(
-            "UPDATE sessions SET phase = ?, status = 'RUNNING', version = version + 1, updated_at = ? WHERE id = ? AND version = ?",
-            (next_phase, now, session_id, expected_version),
+            "UPDATE sessions SET phase = ?, status = 'RUNNING', checkpoint = ?, version = version + 1, updated_at = ? WHERE id = ? AND version = ?",
+            (next_phase, _json(checkpoint, "checkpoint"), now, session_id, expected_version),
         )
         if updated.rowcount != 1:
             raise StaleVersionError("session changed during transition")

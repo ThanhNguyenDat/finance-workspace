@@ -21,10 +21,12 @@ from orchestrator.coordinator import (
     assert_resource_lease,
     create_quant_session,
     create_session,
+    events_since,
     get_session,
     heartbeat_session,
     record_attempt,
     record_question,
+    record_verification_findings,
     release_admission,
     release_resource,
     resume_session,
@@ -134,25 +136,53 @@ def test_records_are_atomic_and_enforce_session_scoped_uniqueness(tmp_path: Path
 def test_lifecycle_transitions_are_guarded_by_version(tmp_path: Path):
     db = make_db(tmp_path)
     session = create_session("change-a", {"request": "plan"}, db=db)
+    admitted = admit_session(session["id"], db=db)
 
     with pytest.raises(IllegalTransitionError):
-        transition_session(session["id"], "VERIFY", expected_version=1, db=db)
+        transition_session(session["id"], "VERIFY", expected_version=2, fencing_token=admitted["fencing_token"], db=db)
     assert get_session(session["id"], db=db)["phase"] == "PLAN"
 
-    brainstorm = transition_session(session["id"], "BRAINSTORM", expected_version=1, db=db)
-    assert brainstorm["version"] == 2
+    brainstorm = transition_session(session["id"], "BRAINSTORM", expected_version=2, fencing_token=admitted["fencing_token"], db=db)
+    assert brainstorm["version"] == 3
     with pytest.raises(StaleVersionError):
-        transition_session(session["id"], "IMPLEMENT", expected_version=1, db=db)
+        transition_session(session["id"], "IMPLEMENT", expected_version=2, fencing_token=admitted["fencing_token"], db=db)
     assert get_session(session["id"], db=db)["phase"] == "BRAINSTORM"
 
-    implementation = transition_session(session["id"], "IMPLEMENT", expected_version=2, db=db)
-    transition_session(session["id"], "VERIFY", expected_version=implementation["version"], db=db)
+    implementation = transition_session(session["id"], "IMPLEMENT", expected_version=3, fencing_token=admitted["fencing_token"], db=db)
+    transition_session(session["id"], "VERIFY", expected_version=implementation["version"], fencing_token=admitted["fencing_token"], db=db)
     verify = get_session(session["id"], db=db)
     assert verify["phase"] == "VERIFY"
-    fixed = transition_session(session["id"], "FIX", expected_version=verify["version"], db=db)
-    verified_again = transition_session(session["id"], "VERIFY", expected_version=fixed["version"], db=db)
-    archived = transition_session(session["id"], "ARCHIVE", expected_version=verified_again["version"], db=db)
+    with pytest.raises(IllegalTransitionError, match="findings"):
+        transition_session(session["id"], "FIX", expected_version=verify["version"], fencing_token=admitted["fencing_token"], db=db)
+    with_findings = record_verification_findings(session["id"], [{"id": "F-1", "severity": "P1"}], expected_version=verify["version"], fencing_token=admitted["fencing_token"], db=db)
+    with pytest.raises(IllegalTransitionError, match="blocked"):
+        transition_session(session["id"], "ARCHIVE", expected_version=with_findings["version"], fencing_token=admitted["fencing_token"], db=db)
+    fixed = transition_session(session["id"], "FIX", expected_version=with_findings["version"], fencing_token=admitted["fencing_token"], db=db)
+    verified_again = transition_session(session["id"], "VERIFY", expected_version=fixed["version"], fencing_token=admitted["fencing_token"], db=db)
+    with pytest.raises(IllegalTransitionError, match="findings"):
+        transition_session(session["id"], "FIX", expected_version=verified_again["version"], fencing_token=admitted["fencing_token"], db=db)
+    clean = record_verification_findings(session["id"], [], expected_version=verified_again["version"], fencing_token=admitted["fencing_token"], db=db)
+    archived = transition_session(session["id"], "ARCHIVE", expected_version=clean["version"], fencing_token=admitted["fencing_token"], db=db)
     assert archived["phase"] == "ARCHIVE"
+    assert archived["checkpoint"]["verification_findings"] == []
+
+
+def test_verification_findings_are_session_scoped_and_atomic(tmp_path: Path):
+    db = make_db(tmp_path)
+    session = create_session("change-a", {"request": "verify"}, db=db)
+    admitted = admit_session(session["id"], db=db)
+    brainstorm = transition_session(session["id"], "BRAINSTORM", expected_version=2, fencing_token=admitted["fencing_token"], db=db)
+    implementation = transition_session(session["id"], "IMPLEMENT", expected_version=brainstorm["version"], fencing_token=admitted["fencing_token"], db=db)
+    verified = transition_session(session["id"], "VERIFY", expected_version=implementation["version"], fencing_token=admitted["fencing_token"], db=db)
+
+    with pytest.raises(StaleVersionError):
+        record_verification_findings(session["id"], [{"severity": "P0"}], expected_version=verified["version"] - 1, fencing_token=admitted["fencing_token"], db=db)
+    assert get_session(session["id"], db=db)["checkpoint"] == {}
+
+    recorded = record_verification_findings(session["id"], [{"severity": "P0", "message": "unsafe"}], expected_version=verified["version"], fencing_token=admitted["fencing_token"], db=db)
+    assert recorded["checkpoint"]["verification_findings_round"] == 0
+    assert recorded["checkpoint"]["blocking_findings"] is True
+    assert [event["event_type"] for event in events_since(session["id"], db=db)] == ["verification.findings"]
 
 
 def test_checkpoint_write_rejects_stale_fencing_without_partial_update(tmp_path: Path):

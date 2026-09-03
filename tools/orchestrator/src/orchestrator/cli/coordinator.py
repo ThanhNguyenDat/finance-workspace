@@ -17,6 +17,7 @@ from ..coordinator import (
     create_session,
     events_since,
     recover_session,
+    record_verification_findings,
     resume_session,
     session_status,
 )
@@ -27,7 +28,7 @@ PREFIX = "coordinator"
 
 def usage() -> NoReturn:
     print(
-        "Usage: coordinator <submit CHANGE [CONTEXT_JSON]|resume SESSION|status SESSION|recover SESSION|cancel SESSION VERSION FENCING_TOKEN|attach SESSION [OFFSET]|monitor SESSION [OFFSET]|follow SESSION [OFFSET] [SECONDS]|answer SESSION QUESTION_ID FENCING_TOKEN RESPONSE>",
+        "Usage: coordinator <submit CHANGE [CONTEXT_JSON]|resume SESSION|status SESSION|recover SESSION|cancel SESSION VERSION FENCING_TOKEN|attach SESSION [OFFSET]|monitor SESSION [OFFSET]|follow SESSION [OFFSET] [SECONDS]|findings SESSION VERSION FENCING_TOKEN FINDINGS_JSON|answer SESSION QUESTION_ID FENCING_TOKEN RESPONSE>",
         file=sys.stderr,
     )
     raise SystemExit(2)
@@ -42,6 +43,16 @@ def _context(value: str | None) -> dict[str, Any]:
         raise CLIError(f"{PREFIX}: context must be valid JSON") from exc
     if not isinstance(parsed, dict):
         raise CLIError(f"{PREFIX}: context must be a JSON object")
+    return parsed
+
+
+def _findings(value: str) -> list[dict[str, Any]]:
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise CLIError(f"{PREFIX}: findings must be valid JSON") from exc
+    if not isinstance(parsed, list) or any(not isinstance(item, dict) for item in parsed):
+        raise CLIError(f"{PREFIX}: findings must be a JSON array of objects")
     return parsed
 
 
@@ -77,6 +88,9 @@ def main() -> int:
             return 0
         if command == "attach" and 2 <= len(args) <= 3:
             print(json_text({"session": session_status(args[1], db=db), "events": events_since(args[1], int(args[2]) if len(args) == 3 else 0, db=db)}))
+            return 0
+        if command == "findings" and len(args) == 5:
+            print(json_text(record_verification_findings(args[1], _findings(args[4]), expected_version=int(args[2]), fencing_token=args[3], db=db)))
             return 0
         if command == "monitor" and 2 <= len(args) <= 3:
             status = session_status(args[1], db=db)
