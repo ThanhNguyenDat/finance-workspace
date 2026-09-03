@@ -286,12 +286,14 @@ def recovery_report(session_id: str, *, db: CoordinatorDB | None = None) -> dict
     session_id = _id(session_id)
     coordinator = db or CoordinatorDB()
     with coordinator.transaction(immediate=False) as connection:
-        session = connection.execute("SELECT id, status, lease_owner, lease_expires_at, fencing_token FROM sessions WHERE id = ?", (session_id,)).fetchone()
+        session = connection.execute("SELECT id, status, lease_owner, lease_expires_at, fencing_token, checkpoint FROM sessions WHERE id = ?", (session_id,)).fetchone()
         if session is None:
             raise CoordinatorError(f"session not found: {session_id}")
         slots = connection.execute("SELECT * FROM admission_slots WHERE session_id = ?", (session_id,)).fetchall()
         resources = connection.execute("SELECT * FROM resource_leases WHERE session_id = ? ORDER BY resource_type, resource_key", (session_id,)).fetchall()
-    owner_parts = str(session["lease_owner"] or "").split(":", 1)
+        latest_attempt = connection.execute("SELECT status FROM attempts WHERE session_id = ? ORDER BY started_at DESC, rowid DESC LIMIT 1", (session_id,)).fetchone()
+    session_value = _row(session) or {}
+    owner_parts = str(session_value["lease_owner"] or "").split(":", 1)
     admission_leases = [
         {
             **dict(item),
@@ -322,11 +324,15 @@ def recovery_report(session_id: str, *, db: CoordinatorDB | None = None) -> dict
         state, reason = "INDETERMINATE", "owner_liveness_or_identity_ambiguous"
     elif expired:
         state, reason = "RECOVERABLE", "expired_owner_confirmed_dead"
+    latest_status = latest_attempt["status"] if latest_attempt is not None else None
+    if latest_status in {"RUNNING", "INTERRUPTED"} and session_value.get("checkpoint", {}).get("safe_boundary") is not True:
+        state, reason = "INDETERMINATE", "attempt_side_effects_ambiguous"
     return {
-        "session": dict(session),
+        "session": session_value,
         "state": state,
         "reason": reason,
         "leases": leases,
+        "latest_attempt_status": latest_status,
     }
 
 

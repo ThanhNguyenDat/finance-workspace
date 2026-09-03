@@ -401,6 +401,25 @@ def test_recovery_reclaims_only_confirmed_dead_owner(tmp_path: Path):
     assert db.read("SELECT COUNT(*) FROM resource_leases WHERE resource_key = 'change:live'")[0][0] == 1
 
 
+def test_recovery_blocks_an_interrupted_attempt_without_safe_boundary(tmp_path: Path):
+    db = make_db(tmp_path)
+    session = create_session("interrupted", {"request": "resume"}, db=db)
+    lease = acquire_resource(session["id"], "change", "change:interrupted", owner_pid=99999999, owner_start_time="missing", db=db)
+    record_attempt(session["id"], phase="PLAN", round=0, attempt_no=1, provider="codex", model="model", effort="high", continuation=False, status="RUNNING", db=db)
+    connection = db.connect()
+    try:
+        connection.execute("UPDATE resource_leases SET lease_expires_at = '2000-01-01T00:00:00Z' WHERE fencing_token = ?", (lease["fencing_token"],))
+        connection.commit()
+    finally:
+        connection.close()
+    report = recovery_report(session["id"], db=db)
+    assert report["state"] == "INDETERMINATE"
+    assert report["reason"] == "attempt_side_effects_ambiguous"
+    with pytest.raises(CoordinatorError, match="indeterminate"):
+        recover_session(session["id"], db=db)
+    assert db.read("SELECT COUNT(*) FROM resource_leases WHERE session_id = ?", (session["id"],))[0][0] == 1
+
+
 def test_coordinator_redacts_secret_bearing_context_and_events(tmp_path: Path):
     db = make_db(tmp_path)
     session = create_session("redacted", {"request": "token=do-not-persist", "api_key": "do-not-persist"}, db=db)
