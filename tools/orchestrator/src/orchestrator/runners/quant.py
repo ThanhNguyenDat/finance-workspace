@@ -15,6 +15,7 @@ from openai_codex import ApprovalMode, CodexConfig, Sandbox
 from ..coordinator import (
     CoordinatorDB,
     CoordinatorError,
+    IllegalTransitionError,
     acquire_account_scope,
     admit_session,
     append_event,
@@ -214,8 +215,20 @@ def run(argv: list[str]) -> int:
     if isinstance(bound_session_id, str):
         existing = get_session(bound_session_id, db=coordinator)
         if existing is not None and existing["status"] == "COMPLETED":
-            session = reopen_quant_session(bound_session_id, db=coordinator)
-            resumed = True
+            try:
+                session = reopen_quant_session(bound_session_id, db=coordinator)
+                resumed = True
+            except IllegalTransitionError:
+                # Another invocation may have reopened the same completed
+                # session after the status read. Treat that race as an
+                # independent prompt instead of losing its iteration.
+                current = get_session(bound_session_id, db=coordinator)
+                if current is None or current["status"] not in {
+                    "RUNNING",
+                    "QUEUED",
+                    "PAUSED",
+                }:
+                    raise
         # An active bound session belongs to the already-running loop. A new
         # invocation is an independent prompt and must get its own namespace;
         # admission will queue it when the configured capacity is exhausted.
