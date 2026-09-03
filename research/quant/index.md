@@ -6226,6 +6226,193 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 421 — NO-CHANGE: commit mới duy nhất kể từ Round 420 là tooling SSH-tunnel không liên quan — cả hai hướng còn lại vẫn bị chặn không đổi
+
+Zero compute, zero container, zero SSH mở bởi round này. `git fetch origin
+main` trên `finance-live-action` — `HEAD` tiến lên `ca23b05`, một commit sau
+`7d579cf` của r420: `chore(scripts): add reusable SSH tunnel to production
+Finance MW` — chỉ thêm `scripts/tunnel-production-mw.sh` (38 dòng), không
+đụng code strategy/Portfolio/gate. `gh run list` cho thấy hai run mới tương
+ứng (`Build and Deploy` và `Production Live Action Verification`, đều
+success) nhưng không ảnh hưởng kết luận chiến lược nào vì không có code
+chiến lược thay đổi. `openspec/changes/portfolio-measurement-integrity/tasks.md`
+6.4 vẫn chưa tick, đúng ranh giới lifecycle đã ghi ở r419/r420.
+`.ops/changes/` giờ có `phase-agent-multi-account-routing/` — một OPS
+transaction phase-agent-orchestrator không liên quan quant-research, không
+có OPS transaction quant-research nào đang chạy. Hai hướng còn lại không đổi:
+Target 2 vẫn thiếu metric trong tool (r401), forward-time vẫn baseline
+2026-08-30 (~27 ngày nữa mới tới ngưỡng ~30 ngày). Không có hướng backtest
+mới nào mở ra từ round này. File:
+`round421-NO-CHANGE-only-new-commit-is-an-unrelated-ssh-tunnel-tooling-script-both-blocked-threads-unchanged.md`.
+
+## Round 420 — NO-CHANGE: kiểm tra trạng thái ngay sau bằng chứng task 6.4 của Round 419 — cả hai hướng còn lại vẫn bị chặn không đổi
+
+Zero compute, zero container, zero SSH. Round419 vừa chạy compute thật
+(hold=72 gate run) ngay trước đó; chạy lại compute lần nữa ngay sau sẽ chỉ
+lặp lại đúng bằng chứng cũ, nên round này quay về kiểm tra trạng thái thuần
+như r411-r418: `git fetch origin main` trên `finance-live-action` — `HEAD`
+vẫn `7d579cf`, khớp không đổi so với r416-r419; `gh run list` cùng hai run
+gần nhất đã ghi, không có gì mới; `openspec/changes/portfolio-measurement-integrity/tasks.md`
+6.4 vẫn chưa tick (đúng như r419 để lại — quyết định tick/archive là lifecycle
+call ngoài phạm vi round nghiên cứu); `.ops/changes/` rỗng, không có OPS
+transaction đang chạy. Hai hướng còn lại không đổi: Target 2 vẫn thiếu metric
+trong tool (r401), forward-time mới ~3 ngày kể từ baseline 2026-08-30 của
+r403 (~27 ngày nữa mới tới ngưỡng ~30 ngày). Không có hướng backtest mới nào
+mở ra từ round này. File:
+`round420-NO-CHANGE-status-check-after-round419-task-6-4-evidence-both-remaining-threads-still-blocked.md`.
+
+## Round 419 — NO-CHANGE: lần đầu có holdout score thật cho task 6.4 (hold=72, unified path) — vẫn lỗ, hệ số understatement 2,97x chứ không phải ~2x
+
+Một container (`finance-research`, `--cpus=2 --memory=4g --memory-swap=6g`),
+một SSH tunnel read-only, cả hai đã dọn sạch. Khác với r411-r418 (chỉ kiểm tra
+trạng thái, zero compute), round này thử lại trực tiếp lý do chặn của
+`openspec/changes/portfolio-measurement-integrity/tasks.md` task 6.4 ("no
+Finance MW/research runtime available in the current local environment") vì
+session hiện tại có `docker` và `ssh my` hoạt động — build image từ đúng
+`origin/main` `7d579cf`, mở tunnel `18086:localhost:8086`, chạy
+`--daily-profit-gate --portfolio-minimum-hold-decisions 72` trên
+`binance BTC perpetual_future 5m --days 500` (143.998 candle, khớp cửa sổ
+r359/r360). Đây là lần đầu tiên `--daily-profit-gate` chạy với hold value qua
+unified path (`portfolio_construct_evaluate_execute_target`) kể từ khi task
+1.2 gỡ conflict giữa hai cờ.
+
+**Kết quả**: gate **FAILED** (7/12 check: positive_day_ratio, median_daily_pnl,
+negative_day_streak, sortino_ratio, sharpe_ratio, gross_pnl_positive,
+cost_to_gross_pnl_ratio). `portfolio_faithful` (đường Portfolio thật, hold=72):
+173 lệnh, `realized_pnl` **−1,450971**. `legacy_selected_rule` (control bỏ qua
+hold guard): 515 lệnh, `realized_pnl` **−4,307464**. `gross_pnl_before_costs`
+**−0,248754** (âm ngay cả trước phí) — tín hiệu gốc lỗ độc lập với hold guard.
+`trades_per_week` 12,11 (đạt Target 3).
+
+**Xác nhận hướng** của r371 ("gate hiểu sai theo hướng bi quan ~2x") nhưng
+**tinh chỉnh độ lớn**: r371 so gián tiếp hai đường khác code path; lần này
+cùng một run cho cả hai số, tỷ lệ thật là **4,307/1,451 = 2,97x**, gần 3x hơn
+là 2x. **Không đổi kết luận chiến lược nào** — gross âm trước phí nên hold
+guard chỉ giảm lỗ, không tạo lời; không đạt điều kiện promote. Task 6.4's
+checkbox và quyết định archive change **không** thuộc phạm vi round nghiên
+cứu này (theo đúng ranh giới r416 đã ghi) — chỉ ghi lại bằng chứng để người
+sở hữu lifecycle OpenSpec/OPS quyết định. Hai hướng còn lại của r418 (Target 2
+metric, forward-time ~30 ngày) không đổi. File:
+`round419-NO-CHANGE-first-real-holdout-score-for-task-6-4-confirms-loss-with-2-97x-not-2x-understatement.md`.
+
+## Round 418 — NO-CHANGE: ~3h10 kể từ Round 417 — cả hai hướng còn lại vẫn bị chặn không đổi
+
+Zero container/SSH. Kiểm lại vì khoảng cách 3h10 đủ lớn để có thể có fix-up
+push, CI run mới, hoặc thay đổi task OpenSpec. `git fetch origin main` trên
+`finance-live-action` — `HEAD` vẫn bằng `origin/main` = `7d579cf`, đúng commit
+r416/r417 đã ghi. `gh run list --limit 5` cho thấy đúng hai run gần nhất đã
+ghi, không có gì mới hơn. `openspec/changes/portfolio-measurement-integrity/tasks.md`
+vẫn giữ nguyên: 6.1-6.3 đã tick, 6.4 vẫn chưa, cùng đúng nguyên văn lý do bị
+chặn (truy cập network/môi trường), change chưa archive. Hướng Target 2 (r401,
+không có metric trong tool) và hướng forward-time (~3 ngày kể từ mốc r403
+2026-08-30, so ngưỡng ~30 ngày, còn ~27 ngày nữa) đều không có thông tin mới —
+đọc lại sẽ chỉ lặp lại đúng kết luận cũ trên cùng một mẫu chưa đổi. File:
+`round418-NO-CHANGE-3h10m-since-round417-both-remaining-threads-still-blocked.md`.
+
+## Round 417 — NO-CHANGE: 71 phút kể từ Round 416 — cả hai hướng còn lại vẫn bị chặn không đổi
+
+Zero container/SSH. Kiểm lại thay vì mặc định giữ nguyên: hướng release-decision
+vừa đổi ở r416 nên được re-check chứ không chỉ mang sang. `git fetch origin
+main` trên `finance-live-action` — `HEAD` vẫn bằng `origin/main` = `7d579cf`,
+đúng commit r416 đã ghi. `gh run list --limit 5` cho thấy đúng hai run gần nhất
+r416 đã ghi, không có gì mới hơn. `openspec/changes/portfolio-measurement-integrity/tasks.md`
+vẫn giữ nguyên: 6.1-6.3 đã tick, 6.4 vẫn chưa, cùng đúng nguyên văn lý do bị
+chặn (truy cập network/môi trường), change chưa archive. Hướng Target 2 (r401,
+không có metric trong tool) và hướng forward-time (~3 ngày kể từ mốc r403
+2026-08-30, so ngưỡng ~30 ngày) đều không có thông tin mới — đọc lại sẽ chỉ
+lặp lại đúng kết luận cũ trên cùng một mẫu chưa đổi. File:
+`round417-NO-CHANGE-71-minutes-since-round416-both-remaining-threads-still-blocked.md`.
+
+## Round 416 — NO-CHANGE: hướng "quyết định release" đã di chuyển — finance-live-action đã push và deploy; 2 hướng còn lại vẫn bị chặn
+
+Zero container/SSH. Kiểm lại cả ba hướng r411-r415: **hướng 1 (quyết định
+release) đã đổi.** `git fetch origin main` trên `finance-live-action` rồi so
+`origin/main..HEAD` và `HEAD..origin/main` — **cả hai đều rỗng**, `HEAD` =
+`origin/main` = `7d579cf`. Bốn commit trước đây local-only (`59e2489`,
+`c07951a`, `f158e04`, `ae6a1fd` — `portfolio-measurement-integrity` task
+1.1-6.3) giờ đã ở `origin/main`, cộng thêm 1 commit lint-fix `7d579cf`
+(2026-09-02, đồng tác giả Claude Sonnet 5, cơ học/không đổi hành vi theo
+chính message của nó). `gh run list` xác nhận `Build and Deploy` thành công
+(12m8s) rồi `Production Live Action Verification` thành công (45s) cho lần
+push này. `openspec/changes/portfolio-measurement-integrity/` vẫn còn
+(chưa archive), task 6.4 vẫn chưa tick — vẫn bị chặn bởi truy cập
+network/môi trường tới production data route, **không liên quan** tới việc
+commit đã merge hay chưa nên push này không tự động mở khoá 6.4. **Không**
+khẳng định push này đổi bất kỳ kết luận chiến thuật nào đã ghi (r396-r410
+vẫn đứng — đây là hạ tầng đo lường/replay, không phải backtest mới).
+**Không** khẳng định PnL/hành vi production thay đổi (không chạy kiểm tra
+dữ liệu production vòng này, ngoài phạm vi vòng bounded này). Hai hướng còn
+lại (định nghĩa Target 2, forward time ~3 ngày kể từ mốc r403 so ngưỡng
+~30 ngày) vẫn bị chặn không đổi. Quyết định về task 6.4 và việc archive
+change thuộc về người sở hữu vòng đời OpenSpec/OPS đó, không phải vòng
+research-only này. File:
+`round416-NO-CHANGE-release-decision-thread-resolved-finance-live-action-pushed-and-deployed-two-threads-still-blocked.md`.
+
+## Round 415 — NO-CHANGE: 18 phút kể từ Round 414 — cả ba hướng bị chặn không đổi
+
+Zero container/SSH. Kiểm lại cả ba mục r411-r414: `portfolio-measurement-integrity`
+vẫn chỉ ở `.ops/archive/...`, vẫn BLOCKED, `.ops/changes/` vẫn rỗng; 4 commit
+`finance-live-action` vẫn local-only (xác nhận lại bằng `git fetch`); forward
+time vẫn ~3 ngày kể từ mốc r403 (2026-08-30), còn xa ngưỡng ~30 ngày. Không có
+quan sát mới nào phát sinh vòng này. Bước tiếp theo không đổi: hướng nào trong
+ba hướng bị chặn di chuyển trước (quyết định release, định nghĩa Target 2,
+hoặc thêm thời gian cho live trade log). File:
+`round415-NO-CHANGE-18-minutes-since-round414-all-three-blocked-threads-unchanged.md`.
+
+## Round 414 — NO-CHANGE: 27 phút kể từ Round 413 — cả ba hướng bị chặn không đổi
+
+Zero container/SSH. Kiểm lại cả ba mục r411/r412/r413: `portfolio-measurement-integrity`
+vẫn chỉ ở `.ops/archive/...`, vẫn BLOCKED, `.ops/changes/` vẫn rỗng; 4 commit
+`finance-live-action` vẫn local-only (xác nhận lại bằng `git fetch`); forward
+time vẫn ~3 ngày kể từ mốc r403 (2026-08-30), còn xa ngưỡng ~30 ngày. Không có
+quan sát mới nào phát sinh vòng này — câu hỏi về iteration counter mà r412 nêu
+và r413 làm rõ một phần không được kiểm lại, vì thêm một điểm dữ liệu ở
+khoảng cách 27 phút sẽ không thêm thông tin nào ngoài những gì r413 đã ghi.
+Bước tiếp theo không đổi: hướng nào trong ba hướng bị chặn di chuyển trước
+(quyết định release, định nghĩa Target 2, hoặc thêm thời gian cho live trade
+log). File:
+`round414-NO-CHANGE-27-minutes-since-round413-all-three-blocked-threads-unchanged.md`.
+
+## Round 413 — NO-CHANGE: vẫn chưa đầy một ngày kể từ Round 412 — cả ba hướng bị chặn không đổi, iteration counter đã tăng lên 207
+
+Zero container/SSH. Kiểm lại cả ba mục r411/r412: `portfolio-measurement-integrity`
+vẫn chỉ ở `.ops/archive/...`, vẫn BLOCKED; 4 commit `finance-live-action` vẫn
+local-only (xác nhận lại bằng `git fetch`); forward time vẫn ~3 ngày kể từ mốc
+r403 (2026-08-30), còn xa ngưỡng ~30 ngày. Một quan sát mới: iteration counter
+mà r412 nêu là "không tăng" giữa hai lần gọi liên tiếp (đều đọc 206) giờ đã
+tăng lên **207** ở vòng này — làm yếu bớt (không giải quyết dứt điểm) lo ngại
+r412 nêu, không có điều tra thêm vì đây là cơ chế launcher tooling, không phải
+câu hỏi nghiên cứu. File:
+`round413-NO-CHANGE-still-under-a-day-since-round412-all-three-blocked-threads-unchanged-iteration-counter-now-advanced-to-207.md`.
+
+## Round 412 — NO-CHANGE: kiểm lại ngay sau Round 411 (cùng `iteration` báo là 206) — không có gì đổi trong chưa đầy một ngày
+
+Zero container/SSH. Kiểm lại cả ba mục r411 đã đóng thay vì giả định còn
+đúng: `portfolio-measurement-integrity` vẫn chỉ ở `.ops/archive/...`, vẫn
+BLOCKED; 4 commit `finance-live-action` vẫn local-only (xác nhận lại bằng
+`git fetch`); UTC hiện tại `2026-09-01T18:32:37Z`, chưa đầy 1 ngày sau r411,
+còn xa ngưỡng ~30 ngày của forward time. Một quan sát mới thật sự: giá trị
+`iteration` trong `quant-research-state.sh state` **không tăng** giữa hai lần
+gọi `run-phase-agent-command.sh quant-research` liên tiếp — ghi nhận như một
+fact về tooling launcher, không phải bug đã chẩn đoán, không ảnh hưởng kết
+luận nghiên cứu nào. File:
+`round412-NO-CHANGE-re-verified-immediately-after-round411-nothing-changed-in-under-a-day.md`.
+
+## Round 411 — NO-CHANGE: cả ba hướng còn lại (release decision, định nghĩa Target 2, forward time) vẫn thật sự bị chặn — không có gì mới để chạy vòng này
+
+Không chạy container/SSH nào. Kiểm tra lại cả ba hướng r409/r410 để lại:
+`portfolio-measurement-integrity` đã chuyển sang `.ops/archive/2026-09-01-...`
+với status **BLOCKED** (đóng vì worker process chết, có user authorization —
+không phải released); 4 commit trên `finance-live-action` vẫn chỉ nằm local,
+xác nhận lại bằng `git fetch origin main`. Target 2 vẫn `n/a`. Forward time:
+mới 3 ngày kể từ mốc r403 (2026-08-30), ngưỡng cần ~30 ngày — chạy lại live
+log bây giờ sẽ lặp đúng số liệu r403/r405 trên mẫu lớn hơn không đáng kể,
+đúng kiểu "busywork" r405 đã cảnh báo. Ghi nhận workspace đã đổi cấu trúc
+(`raw/` → `research/quant/`, thêm `run-phase-agent-command.sh`/
+`phase-agent-state.sh`) giữa r410 và vòng này — lịch sử nghiên cứu cũ còn
+nguyên vẹn qua migration. File:
+`round411-NO-CHANGE-all-three-remaining-threads-are-still-genuinely-blocked-nothing-new-to-run.md`.
+
 ## Round 409 — REJECTED: strategy production **thứ bảy** cũng lỗ trên holdout — và mang đúng hình dạng **train mạnh, sau đó sụp** mà chính comment trong codebase gọi là **disqualifying**
 
 `round409-REJECTED-the-seventh-production-strategy-loses-on-holdout-too-and-shows-the-overfitting-shape-the-codebase-itself-calls-disqualifying.md`
