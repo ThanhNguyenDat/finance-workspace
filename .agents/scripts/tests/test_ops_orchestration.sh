@@ -84,6 +84,10 @@ test "$(git -C "$web_worktree" rev-parse --is-inside-work-tree)" = true || fail 
 
 export OPS_ROOT="$workspace"
 export OPS_WORKSPACE_ROOT="$workspace"
+# Keep phase-agent candidate state inside the hermetic fixture as well. The
+# runner needs this separate root for provider selection, and must not read a
+# stale operator state from the checkout running the contract test.
+export PHASE_AGENT_ROOT="$workspace"
 
 new_change() {
   local change="$1"
