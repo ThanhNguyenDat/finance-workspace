@@ -524,10 +524,11 @@
     ]));
   }
 
-  function onAttemptsLoaded(attempts) {
+  function onAttemptsLoaded(attempts, source) {
     state.attempts = attempts;
     document.getElementById("sidebar-sub").textContent =
-      attempts.length + (attempts.length === 1 ? " attempt" : " attempts");
+      attempts.length + (attempts.length === 1 ? " attempt" : " attempts") +
+      " · " + source;
     renderTree();
     if (attempts.length && !state.activeId) {
       var sorted = attempts.slice().sort(function (a, b) {
@@ -539,6 +540,14 @@
     }
   }
 
+  // The shared `db` store this artifact writes to via export-transcript +
+  // prepare-transcript-docs + a write_db batch (see
+  // tools/orchestrator/artifacts/README.md). Only as current as the last
+  // push — a local-MCP live arm was tried and dropped; publishing this
+  // artifact from Claude Code cannot declare a `host:` MCP server
+  // (`mcp manifest rejected: host servers aren't available in this
+  // session`), so there is currently no way to make this page tail data
+  // live from this environment.
   async function init() {
     if (!window.claude || typeof window.claude.use !== "function") {
       showEmpty("Live data isn't available in this view.");
@@ -564,7 +573,7 @@
         data._id = doc.id;
         return data;
       });
-      onAttemptsLoaded(attempts);
+      onAttemptsLoaded(attempts, "pushed snapshot");
     }, function (err) {
       showEmpty("Could not load transcripts (" + err.code + ": " + err.message + ").");
       document.getElementById("sidebar-sub").textContent = "error: " + err.code;

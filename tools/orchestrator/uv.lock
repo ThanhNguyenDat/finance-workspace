@@ -363,6 +363,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "claude-agent-sdk" },
+    { name = "mcp" },
     { name = "openai-codex" },
     { name = "pyyaml" },
 ]
@@ -376,6 +377,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "claude-agent-sdk", specifier = "==0.2.151" },
+    { name = "mcp", specifier = "==2.1.1" },
     { name = "openai-codex", specifier = "==0.147.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
 ]

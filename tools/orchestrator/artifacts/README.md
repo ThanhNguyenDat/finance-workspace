@@ -46,9 +46,46 @@ publish — omitting `capabilities` also carries the existing declaration
 forward, but stating it explicitly here documents that it's required, not
 incidental.
 
+## Real-time streaming: tried, blocked at publish, kept as standalone tooling
+
+The `db` arm above is pull-only — a viewer only sees whatever a Claude
+session last pushed. A local MCP server (`host:agent-transcripts`) was built
+to let the page poll the coordinator DB directly instead
+(`mcp.watchTool("host:agent-transcripts", "get_transcripts", ...)`, per the
+`mcp` capability's `host:` local-server design), but publishing the artifact
+with that capability declared from *this* environment (Claude Code) is
+rejected outright:
+
+```text
+mcp manifest rejected: "host:agent-transcripts" names a locally-configured
+MCP server, and host servers aren't available in this session — declare
+only claude.ai connectors ..., or to publish without connector access leave
+"mcp" out of capabilities
+```
+
+So the artifact itself stayed on the `db`-only design. The server is real
+and independently working, though — kept in the repo in case a session that
+*can* declare `host:` capabilities (a claude.ai chat session, if that turns
+out to support it) ever manages this artifact instead:
+
+- `tools/orchestrator/src/orchestrator/mcp_server/agent_transcripts.py` — the
+  server (tool `get_transcripts(selector="quant-research")`, returning the
+  same shape `export-transcript` produces). Entry point `agent-transcripts-mcp`,
+  installed to `tools/orchestrator/.venv/bin/agent-transcripts-mcp` by
+  `uv sync --project tools/orchestrator`.
+- Verified directly with a real MCP client over stdio (not through an
+  artifact): lists exactly one tool (`get_transcripts`, `read_only_hint:
+  true`) and a real call returned 34 attempts from the live coordinator DB.
+  Unit coverage in `tests/test_agent_transcripts_mcp_server.py`.
+- Not verified, and not currently usable from here: registering it in a
+  Claude app as a local MCP server, and whether a `claude.ai`-originated
+  publish of this artifact can declare `capabilities: {"mcp": {"servers":
+  [{"server": "host:agent-transcripts", "tools": ["get_transcripts"]}]}}`
+  where this session cannot.
+
 ## Known open issue
 
-Live rendering was checked once via browser automation right after
+Live `db` rendering was checked once via browser automation right after
 populating the store: `write_db`/`read_db` confirmed the documents are
 present and well-formed, but the page's `onSnapshot` callback did not fire
 within roughly 40 seconds in that check (no error either — `init()` reached

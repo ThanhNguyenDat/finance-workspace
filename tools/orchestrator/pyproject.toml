@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
   "claude-agent-sdk==0.2.151",
+  "mcp==2.1.1",
   "openai-codex==0.147.0",
     "pyyaml>=6.0.3",
 ]
@@ -22,6 +23,7 @@ module-name = "orchestrator"
 
 [project.scripts]
 agent-role-state = "orchestrator.cli.agent_role_state:cli"
+agent-transcripts-mcp = "orchestrator.cli.agent_transcripts_mcp:cli"
 classify-claude-result = "orchestrator.cli.classify_claude_result:cli"
 classify-codex-result = "orchestrator.cli.classify_codex_result:cli"
 configure-agent-roles = "orchestrator.cli.configure_agent_roles:cli"
