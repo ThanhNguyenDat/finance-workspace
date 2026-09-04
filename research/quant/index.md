@@ -10453,6 +10453,21 @@ Zero container, zero backtest round này (đúng quy tắc round434/435/442 áp
 dụng cho design-survey). File:
 `round445-NEEDS-MORE-RESEARCH-volume-profile-poc-value-area-design-survey-new-mechanism-after-muc-0.5-re-exhausted.md`.
 
+**Round 446 (2026-09-04, operator iteration 248) — NEEDS-MORE-RESEARCH:**
+item 7 Volume Profile đã được implement **chỉ trong research registry** và
+backtest thật bằng Docker trên `exness XAU` trước, rồi transfer test
+`binance BTC`, cùng cutoff `2026-09-04T14:15:11Z`. Grid đã đăng ký trước gồm
+`bin_count={12,24,48}` × `lookback={96,288}` × `{breakout,reversion}`.
+XAU breakout lookback 288 cho 3 holdout PF **1.3366 / 1.3556 / 1.2604**
+(71/71/73 trades; ~5.02/5.02/5.16 tuần), và hai cell b12/b24 còn dương ở
+train + validation. Nhưng transfer BTC không ổn định: b12/l288 chỉ dương
+holdout **+0.16364, PF 1.0452** trong khi train/validation âm; b24/l288
+holdout PF **0.9139**, b48/l288 **0.8350**; các cell còn lại cũng không đạt.
+Reversion âm ở cả hai route. Candle-count gate đạt: XAU **97,472** với
+`unverified_gap_candles=0`, BTC **143,998** với `unverified_gap_candles=0`.
+Không promote, không OpenSpec/OPS; item 7 giữ mở cho một cutoff/window độc
+lập. Full evidence: `round446-NEEDS-MORE-RESEARCH-volume-profile-poc-value-area-transfer-is-not-stable.md`.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
