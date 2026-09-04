@@ -23,10 +23,22 @@ walk-forward defensible. Không việc nào khác được tính là công việ
 vòng, kể cả khi có vẻ liên quan: không audit lifecycle OpenSpec/OPS, không
 kiểm tra trạng thái archive/handoff, không theo dõi CI/deploy, không đọc ADR,
 không status-check các thread bị block bởi lý do bên ngoài (chờ thời gian
-lịch, chờ quyết định sản phẩm, chờ hạ tầng không truy cập được). Nếu không có
-hướng Alpha/Portfolio nào còn mở và chưa đóng, kết luận `NO-CHANGE` hoặc
-`NEEDS-MORE-RESEARCH` ngắn gọn rồi dừng — không lấp đầy vòng bằng việc kiểm
-tra trạng thái ngoài phạm vi này.
+lịch, chờ quyết định sản phẩm, chờ hạ tầng không truy cập được).
+
+**Nếu backlog nội bộ (`research/quant/index.md` mục 3 + mục 0.5) không còn
+hướng nào mở**, trước khi kết luận `NO-CHANGE`, dùng web search tìm cơ chế
+Alpha hoặc Portfolio-construction mới — mechanism/kỹ thuật cụ thể chưa từng
+xuất hiện trong mục 3 (không phải biến thể tham số của cái đã đóng), ví dụ
+literature/kỹ thuật quant thực tế: thống kê arbitrage, machine-learning
+signal đơn giản, volume-profile/market-profile, order-book microstructure,
+regime-detection (Hurst exponent...), risk-parity/vol-targeting variant khác
+mục 0.5 đã test. Ghi rõ nguồn tìm được vào `index.md` mục 0.5 kèm lý do vì
+sao khác các mục 3 đã đóng, y hệt cách 4 hướng 2026-09-04 đã được ghi trước
+khi implement. Chỉ kết luận `NO-CHANGE` khi web search cũng không tìm được
+cơ chế nào đủ cụ thể và khác biệt để implement — không được bịa cơ chế chỉ
+để có việc làm, và không implement ngay trong cùng round tìm ra ý tưởng trừ
+khi đã đủ ngân sách backtest của round (ưu tiên ghi ý tưởng lại cho round
+sau nếu không chắc).
 
 ## Bắt đầu vòng
 
