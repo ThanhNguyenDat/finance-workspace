@@ -251,12 +251,40 @@ fabricate one.
   rounds 349/350 — and **not** to the gate runs of rounds 344/345, whose fee response is the
   cost-feedback path alone.
 - `--daily-profit-gate` evaluates the deployed *decision policy* on holdout only
-  (Sharpe/Sortino/streak/frequency) — it does not let you pick an arbitrary candidate. The plain sweep table (no gate
-  flag, optionally with `--higher-timeframe-interval <interval>` to include
-  MTF trend-filtered candidates) scores arbitrary candidates on PF/win-rate
-  only. There is no tool to get extended metrics (Sharpe/Sortino/streak) for
-  an arbitrary candidate — don't invent one; report PF/win-rate honestly and
-  say so if extended metrics are unavailable.
+  (Sharpe/Sortino/streak/frequency) — it does not let you pick an arbitrary
+  **Alpha strategy** candidate (`--gate-strategy` was removed at round 55).
+  **It does, however, respect every `--portfolio-*` flag** (sizing mode/value,
+  protective kind/stop/take/atr-periods, minimum-hold-decisions) exactly like
+  `one_target` does, because both read the same `selected_portfolio_rule`
+  built from those flags (`main.rs`'s gate branch calls
+  `evaluate_real_portfolio_with_funding_and_continuity_and_hold` with
+  `selected_portfolio_rule.simulation` directly) — this is how round
+  80/83/356-367/427-431/439 all got real holdout Sharpe/Sortino for a
+  non-deployed Portfolio-layer configuration (a different hold/band/sizing
+  value or mode than what's live). Do not read "can't pick a candidate" as
+  "can't change the Portfolio config" — they are different axes. The plain
+  sweep table (no gate flag, optionally with `--higher-timeframe-interval
+  <interval>` to include MTF trend-filtered candidates) scores arbitrary
+  **Alpha strategy** candidates on PF/win-rate only. There is no tool to get
+  extended metrics (Sharpe/Sortino/streak) for an arbitrary Alpha candidate —
+  don't invent one; report PF/win-rate honestly and say so if extended
+  metrics are unavailable.
+- **Diagnostic for "is a sizing-mode difference real or just a scale
+  effect": check `cost_to_gross_pnl_ratio` invariance** (round 439). Fees,
+  slippage, and funding all scale with notional the same way PnL does, so a
+  pure uniform rescaling (e.g. `fixed_notional 5.0` vs `equity_fraction
+  0.10`, ~200x different notional at $10k starting equity) leaves
+  `cost_to_gross_pnl_ratio` essentially unchanged even though every raw PnL
+  number moves ~200x — confirmed empirically (1.702 vs 1.710). A sizing mode
+  whose *per-trade* size varies independently of a uniform scale (e.g.
+  `VolatilityScaled`, which sizes each trade by its own realized-volatility
+  reading) breaking that invariance — round 439 saw `cost_to_gross_pnl_ratio`
+  jump 4.6x (1.710 → 7.811) at the *same* base `target_fraction` as the
+  `equity_fraction` control — is evidence the mechanism is reallocating size
+  per-trade in a way correlated (positively or negatively) with each trade's
+  own edge/cost profile, not merely a calibration/scale question. Run the
+  uniform-rescaling pair as a control in the same round before concluding a
+  new sizing mode's cost-ratio shift means anything mechanistic.
 - The `portfolio_execution` block in `--json` output carries several parallel
   Portfolio-level measurements with different fidelity — verified by reading
   `portfolio_measurement.rs::compare_real_portfolio_with_funding` directly
