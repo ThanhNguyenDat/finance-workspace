@@ -10015,7 +10015,7 @@ Ba hệ quả:
 
 Chi tiết: `research/quant/rounds/round334-REJECTED-the-6-8-per-week-coincidence-dissolves-on-a-refined-grid-and-the-volatility-prediction-locates-the-band.md`.
 
-## 0.5. Hướng mới đề xuất sau Round 432 — mục 1 đã ĐÓNG (Round 433), mục 2 vẫn mở (design survey Round 434, chưa backtest)
+## 0.5. Hướng mới đề xuất sau Round 432 — mục 1 và mục 4 đã ĐÓNG (Round 433, 436); mục 2, 3 vẫn mở (design survey Round 434/435, chưa backtest, cần 1 round implementation riêng trước)
 
 Round 432 audit kết luận không còn cơ chế Alpha/Portfolio nào mở trong ~90
 candidate hiện có (mục 3). Hai hướng **thật sự mới**, chưa từng xuất hiện
@@ -10130,21 +10130,37 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
 4. **Cross-route correlation-aware allocation** — có bằng chứng nền từ
    Round 342: `bybit XAUT` và `exness XAU` tương quan **giá** +0,996 nhưng
    tương quan **PnL Portfolio** chỉ +0,287 (cơ chế decorrelation hiện tại
-   chưa rõ nguyên nhân, chỉ mới xác nhận hiện tượng). Chưa ai test chủ động
-   giảm exposure đồng thời khi correlation giữa các route tăng đột biến
-   (rủi ro drawdown đồng thời chưa quản lý). User đề xuất trực tiếp
-   (2026-09-04), chưa implement/backtest.
+   chưa rõ nguyên nhân, chỉ mới xác nhận hiện tượng). User đề xuất trực tiếp
+   (2026-09-04). **ĐÃ IMPLEMENT (post-hoc overlay, không đụng production) +
+   BACKTEST + ĐÓNG, Round 436**: scale exposure kết hợp của
+   `exness XAU`+`bybit XAUT` xuống 0,5× vào ngày rolling-10-day correlation
+   giữa PnL 2 route vượt 0,5. Đo trên 2 cửa sổ holdout **rời nhau** qua
+   `--as-of` (cơ chế round382/391/429-431): Window A (2026-02/03→05-26, 70
+   ngày chung) VÀ Window B ("now", 2026-05-27/28→09-04, 84 ngày chung). Đối
+   sánh non-rolling correlation với round342 khớp sát (+0,4185 / +0,2838 so
+   với +0,287 gốc) — xác nhận pipeline đúng trước khi tin số liệu mới.
+   Raw before/after trông như cải thiện nhất quán ở CẢ HAI cửa sổ (Sharpe
+   −6,168→−4,994 / −4,751→−4,556), nhưng Sharpe/Sortino **bất biến qua scale
+   đều** nên chênh lệch chỉ có thể đến từ **ngày nào bị chọn**, không phải từ
+   lượng exposure cắt trung bình — permutation control (2000 lần rút ngẫu
+   nhiên tập ngày cùng kích thước) cho thấy Window A vượt 97,5% random draw
+   (trông như thật) nhưng Window B chỉ vượt 61,4% (không phân biệt được với
+   ngẫu nhiên) — đúng khuôn mẫu "một cửa sổ trông tốt rồi không tái lập" đã
+   lặp lại nhiều lần trong arc này (round331/334/341). Kể cả đọc thuận lợi
+   nhất (Window A) cũng KHÔNG bao giờ tới gần ngưỡng Sharpe≥1,0 của gate —
+   cùng phát hiện cấu trúc "giảm exposure chỉ thu nhỏ lỗ, không tạo edge"
+   như cả họ lever hold/band (round328-367), giờ được xác nhận bằng phương
+   pháp permutation độc lập thay vì chỉ đọc magnitude thô.
+   File: `round436-REJECTED-cross-route-correlation-aware-allocation-improves-both-windows-raw-but-fails-a-permutation-control-out-of-sample.md`.
 
-Ưu tiên cho vòng research tiếp theo: mục 3 giờ đã có design survey (Round
-435) — bước kế tiếp của nó là 1 round implement + unit-test riêng (không
-backtest trong cùng round đó), xem chi tiết ngay phía trên. Mục 4 (cross-route
-correlation-aware allocation) vẫn hoàn toàn mở, chưa design survey lẫn
-backtest — ứng viên tự nhiên cho round research tiếp theo nếu muốn một hướng
-có thể ra số ngay thay vì cần một round implementation riêng trước. Cùng
-chuẩn evidence như mục 1/2: train/validation/holdout defensible, không
-cherry-pick, sweep đủ range tham số trước khi kết luận đóng hay mở; và cùng
-chuẩn round 434/435 đã đặt ra: không viết code sizing/risk-gate hay alignment
-xuyên-instrument vội trong cùng round định ra số.
+**Trạng thái sau Round 436**: mục 1 đóng (round433), mục 4 đóng (round436,
+cấu hình đã test — không loại trừ hoàn toàn 1 rule khác trên 1 route pair
+khác). Mục 2 (cross-instrument lead-lag) và mục 3 (volatility-scaled sizing)
+vẫn mở, cả hai đều đã dừng ở design survey (round434/435) vì đụng shared
+engine code — bước kế tiếp của CẢ HAI là 1 round implementation + unit-test
+riêng (không backtest trong cùng round đó) trước khi có thể ra số, xem chi
+tiết ngay phía trên mục tương ứng. Không còn hướng nào trong mục 0.5 có thể
+ra số ngay mà không cần 1 round implementation riêng trước.
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
