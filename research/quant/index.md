@@ -10015,7 +10015,7 @@ Ba hệ quả:
 
 Chi tiết: `research/quant/rounds/round334-REJECTED-the-6-8-per-week-coincidence-dissolves-on-a-refined-grid-and-the-volatility-prediction-locates-the-band.md`.
 
-## 0.5. Hướng mới đề xuất sau Round 432 — CẢ 4 MỤC ĐÃ ĐÓNG (mục 1 Round 433, mục 2 Round 437, mục 3 Round 439, mục 4 Round 436)
+## 0.5. Hướng mới đề xuất sau Round 432 — 5/6 MỤC ĐÃ ĐÓNG (mục 1 Round 433, mục 2 Round 437, mục 3 Round 439, mục 4 Round 436, mục 5 Round 443; mục 6 vẫn mở)
 
 Round 432 audit kết luận không còn cơ chế Alpha/Portfolio nào mở trong ~90
 candidate hiện có (mục 3). Hai hướng **thật sự mới**, chưa từng xuất hiện
@@ -10286,6 +10286,29 @@ implement/backtest:**
    trước, backtest sau (round437's honest-metrics-only scope, chỉ
    PF/win-rate qua plain sweep, không Sharpe/Sortino vì `--gate-strategy` đã
    bị xoá round55).
+   - **ĐÃ IMPLEMENT + BACKTEST + ĐÓNG, Round 443**: `SpreadReversionStrategy`
+     + `spread_reversion_candidates` (`crates/finance-research/src/
+     {strategies,main}.rs`, finance-live-action commit `917f00d`), tái dùng
+     nguyên hạ tầng leader/follower round437 đã xây, không thêm CLI flag
+     mới. Grid: window∈{20,60} × hypothesis∈{converge,diverge} ×
+     `entry_z=1.5` bare, cả 2 chiều leader/follower (`exness XAU`/
+     `bybit XAUT`). 8 unit test mới xanh cùng 150 test cũ, `cargo fmt`/
+     `cargo clippy` sạch. Backtest 2 container (`--days 500`, plain sweep),
+     validity gate `merged_candle_count=241472` khớp cả 2 chiều (gần khớp
+     round437's `241470` đo 3 round trước trên cặp instrument khác — trong
+     phạm vi jitter route đã ghi nhận). **Cả 8 ô đều PF 0.20-0.42 trên
+     holdout**, khớp train/validation (không có dạng overfit). Phát hiện
+     đáng chú ý nhất: hypothesis `diverge` (cược spread doãng tiếp) thắng
+     `converge` (cược spread hồi quy mean) trên **cả 4** cặp (window,
+     chiều) — nếu quan hệ cointegration hồi quy thật tồn tại, phía
+     reversion phải thắng, không phải thua chính bản gương của nó ở mọi ô.
+     Đây là dấu hiệu z-score bắt nhiễu quanh 1 spread không thực sự
+     mean-revert ở khung 5m/20-60 bar, không phải bằng chứng đảo thành edge
+     momentum thật (PF tốt nhất của `diverge`, 0,416, vẫn xa dưới 1,0).
+     `entry_z` chưa sweep ngưỡng cao hơn 1,5 và hedge ratio 1.0 chưa kiểm
+     chứng thực nghiệm — ghi lại như giới hạn thật, không khẳng định đã
+     loại trừ hoàn toàn. **Mục 5 ĐÓNG.** File:
+     `round443-REJECTED-spread-reversion-stat-arb-loses-on-all-8-cells-both-directions-both-windows-both-hypotheses.md`.
 6. **Hurst-exponent regime filter** (rolling R/S estimator, H>0.5=trending,
    H<0.5=mean-reverting, gate chọn family strategy phù hợp; nguồn:
    Macrosynergy, quantneuraledge). Khác `RealizedVolatilityRegimeFilterStrategy`
@@ -10303,6 +10326,36 @@ Cả 2 chưa viết dòng Rust nào, chưa unit test — round442 dừng ở thi
 đúng chỉ dẫn "ưu tiên ghi ý tưởng lại cho round sau nếu không chắc ngân sách
 đủ". File:
 `round442-NEEDS-MORE-RESEARCH-web-search-surfaces-two-new-mechanisms-statistical-arbitrage-spread-and-hurst-regime-filter-design-survey.md`.
+
+**Round 443 (2026-09-04) — item 5 implement + backtest xong, ĐÓNG (REJECTED):**
+`SpreadReversionStrategy` + `spread_reversion_candidates` build theo đúng
+thiết kế round442 (`crates/finance-research/src/strategies.rs`, commit
+`917f00d`, đã push + xác nhận `origin/main` khớp), 8 unit test mới xanh cùng
+150 test cũ, `cargo fmt`/`cargo clippy` sạch (chỉ còn 9 finding pre-existing
+round437 đã ghi nhận). Backtest 2 container (`exness XAU`/`bybit XAUT` cả 2
+chiều leader/follower, `--days 500`, plain sweep), validity gate
+`merged_candle_count=241472` khớp cả 2 chiều. Kết quả: **cả 8 ô** (2 window
+{20,60} × 2 hypothesis {converge, diverge} × 2 chiều) đều PF 0.20-0.42 trên
+holdout, khớp train/validation (không có dạng overfit train-tốt/holdout-tệ).
+**Phát hiện quan trọng nhất không chỉ là PF thấp**: hypothesis `diverge`
+(cược spread tiếp tục doãng ra) thắng `converge` (cược spread hồi quy về
+mean) trên **cả 4** cặp (window, chiều) — nếu cặp route này thực sự có quan
+hệ cointegration hồi quy thật, phía reversion phải thắng, không phải thua
+chính bản sao gương của nó trên mọi ô. Đây là dấu hiệu z-score đang bắt
+nhiễu ngẫu nhiên quanh 1 spread không thực sự mean-revert ở khung thời gian
+này, không phải bằng chứng đảo chiều thành edge momentum thật (PF tốt nhất
+của `diverge`, 0.416, vẫn xa dưới 1.0 ở mọi split). `entry_z=1.5` bare chưa
+sweep ngưỡng cao hơn — ghi lại trung thực như round437 làm với
+`minimum_cumulative_move`, không khẳng định ngưỡng khác sẽ đổi kết luận
+nhưng cũng không loại trừ. **Mục 5 ĐÓNG.** File:
+`round443-REJECTED-spread-reversion-stat-arb-loses-on-all-8-cells-both-directions-both-windows-both-hypotheses.md`.
+
+**Trạng thái sau Round 443**: mục 1/2/3/4 đóng (round433/437/439/436), mục 5
+đóng (round443, ngay trên). **Mục 6 (Hurst-exponent regime filter) là hướng
+mở duy nhất còn lại trong mục 0.5** — named next step giữ nguyên như
+round442 đã ghi: unit test R/S estimator trên synthetic series có Hurst
+exponent đã biết trước, rồi wrap Donchian/Keltner (round88/91, đã đóng) để
+xem Hurst-gating có cứu được không.
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
@@ -10398,6 +10451,7 @@ Cả 2 chưa viết dòng Rust nào, chưa unit test — round442 dừng ở thi
 | Fibonacci Golden Zone(100) + SMA(10) trend filter — **near-miss gần nhất phiên này** | 106 | 5 năm: PF>1 validation+holdout, nhất quán 2 broker BTC (binance 1.447/1.248, exness 1.141/1.026) — bằng chứng mạnh nhất trước cross-check. Cross-check 18 tháng bắt buộc: ĐẢO HÌNH DẠNG hoàn toàn cả 2 broker (train giờ >1, validation tụt <1), mẫu mỏng hơn — đóng. Ví dụ rõ nhất trong chương trình cho lý do cross-window check bắt buộc |
 | Short-term k-bar return-autocorrelation reversal (fade N nến cùng chiều liên tiếp, cơ chế run-length thuần — khác RSI/Bollinger/Keltner, đề xuất mới sau audit Round 432) | 433 | `KBarReturnReversalStrategy` mới, 5 biến thể (k=2/3/5 bare, k=3+SMA10 trend filter, k=3+session London) trên `exness XAU` + `binance BTC`, `--days 500`. **Cả 30 ô (5×2×3) đều PF<1**, tốt nhất 0.82 (XAU train). PF tăng đơn điệu theo k trên cả 2 route khi trade count sập nhưng không vượt 1.0 — cùng arithmetic "tiến về breakeven từ dưới khi hoạt động biến mất" đã đóng ở lever hold Portfolio-layer (Round 363), ở đây là tham số độ chặt entry Alpha-layer |
 | Cross-instrument lead-lag (return của leader instrument dự đoán follower instrument — BTC/binance ⇄ XAU/exness, cơ chế mới đọc kline instrument thứ 2, đề xuất mới sau audit Round 432) | 437 | `CrossInstrumentLeadLagStrategy` mới (backtest-only, as-of strict-before guard, không đụng production engine), k∈{1,3}×follow/fade×2 hướng leader/follower trên `binance BTC`⇄`exness XAU`, `--days 500`. **Cả 24 ô (4×2×3) đều PF<1**, tốt nhất 0.225 (XAU dẫn BTC, k=3, holdout) — tệ hơn hẳn baseline `KBarReturnReversalStrategy`. Cả 2 hướng đều thua, fade≈follow cùng độ lớn mỗi ô (không phải 1 bên thắng) — chữ ký "nhiễu áp đảo chi phí bất kể hướng" giống order-flow imbalance (Round 72). Nguyên nhân: `minimum_cumulative_move=0.0` khiến gần như mọi bar follower có tín hiệu (~700 lệnh/tuần); ngưỡng magnitude lớn hơn chưa sweep (giới hạn bằng chứng hẹp, cùng mức round433 tự chấp nhận) |
+| Statistical-arbitrage spread reversion (rolling log-price-ratio z-score giữa 2 route cùng vàng — `exness XAU`⇄`bybit XAUT`, cơ chế mới bet convergence giá thay vì throttle exposure hay đọc return leader, đề xuất mới sau web search Round 442) | 443 | `SpreadReversionStrategy` mới (tái dùng hạ tầng leader/follower round437, không CLI flag mới), window∈{20,60}×hypothesis∈{converge,diverge}×`entry_z=1.5` bare, cả 2 hướng leader/follower, `--days 500`. **Cả 8 ô (2×2×2) đều PF 0.20-0.42 trên holdout**, khớp train/validation. Phát hiện chính: `diverge` (cược spread doãng tiếp) thắng `converge` (cược hồi quy mean) trên cả 4 cặp (window, chiều) — nếu cointegration hồi quy thật tồn tại, phía reversion phải thắng, không phải thua bản gương của nó ở mọi ô; dấu hiệu z-score bắt nhiễu quanh spread không thực sự mean-revert ở 5m/20-60 bar, không phải momentum edge thật (PF tốt nhất `diverge` 0.416 vẫn xa dưới 1.0). `entry_z` cao hơn và hedge ratio ước lượng thay vì giả định 1.0 chưa test |
 
 ## 4. Gap hạ tầng/công cụ — chặn khả năng verify chính xác hơn
 
