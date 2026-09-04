@@ -10244,6 +10244,19 @@ phía trên), mục 4 đóng (round436, cấu hình đã test — không loại 
 1 rule khác trên 1 route pair khác). **Cả 4 hướng mới đề xuất sau Round 432
 đều đã đóng — mục 0.5 không còn hướng nào mở.**
 
+**Round 440 — DATA-ISSUE, tái xác nhận không đổi:** phiên trước bị gián đoạn
+provider-quota ngay sau commit docs của round439 (`3752dc5`) nhưng trước khi
+commit riêng phần skill-upsert phản ánh 2 bài học của round439 — file
+`.agents/skills/quant-research-loop/references/playbook.md` bị sửa đổi
+(34 dòng thêm/6 dòng bớt, nội dung đầy đủ, không đứt đoạn) nhưng nằm ngoài
+mọi commit. Round440 đối chiếu diff khớp đúng phát hiện round439 đã báo cáo,
+commit (`31d4bd3`) và push thành công, xác nhận `HEAD == origin/main` ở cả
+`finance-workspace` và `finance-live-action`. Đọc lại mục 0.5 này trước khi
+cân nhắc việc mới: không có ý tưởng user-proposed nào phát sinh kể từ
+round439, cả 4 mục vẫn đóng như trên — không có container/backtest nào chạy
+round này. File:
+`round440-DATA-ISSUE-round439s-skill-upsert-was-never-committed-recovered-and-pushed.md`.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
