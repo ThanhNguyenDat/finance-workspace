@@ -6226,6 +6226,36 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 430 — REJECTED: holdout tách rời thứ BA trên `bybit XAUT` — corner thắng deployed band về net PnL/Sharpe ở **3/3 cửa sổ**, nhưng tần suất vẫn không bao giờ đạt Target 3
+
+Trả lời dứt điểm câu hỏi Round429 tự nêu: "corner có thắng deployed band ở
+MỌI cửa sổ, bất kể dấu tuyệt đối của từng arm không?" Chạy holdout tách rời
+thứ ba (`--as-of 2026-03-05T17:00:00Z`, lùi thêm ~65 ngày từ điểm bắt đầu
+holdout Round429), cùng corner (band 0.02/0.04, hold 288) so với deployed
+control (band 0.01/0.02, hold 36) qua `--daily-profit-gate`.
+
+**Kết quả 3 cửa sổ (net PnL / Sharpe, corner vs deployed):** A (Round428,
+99.997 ngày): +0.6246/+0.1380, +2.046/+0.485 → corner thắng. B (Round429,
+82.07 ngày): −0.8057/−0.8166, −3.223/−3.428 → corner thắng (ít âm hơn). C
+(Round430, 65.66 ngày, cửa sổ này): **+0.1415/−0.1461, +0.572/−0.528** →
+corner thắng rõ ràng (đảo dấu hoàn toàn). **Corner thắng deployed ở CẢ 3
+cửa sổ** trên net PnL và Sharpe/Sortino — đạt chuẩn "3 cửa sổ trở lên"
+Round391-392 đã đặt ra, và Round429 tự nêu là điều kiện cần trước khi gọi
+pattern này "established". cost÷gross KHÔNG nhất quán tuyệt đối (B corner
+tệ hơn deployed: 2.907 vs 1.723) — chỉ net PnL/Sharpe/Sortino nhất quán cả
+3/3.
+
+**KHÔNG mở lại hướng promote.** Tần suất corner cả 3 cửa sổ: 1.61 / 2.815 /
+2.878 mỗi tuần — không bao giờ gần ngưỡng Target 3 (7.0). Ở cửa sổ này lần
+đầu tiên **deployed** (không phải corner) đạt Target 3 (7.249/tuần) nhưng
+lại net-âm — chưa cấu hình nào trên `bybit XAUT` từng vừa có lãi vừa đủ tần
+suất trong cùng 1 arm. Chỉ 1/3 cửa sổ (A) đủ điều kiện gate
+(`minimum_holdout_days≥90`); B và C đều là cửa sổ partial (lịch sử càng lùi
+càng ngắn — 143,998→118,185→94,549 candle) nên là relative-ranking, không
+phải gate verdict. Đóng theo đúng kết luận Round366: "mọi cấu hình có lãi
+trong arc này đều fail Target 3" — nay có thêm bằng chứng thứ ba trên
+`bybit XAUT`. File: `round430-*.md`.
+
 ## Round 429 — REJECTED: đọc số Round428 cho `bybit XAUT` **đảo ngược hoàn toàn** trên một holdout tách rời (disjoint)
 
 Round428 tự nêu bước tiếp theo trong mục "what would move this": chạy thêm
