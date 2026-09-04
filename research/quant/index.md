@@ -10468,6 +10468,35 @@ Reversion âm ở cả hai route. Candle-count gate đạt: XAU **97,472** với
 Không promote, không OpenSpec/OPS; item 7 giữ mở cho một cutoff/window độc
 lập. Full evidence: `round446-NEEDS-MORE-RESEARCH-volume-profile-poc-value-area-transfer-is-not-stable.md`.
 
+**Round 447 (2026-09-04, operator iteration 249) — NEEDS-MORE-RESEARCH:**
+item 7 Volume Profile được chạy lại trên cutoff khác, `2026-08-20T00:00:00Z`,
+giữ nguyên grid 12 ô và `days=500`, train/validation/holdout 60/20/20. Hai
+route dùng đúng 2 container Docker bounded, image rebuild từ
+`finance-live-action` `efe5754`, qua SSH tunnel read-only; candle-count gate
+đạt với `exness XAU` 97.194 nến và `binance BTC` 144.001 nến, cả hai có 0
+unverified gaps.
+
+XAU tiếp tục cho kết quả đáng điều tra ở breakout lookback 288: b12 và b24
+đều PF > 1 ở train/validation/holdout, với holdout PF **1,3454 / 1,3991**,
+65 giao dịch và **+0,50334 / +0,57815 USD** (4,60/tuần); b48 holdout PF
+1,1630 nhưng train PF 0,9317. Đây là sự lặp lại trên cutoff khác nhưng cửa sổ
+500 ngày vẫn chồng lấn phần lớn Round 446, nên chưa gọi là disjoint evidence.
+Reversion XAU vẫn PF < 1 toàn bộ 6 ô.
+
+Transfer BTC không sống sót: cả 3 breakout l288 đều âm ở holdout (PF
+0,7301 / 0,6474 / 0,5914) và cũng không qua train/validation. `reversion_b48_l288`
+chỉ có holdout PF 1,0614, +0,21775 USD, nhưng train/validation PF 0,7887 /
+0,7963 nên không được chọn; không cherry-pick ô này. Plain sweep không có
+Sharpe/Sortino, decision-rate hay Portfolio-faithful gate cho Alpha candidate.
+
+Không có Portfolio-construction lever áp dụng được để chạy: mục còn ghi
+`--portfolio-atr-periods` chỉ có ý nghĩa với `protective_kind=atr`, còn policy
+deployed là `fractional`; các lever production khác đã đóng. Không tạo
+OpenSpec/OPS và không đổi production. Item 7 giữ mở cho một cutoff **disjoint**
+hoặc walk-forward đã đăng ký trước trên XAU, sau đó mới xem xét Portfolio gate.
+Item 8 ML vẫn chưa triển khai. Full evidence:
+`round447-NEEDS-MORE-RESEARCH-volume-profile-independent-cutoff-still-xau-local-not-transferable.md`.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
