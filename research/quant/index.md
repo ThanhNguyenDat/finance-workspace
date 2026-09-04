@@ -10015,7 +10015,7 @@ Ba hệ quả:
 
 Chi tiết: `research/quant/rounds/round334-REJECTED-the-6-8-per-week-coincidence-dissolves-on-a-refined-grid-and-the-volatility-prediction-locates-the-band.md`.
 
-## 0.5. Hướng mới đề xuất sau Round 432 — mục 1 và mục 4 đã ĐÓNG (Round 433, 436); mục 2, 3 vẫn mở (design survey Round 434/435, chưa backtest, cần 1 round implementation riêng trước)
+## 0.5. Hướng mới đề xuất sau Round 432 — CẢ 4 MỤC ĐÃ ĐÓNG (mục 1 Round 433, mục 2 Round 437, mục 3 Round 439, mục 4 Round 436)
 
 Round 432 audit kết luận không còn cơ chế Alpha/Portfolio nào mở trong ~90
 candidate hiện có (mục 3). Hai hướng **thật sự mới**, chưa từng xuất hiện
@@ -10183,6 +10183,31 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
      `finance-research` (giống cách `--portfolio-stop-value`/
      `--portfolio-atr-periods` đã expose `AtrMultiple`), rồi chạy backtest
      train/validation/holdout thật trước khi gọi là improvement.
+   - **ĐÃ IMPLEMENT CLI + BACKTEST + ĐÓNG, Round 439**: thêm
+     `--portfolio-sizing-mode volatility_scaled` cùng
+     `--portfolio-target-volatility`/`--portfolio-sizing-periods`/
+     `--portfolio-max-multiplier` vào `finance-research`
+     (`crates/finance-research/src/{execution_rules,main,portfolio_measurement}.rs`,
+     6 unit test mới, `cargo test --workspace --exclude finance-redis` xanh).
+     Backtest `exness XAU` (`--daily-profit-gate`, `--days 500`, protective/hold
+     deployed) so `volatility_scaled` (target_fraction=0,10, target_volatility=
+     0,0009597 — đo lại đúng từ round333, xem ghi chú sửa lỗi trích dẫn của
+     round438 trong file round439) tại `max_multiplier` 3,0 và 2,0 với 2 baseline
+     đang deploy cùng cửa sổ (`fixed-pct`, `compounding-10pct` — cùng
+     `target_fraction` 0,10). **Cả 2 điểm `max_multiplier` đều tệ hơn rõ rệt cả 2
+     baseline trên mọi metric mở rộng**: Sharpe −1,012→−1,867/−1,870, Sortino
+     −1,428→−2,496/−2,500, `cost_to_gross_pnl_ratio` 1,710→7,811/7,995 (+357%),
+     gross sụp 81% trong khi net tệ hơn 80%. Hai điểm `max_multiplier` gần như
+     giống hệt nhau (loại trừ "ceiling quá lỏng"), và rescaling tuyến tính thuần
+     (`fixed-pct` vs `compounding-10pct`, lệch ~200x notional) giữ nguyên
+     `cost_to_gross_pnl_ratio` — nên chênh lệch của `volatility_scaled` không
+     thể chỉ do đổi tỉ lệ, mà do sizing theo biến động thực tế **nghịch tương
+     quan với chất lượng edge** của Alpha này trên route/cửa sổ này (undersize
+     lệnh tốt, oversize lệnh yếu/tốn phí) — ngược hẳn mục đích vol-targeting.
+     **REJECTED**, 1 cửa sổ holdout (không chạy cửa sổ rời thứ 2 hay kiểm tra
+     BTC do hướng âm đã rõ cơ chế; BTC cần đo volatility độc lập trước, không
+     đoán hằng số). File:
+     `round439-REJECTED-volatility-scaled-sizing-anti-correlates-with-exness-xau-edge.md`.
 4. **Cross-route correlation-aware allocation** — có bằng chứng nền từ
    Round 342: `bybit XAUT` và `exness XAU` tương quan **giá** +0,996 nhưng
    tương quan **PnL Portfolio** chỉ +0,287 (cơ chế decorrelation hiện tại
@@ -10209,17 +10234,15 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
    pháp permutation độc lập thay vì chỉ đọc magnitude thô.
    File: `round436-REJECTED-cross-route-correlation-aware-allocation-improves-both-windows-raw-but-fails-a-permutation-control-out-of-sample.md`.
 
-**Trạng thái sau Round 438**: mục 1 đóng (round433), mục 2 đóng (round437,
+**Trạng thái sau Round 439**: mục 1 đóng (round433), mục 2 đóng (round437,
 prototype backtest-only đã build+test+chạy — cả 24 ô đều thua, ngưỡng
-magnitude lớn hơn chưa sweep, xem chi tiết ngay phía trên), mục 4 đóng
-(round436, cấu hình đã test — không loại trừ hoàn toàn 1 rule khác trên 1
-route pair khác). Mục 3 (volatility-scaled sizing) đã qua bước implementation
-+ unit-test (round438, xem chi tiết ngay phía trên) nhưng **vẫn CHƯA có số
-backtest nào** — variant `PositionSizing::VolatilityScaled` đã tồn tại và
-được test đúng ở tầng `finance-core`, nhưng chưa constructible từ
-configuration/CLI, nên KHÔNG round nào có thể "chạy thử nó" cho tới khi có 1
-round riêng thêm CLI wiring cho `finance-research`. Đây là hướng duy nhất còn
-mở trong mục 0.5; bước kế tiếp cụ thể nằm ngay phía trên mục 3.
+magnitude lớn hơn chưa sweep, xem chi tiết ngay phía trên), mục 3 đóng
+(round439 — CLI wiring + backtest thật trên `exness XAU`, `volatility_scaled`
+tệ hơn rõ rệt cả 2 baseline deployed ở cả 2 điểm `max_multiplier`, nghịch
+tương quan với edge chứ không phải lỗi hiệu chỉnh tham số, xem chi tiết ngay
+phía trên), mục 4 đóng (round436, cấu hình đã test — không loại trừ hoàn toàn
+1 rule khác trên 1 route pair khác). **Cả 4 hướng mới đề xuất sau Round 432
+đều đã đóng — mục 0.5 không còn hướng nào mở.**
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
