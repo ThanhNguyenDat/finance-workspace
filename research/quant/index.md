@@ -10456,7 +10456,9 @@ provider khác, vì chưa có round nào TRƯỚC round445 tìm-mà-không-ra k�
    chưa có feature schema, market data hay train/validation/holdout nên chưa
    phải candidate/backtest. Named next step: adapter research-only với feature
    OHLCV causal cố định, fit train, threshold validation, đánh giá holdout
-   disjoint/walk-forward qua engine cost-aware.
+   disjoint/walk-forward qua engine cost-aware. Round 450 đã bác schema
+   OHLCV v1; Round 451 tiếp tục test schema temporal đa khung, vẫn giữ ML
+   family mở cho model hoặc feature schema khác nếu cần.
 
 Zero container, zero backtest round này (đúng quy tắc round434/435/442 áp
 dụng cho design-survey). File:
@@ -10553,6 +10555,40 @@ finance-research` **163 passed**, fmt và Docker release build xanh. ML family
 vẫn mở cho một model/feature schema thực sự khác; không test lại identity này.
 Chi tiết: `round450-REJECTED-ml-logistic-ohlcv-causal-model-fails-selection-or-cross-route.md`.
 
+**Round 451 (2026-09-05, operator iteration 253) — REJECTED:** item 8 được
+tiếp tục bằng một schema khác, `logistic_regression_temporal_v2`, không lặp
+identity Round 450. Năm feature được tính causal từ nến đã đóng và lịch sử
+trước đó: log-return 1/3/12 nến, realized volatility 12 nến, và z-score
+volume hiện tại so với 24 nến trước. Model fit đúng một lần trên train;
+threshold `{0.50,0.55,0.60}` chọn trên validation với minimum 20 lệnh, rồi
+đánh giá holdout không refit. Warm-up 24 nến được giữ thành Hold, không
+điền dữ liệu tương lai.
+
+Hai container Docker capped chạy cùng cutoff disjoint
+`2025-04-01T00:00:00Z`, `days=500`, split 60/20/20, fee 5 bps, slippage 2
+bps, fixed funding 1 bps. XAU/Exness có **96.234 nến**, BTC/Binance có
+**144.001 nến**; cả hai có `unverified_gap_count=0` và candle-count khớp
+Round 450.
+
+XAU/Exness chọn threshold 0,50: train/validation/holdout lần lượt
+**-62,0698 / -22,8990 / -22,4909 USD**, PF **0,0229 / 0,0119 / 0,0097**;
+holdout 3.231 lệnh, win rate 3,22%, khoảng 221,22 lệnh/tuần. Threshold 0,55
+bị loại vì validation chỉ 19 lệnh; 0,60 chỉ có 1.
+
+Transfer BTC/Binance chọn threshold 0,60: train **+0,7637 USD / PF 1,1102 /
+114 lệnh**, validation **-0,9706 / PF 0,6642 / 24 lệnh**, holdout
+**-0,2172 / PF 0,9455 / 45 lệnh**, win rate holdout 62,22%, khoảng 484,19
+lệnh/tuần. Dấu dương chỉ ở train và đảo sang âm ở validation/holdout;
+không có chuyển giao cross-route hay OOS improvement.
+
+Kết luận: schema temporal v2 **REJECTED** vì XAU lỗ nặng và BTC không giữ
+được dấu qua validation/holdout; không promote, không OpenSpec/OPS, không
+đổi Portfolio hoặc production. Portfolio-layer không có lever mở được đăng
+ký trong backlog nên không chạy lại các knob đã đóng. ML family vẫn mở ở
+mức model/feature mechanism khác, không test lại `logistic_regression_ohlcv_v1`
+hay `logistic_regression_temporal_v2`.
+Chi tiết: `round451-REJECTED-ml-logistic-temporal-feature-schema-fails-cross-route.md`.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
@@ -10628,6 +10664,7 @@ Chi tiết: `round450-REJECTED-ml-logistic-ohlcv-causal-model-fails-selection-or
 | Larry Connors RSI(2) 10/90 (cơ chế thật từ literature: RSI cực nhanh + ngưỡng cực đoan + trend filter dài hạn) | 204 | Bare: PF 0.024-0.111 cả 2 broker, 41,981 lệnh/train ở exness — over-trading thuần túy trên nhiễu 5m, **cơ chế oscillator thứ 8** thất bại đúng kiểu này (sau Stochastic/CCI/MFI/OBV/Elder Ray/Vortex/Awesome). Bản +SMA200 filter khá hơn NHIỀU (0.05→0.7, tái khẳng định filter mới là nơi có edge) nhưng vẫn <1 mọi ô (binance 0.707/0.905/0.750, exness 0.425/0.552/0.865) và 2 broker không đồng thuận split nào đỡ nhất → không có shape ổn định. Không cần cross-window 18 tháng vì không ô nào gần breakeven |
 | Awesome Oscillator (Bill Williams, SMA(5)/SMA(34) của midpoint high+low, zero-line cross) | 150 | PF 0.494-0.538 ổn định cả 3 split — cơ chế thứ 7 (sau Stochastic/CCI/MFI/OBV/Elder Ray/Vortex) thất bại cùng lý do: oscillator thuần không kèm trend/regime filter luôn thua ở 5m, bất kể cơ chế smoothing cụ thể — bằng chứng hội tụ mạnh đây là trần cấu trúc, không phải đặc thù 1 indicator |
 | Logistic regression trên feature OHLCV chuẩn hoá (`body_return`, `range_return`, `close_location`, `log_volume`, `log_trades`) với threshold 0,50/0,55/0,60 | 450 | Identity `logistic_regression_ohlcv_v1` bị bác: XAU/Exness lỗ cả train/validation/holdout; BTC/Binance chỉ dương ở validation và holdout tại threshold 0,55 nhưng train âm, còn threshold 0,60 chỉ có 4 validation trade. Không đủ selection hoặc cross-route evidence; ML family vẫn mở cho model/feature schema khác |
+| Logistic regression temporal đa khung (`return_1`, `return_3`, `return_12`, `realized_vol_12`, `volume_surprise_24`) với threshold 0,50/0,55/0,60 | 451 | Identity `logistic_regression_temporal_v2` bị bác: XAU/Exness selected holdout PF 0,0097 và PnL -22,4909; BTC/Binance train dương nhưng validation/holdout âm (PF 0,6642/0,9455). Schema temporal không giữ được OOS hoặc cross-route; ML family vẫn mở cho model/feature schema khác |
 | Session time-of-day filter (UTC hour, London/NY overlap 12-16h và exclude-Asian 6-22h, áp lên candle_momentum/rsi_mean_reversion) | 164 | PF<1 nhất quán cross-instrument (BTC+XAU) mọi biến thể candle_momentum. 1 outlier XAU RSI holdout PF 0.971 (55 trade, train/validation thấp hơn nhiều) — dạng "chỉ holdout thắng" đã biết là false-positive, không promote |
 | 5m entries gated bởi 1d SMA trend filter (`--interval 5m --higher-timeframe-interval 1d`, motivated bởi swing edge Round 172-180) trên XAU | 181 | ĐÓNG sạch — cả 7 biến thể (candle_momentum/rsi/bollinger/keltner) train PF>1 nhưng sập validation+holdout, dạng overfitting kinh điển |
 | Funding rate contrarian threshold (nguồn thông tin THẬT SỰ khác OHLCV, dùng public Binance API do bearer token nội bộ bị chặn) | 168, 171 | Correlation sơ bộ có vẻ hứa hẹn (decile cực trị: funding dương cực đoan → return 8h kế tiếp -0.131%) nhưng ĐÓNG dứt điểm sau khi test đúng phương pháp 3-way split thời gian thật: train PF 1.30, validation PF 8.17 (n=10, artifact mẫu mỏng), **holdout PF 0.35** — dạng "chỉ train+validation đẹp, đảo trên holdout" kinh điển |
