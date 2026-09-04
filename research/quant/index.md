@@ -6226,6 +6226,60 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 432 — NO-CHANGE: audit toàn bộ `index.md` (mục 0/1/2/3/4/6 và round330-431) không tìm thấy hướng Alpha/Portfolio nào còn mở và chưa test
+
+Zero container, zero SSH tunnel, zero backtest compute. Nhiệm vụ vòng này là
+tìm Alpha mới hoặc tối ưu Portfolio bằng backtest thật — trước khi tiêu ngân
+sách container, vòng này làm đúng phần tiền đề mà prompt cũng yêu cầu: đọc
+lại toàn bộ `index.md` để xác định hướng nào **thật sự** còn mở, tránh chạy
+lại đúng câu hỏi corpus đã có kết luận.
+
+**(1) Hướng hoạt động gần nhất — "góc" band 0,02/0,04 + hold 288 (Round
+365/366) — đã đóng dứt điểm ở Round 431**, trên cả ba route test được:
+`binance BTC` thua trước cả chi phí (Round427); `bybit XAUT` thắng deployed
+3/4 cửa sổ rời nhưng không bao giờ gần Target 3 và độ sâu lịch sử đã cạn
+(Round428-431, Round431 tự đóng nhánh này); `exness XAU` (nơi góc xuất phát)
+chưa từng gate-eligible ở bất kỳ cửa sổ nào (Round335-336).
+
+**(2) Rule 1 (sizing/band/hold Portfolio-construction) đã đóng như một
+không gian**, theo đúng mục "Thứ tự ưu tiên" (dòng ~10195-10266): hold
+(Round80, đã deploy), stop/take (Round83, đã deploy), tương tác hai lever
+sub-additive và production hiện tại là tổ hợp tốt nhất trong 4 (Round87),
+sizing mode đã đóng (Round89-90/151-152, chỉ `fixed-pct` tránh được sụp đổ
+compounding hình học). Câu hỏi band-optimum được Round330-332 trả lời trực
+tiếp: ở `--days 900` trên `exness XAU`, **band đang deploy chính là cực trị
+trong miền** trong năm cấu hình đã test — "production KHÔNG BỊ cấu hình
+sai". Mục còn ghi "mở" duy nhất (`--portfolio-atr-periods`) không áp dụng
+cho production (protective-kind hiện là `fractional`, không phải `atr`), và
+nhánh ATR đã xuất hiện như hàng so sánh ở Round329/330 với kết quả tệ hơn
+fractional rất nhiều (Sharpe −18,9 tới −23,2 so với −0,1 tới −0,9) — sweep
+thêm tham số ATR mà chưa mở lại câu hỏi `protective-kind` (đã đóng, bất lợi)
+sẽ không phải cách dùng ngân sách vòng này hợp lý.
+
+**(3) Rule 2/3 (tìm signal Alpha) đã đóng như một không gian ở 5m** theo
+mục 3: ~40 cơ chế đã test, 0 cơ chế đạt PF>1 nhất quán qua split/broker/cửa
+sổ. Ensemble/regime-switching đã đóng hai lần độc lập (Round54 qua engine
+thật; Round67/394-396 cho chính các strategy MTF đang live).
+
+**(4) Các nhánh phụ chiều/guard/cấu trúc chi phí đều đã đóng**: bất đối
+xứng long/short là drift chứ không phải edge (Round385-386); guard không
+tổng quát hoá (Round371-372); hiệu ứng theo thứ trong tuần trượt permutation
+test đăng ký trước (p=0,60, Round354-355); gross gộp qua 9 holdout rời của
+cả hạm đội chứa 0 trong khoảng tin cậy, và chính Round400 đã tự đánh giá
+thêm điểm holdout nữa "sẽ không đổi câu trả lời", chỉ đáng làm như xác
+nhận chứ không phải câu hỏi còn sống (Round398-400).
+
+**(5) Ba hướng còn ghi "mở" trong `index.md`** (quyết định release, định
+nghĩa metric Target 2, chờ đủ forward-time) đều bị chặn bởi yếu tố ngoài
+phạm vi vòng này theo đúng chỉ dẫn của prompt (quyết định sản phẩm, thời
+gian lịch, hạ tầng không truy cập) — không audit lại ngoài việc xác nhận
+chúng chưa đổi.
+
+**Kết luận**: không tìm được candidate Alpha mới, không tìm được lever
+Portfolio-construction nào còn áp dụng được và chưa test. Không promote,
+không implement, không đổi production. File:
+`round432-NO-CHANGE-search-space-audit-finds-no-open-untested-alpha-or-portfolio-direction-left-in-431-rounds-of-history.md`.
+
 ## Round 431 — REJECTED: holdout tách rời thứ TƯ trên `bybit XAUT` **đảo lại** — corner chỉ thắng deployed **3/4 cửa sổ**, không phải 3/3 như Round430 kết luận, và độ sâu lịch sử đã cạn cho route này
 
 Round430 tự đặt câu hỏi liệu độ sâu lịch sử `bybit XAUT` có còn đủ cho cửa
