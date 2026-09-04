@@ -10015,7 +10015,7 @@ Ba hệ quả:
 
 Chi tiết: `research/quant/rounds/round334-REJECTED-the-6-8-per-week-coincidence-dissolves-on-a-refined-grid-and-the-volatility-prediction-locates-the-band.md`.
 
-## 0.5. Hướng mới đề xuất sau Round 432 — 5/6 MỤC ĐÃ ĐÓNG (mục 1 Round 433, mục 2 Round 437, mục 3 Round 439, mục 4 Round 436, mục 5 Round 443; mục 6 vẫn mở)
+## 0.5. Hướng mới đề xuất sau Round 432 — 6/6 MỤC ĐÃ ĐÓNG (mục 1 Round 433, mục 2 Round 437, mục 3 Round 439, mục 4 Round 436, mục 5 Round 443, mục 6 Round 444)
 
 Round 432 audit kết luận không còn cơ chế Alpha/Portfolio nào mở trong ~90
 candidate hiện có (mục 3). Hai hướng **thật sự mới**, chưa từng xuất hiện
@@ -10351,11 +10351,47 @@ nhưng cũng không loại trừ. **Mục 5 ĐÓNG.** File:
 `round443-REJECTED-spread-reversion-stat-arb-loses-on-all-8-cells-both-directions-both-windows-both-hypotheses.md`.
 
 **Trạng thái sau Round 443**: mục 1/2/3/4 đóng (round433/437/439/436), mục 5
-đóng (round443, ngay trên). **Mục 6 (Hurst-exponent regime filter) là hướng
-mở duy nhất còn lại trong mục 0.5** — named next step giữ nguyên như
-round442 đã ghi: unit test R/S estimator trên synthetic series có Hurst
-exponent đã biết trước, rồi wrap Donchian/Keltner (round88/91, đã đóng) để
-xem Hurst-gating có cứu được không.
+đóng (round443, ngay trên).
+
+**Round 444 (2026-09-04) — item 6 thực thi xong, ĐÓNG (REJECTED):** phát hiện
+lúc bắt đầu vòng — bản R/S Hurst estimator (`hurst_exponent`,
+`finance-strategy/src/indicators/hurst.rs`, 5 unit test kèm 3 synthetic
+fixture biết trước Hurst character) và wrapper `HurstRegimeFilterStrategy`
+(`strategies.rs`) đã được implement + unit test đầy đủ từ một attempt trước
+nhưng **chưa commit** — cùng họ evidence-trail-sync-gap round422/424/425/440.
+Đối chiếu diff khớp đúng thiết kế round442/443 đã ghi, dùng lại trực tiếp
+(không làm lại). Đăng ký 6 candidate mới trong `strategies::candidates()`:
+wrap `donchian_breakout_200` (round88, biến thể holdout PF mạnh nhất của
+chính nó) bằng `HurstRegime::Trending`, và `keltner_reversion_20_2_5`
+(round91/96/98, biến thể cost-limited-không-rõ-âm) bằng
+`HurstRegime::MeanReverting`, `period=64` cố định, threshold sweep 3 mức mỗi
+bên quanh ranh giới H=0.5. Backtest 2 container (`exness XAU`/`binance BTC`,
+`--days 500`, plain sweep), validity gate `candle_count` 97472/143998 khớp
+đúng giá trị round433/443 đã ghi cho cùng route/window.
+
+**Kết quả (18 ô: 6 candidate × 2 route × 3 split, cộng 4 ô baseline không
+gate để đối chiếu):** không ô nào đạt PF>1.0 nhất quán cả train/validation/
+holdout **trên cả hai route** — thanh chuyển-giao-cross-route chương trình
+này dùng từ round338/366. Gate `Trending` trên Donchian: **đúng một** ô đạt
+PF>1.0 cả 3 split — XAU threshold 0.60 (1.03/1.12/1.26, 118/31/41 lệnh, trên
+ngưỡng tin cậy ~20-30 của round49) — nhưng **cùng threshold đó trượt
+validation của BTC** (0.46), không qua được bài test chuyển giao. Gate
+`MeanReverting` trên Keltner: threshold 0.50 là phát hiện nhất quán thật —
+cải thiện PF ở **cả 6/6 ô** (2 route × 3 split) so với baseline không gate
+(XAU 0.44/0.57/0.59 → 0.74/0.75/0.97; BTC 0.69/0.79/0.77 → 0.69/0.70/0.94)
+nhưng **không vượt 1.0 ở route nào** — một hiệu ứng thật, cùng nhóm với
+round130/round371 (cải thiện chất lượng signal, không đủ tự nó). Threshold
+0.45 lộ đúng hình dạng overfit train-tốt/holdout-sập kinh điển trên BTC
+(1.16/1.34 → 0.34); threshold 0.40's XAU holdout PF>4 dựa trên 8 lệnh, dưới
+ngưỡng tin cậy round49 — cả hai không đáng tin trên chính điều kiện của nó.
+Không cherry-pick: cả 18 ô được báo cáo, không ô nào bị bỏ qua. Chi tiết đầy
+đủ: `research/quant/rounds/round444-REJECTED-hurst-regime-gate-does-not-cleanly-rescue-donchian-or-keltner-closes-index-item-6.md`.
+
+**Mục 6 ĐÓNG.** Chưa sweep: `period` Hurst (chỉ test 64), và Donchian/Keltner
+chỉ wrap đúng 1 biến thể mỗi loại (biến thể mạnh nhất của grid gốc) — ghi lại
+trung thực theo đúng quy ước round443 đã dùng với `entry_z`, không khẳng định
+sweep thêm sẽ đổi kết luận nhưng cũng không loại trừ. **Cả 6/6 mục đề xuất
+sau Round 432 nay đã đóng.**
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
@@ -10452,6 +10488,7 @@ xem Hurst-gating có cứu được không.
 | Short-term k-bar return-autocorrelation reversal (fade N nến cùng chiều liên tiếp, cơ chế run-length thuần — khác RSI/Bollinger/Keltner, đề xuất mới sau audit Round 432) | 433 | `KBarReturnReversalStrategy` mới, 5 biến thể (k=2/3/5 bare, k=3+SMA10 trend filter, k=3+session London) trên `exness XAU` + `binance BTC`, `--days 500`. **Cả 30 ô (5×2×3) đều PF<1**, tốt nhất 0.82 (XAU train). PF tăng đơn điệu theo k trên cả 2 route khi trade count sập nhưng không vượt 1.0 — cùng arithmetic "tiến về breakeven từ dưới khi hoạt động biến mất" đã đóng ở lever hold Portfolio-layer (Round 363), ở đây là tham số độ chặt entry Alpha-layer |
 | Cross-instrument lead-lag (return của leader instrument dự đoán follower instrument — BTC/binance ⇄ XAU/exness, cơ chế mới đọc kline instrument thứ 2, đề xuất mới sau audit Round 432) | 437 | `CrossInstrumentLeadLagStrategy` mới (backtest-only, as-of strict-before guard, không đụng production engine), k∈{1,3}×follow/fade×2 hướng leader/follower trên `binance BTC`⇄`exness XAU`, `--days 500`. **Cả 24 ô (4×2×3) đều PF<1**, tốt nhất 0.225 (XAU dẫn BTC, k=3, holdout) — tệ hơn hẳn baseline `KBarReturnReversalStrategy`. Cả 2 hướng đều thua, fade≈follow cùng độ lớn mỗi ô (không phải 1 bên thắng) — chữ ký "nhiễu áp đảo chi phí bất kể hướng" giống order-flow imbalance (Round 72). Nguyên nhân: `minimum_cumulative_move=0.0` khiến gần như mọi bar follower có tín hiệu (~700 lệnh/tuần); ngưỡng magnitude lớn hơn chưa sweep (giới hạn bằng chứng hẹp, cùng mức round433 tự chấp nhận) |
 | Statistical-arbitrage spread reversion (rolling log-price-ratio z-score giữa 2 route cùng vàng — `exness XAU`⇄`bybit XAUT`, cơ chế mới bet convergence giá thay vì throttle exposure hay đọc return leader, đề xuất mới sau web search Round 442) | 443 | `SpreadReversionStrategy` mới (tái dùng hạ tầng leader/follower round437, không CLI flag mới), window∈{20,60}×hypothesis∈{converge,diverge}×`entry_z=1.5` bare, cả 2 hướng leader/follower, `--days 500`. **Cả 8 ô (2×2×2) đều PF 0.20-0.42 trên holdout**, khớp train/validation. Phát hiện chính: `diverge` (cược spread doãng tiếp) thắng `converge` (cược hồi quy mean) trên cả 4 cặp (window, chiều) — nếu cointegration hồi quy thật tồn tại, phía reversion phải thắng, không phải thua bản gương của nó ở mọi ô; dấu hiệu z-score bắt nhiễu quanh spread không thực sự mean-revert ở 5m/20-60 bar, không phải momentum edge thật (PF tốt nhất `diverge` 0.416 vẫn xa dưới 1.0). `entry_z` cao hơn và hedge ratio ước lượng thay vì giả định 1.0 chưa test |
+| Hurst-exponent regime filter gating CLOSED Donchian breakout/Keltner reversion (rolling R/S estimator, H>0.5=trending gate cho breakout, H<0.5=mean-reverting gate cho reversion — khác `RealizedVolatilityRegimeFilterStrategy` đo biên độ, không đo persistence; đề xuất mới sau web search Round 442) | 444 | `HurstRegimeFilterStrategy` mới (wrap `donchian_breakout_200`/`keltner_reversion_20_2_5`, biến thể mạnh nhất grid gốc mỗi loại), `period=64` cố định, threshold∈{0.50,0.55,0.60} (Trending) / {0.50,0.45,0.40} (MeanReverting), `exness XAU` + `binance BTC`, `--days 500`. **18 ô (6×2×3, cộng 4 ô baseline đối chiếu)**: đúng 1 ô đạt PF>1.0 cả 3 split — XAU Trending threshold 0.60 (1.03/1.12/1.26) — nhưng cùng threshold trượt validation BTC (0.46), không qua bài test chuyển giao cross-route (round338/366). Gate MeanReverting threshold 0.50 cải thiện PF nhất quán **6/6 ô** (2 route×3 split) so với baseline không gate nhưng không vượt 1.0 ở route nào — hiệu ứng chất lượng signal thật (cùng nhóm round130/371), không đủ tự nó. Threshold 0.45 lộ overfit train-tốt/holdout-sập trên BTC (1.16/1.34→0.34); threshold 0.40's XAU holdout PF>4 dựa 8 lệnh, dưới ngưỡng tin cậy round49. `period` Hurst chưa sweep (chỉ test 64) |
 
 ## 4. Gap hạ tầng/công cụ — chặn khả năng verify chính xác hơn
 
