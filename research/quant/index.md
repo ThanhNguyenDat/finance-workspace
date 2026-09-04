@@ -10149,6 +10149,40 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
      `RiskFraction` (`trading_modes.rs:1268-1291`, `portfolio_risk.rs:198-271`,
      `cargo test --workspace --exclude finance-redis` xanh) **trước khi** bất
      kỳ round nào chạy Docker backtest dùng sizing mode này.
+   - **ĐÃ IMPLEMENT + UNIT TEST (chưa backtest), Round 438**: variant
+     `PositionSizing::VolatilityScaled { target_fraction, target_volatility,
+     periods, max_multiplier }` (`crates/finance-core/src/trading_modes.rs`,
+     finance-live-action commit `524ac5c`). Trả lời đúng 2 câu hỏi thiết kế
+     Round 435: (1) mọi caller không có ledger (`widened_for_simulation`, 2
+     pre-trade gate, `apply_leverage_constraints`) qua `notional()`/
+     `executable_notional()` (signature không đổi) luôn nhận **worst case**
+     (`max_multiplier`) — không bao giờ under-widen kiểu Round 84; (2) chính
+     `max_multiplier` đó (finite, `>=1.0`, validate tại construction) là clamp
+     tường minh chặn ATR→0 nổ vô cực — dùng chung 1 giá trị cho cả 2 câu hỏi
+     thay vì 2 hằng số bịa riêng. Tách rời ATR tracking khỏi riêng
+     `ProtectiveLevels::AtrMultiple` (`SimulationConfig::true_range_retention`,
+     `average_true_range(periods)` nhận tham số thay vì đọc từ `protective`)
+     để `VolatilityScaled` dùng được với `Fractional` (protective đang
+     deploy) hoặc `None`, không chỉ `AtrMultiple`. `SimulatedLedger::
+     open_position` khi ATR window CHƯA đủ ấm thì **từ chối mở lệnh** (early
+     return) — giống hệt precedent warm-up guard sẵn có của `AtrMultiple`
+     protective, KHÔNG dùng lại fallback ceiling (ceiling chỉ đúng cho mục
+     đích widening/structural, không phải cho 1 lệnh thật khi chưa biết biến
+     động thật). 14 unit test mới (`crates/finance-core/tests/trading_modes.rs`):
+     formula-level (fallback, scale nghịch đảo, clamp, input suy biến NaN/0/
+     âm/inf) + ledger-level (warm-up 3 nến, calm/turbulent/extremely-calm
+     sizing đúng dự đoán). `cargo test --workspace --exclude finance-redis`
+     xanh toàn bộ, `cargo clippy -p finance-core --all-targets` không phát
+     sinh finding mới (2 finding cũ ở `enums.rs` xác nhận có từ trước bằng
+     `git stash`, không đụng). **CHƯA wiring production** (`config.rs`'s
+     `sizing_mode` string, `deployment_rules.rs`, env var đều chưa đụng —
+     variant chưa constructible từ configuration), **CHƯA CLI research**,
+     **CHƯA backtest** — đúng thứ tự Round 435 yêu cầu. File:
+     `round438-NEEDS-MORE-RESEARCH-volatility-scaled-sizing-implemented-and-unit-tested-no-backtest-yet.md`.
+   - **Bước kế tiếp cụ thể (sau Round 438):** 1 round riêng thêm CLI flag cho
+     `finance-research` (giống cách `--portfolio-stop-value`/
+     `--portfolio-atr-periods` đã expose `AtrMultiple`), rồi chạy backtest
+     train/validation/holdout thật trước khi gọi là improvement.
 4. **Cross-route correlation-aware allocation** — có bằng chứng nền từ
    Round 342: `bybit XAUT` và `exness XAU` tương quan **giá** +0,996 nhưng
    tương quan **PnL Portfolio** chỉ +0,287 (cơ chế decorrelation hiện tại
@@ -10175,16 +10209,17 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
    pháp permutation độc lập thay vì chỉ đọc magnitude thô.
    File: `round436-REJECTED-cross-route-correlation-aware-allocation-improves-both-windows-raw-but-fails-a-permutation-control-out-of-sample.md`.
 
-**Trạng thái sau Round 437**: mục 1 đóng (round433), mục 2 đóng (round437,
+**Trạng thái sau Round 438**: mục 1 đóng (round433), mục 2 đóng (round437,
 prototype backtest-only đã build+test+chạy — cả 24 ô đều thua, ngưỡng
 magnitude lớn hơn chưa sweep, xem chi tiết ngay phía trên), mục 4 đóng
 (round436, cấu hình đã test — không loại trừ hoàn toàn 1 rule khác trên 1
-route pair khác). Chỉ còn mục 3 (volatility-scaled sizing) mở, dừng ở design
-survey (round435) vì đụng shared risk-gate code dùng chung live+research —
-bước kế tiếp là 1 round implementation + unit-test riêng (không backtest
-trong cùng round đó) trước khi có thể ra số, xem chi tiết ngay phía trên mục
-đó. Không còn hướng nào khác trong mục 0.5 có thể ra số ngay mà không cần 1
-round implementation riêng trước.
+route pair khác). Mục 3 (volatility-scaled sizing) đã qua bước implementation
++ unit-test (round438, xem chi tiết ngay phía trên) nhưng **vẫn CHƯA có số
+backtest nào** — variant `PositionSizing::VolatilityScaled` đã tồn tại và
+được test đúng ở tầng `finance-core`, nhưng chưa constructible từ
+configuration/CLI, nên KHÔNG round nào có thể "chạy thử nó" cho tới khi có 1
+round riêng thêm CLI wiring cho `finance-research`. Đây là hướng duy nhất còn
+mở trong mục 0.5; bước kế tiếp cụ thể nằm ngay phía trên mục 3.
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
