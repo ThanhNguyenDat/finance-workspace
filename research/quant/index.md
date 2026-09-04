@@ -10089,8 +10089,44 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
    gian). Khác `risk_fraction`/`equity_fraction` đã đóng (Round 89-90/
    151-152) — 2 cái đó scale theo equity hiện có, không đọc biến động thị
    trường. Đây là kỹ thuật Portfolio construction chuẩn ngành, chưa từng
-   test trong chương trình này. User đề xuất trực tiếp (2026-09-04), chưa
-   implement/backtest.
+   test trong chương trình này. User đề xuất trực tiếp (2026-09-04).
+   **KHÔNG buildable an toàn ngay — Round 435 làm design survey (không
+   backtest), xác nhận đây KHÔNG hẹp như `KBarReturnReversalStrategy`
+   (round433, Strategy thuần không đụng sizing/risk code):**
+   - Input biến động (ATR) đã có sẵn trong engine, tính causal, không rủi ro
+     lookahead (`SimulatedLedger::record_true_range`/`average_true_range`,
+     `trading_modes.rs:1720,1751,2022-2032`), đã dùng đúng kiểu này để gate
+     `AtrMultiple` protective stop (`protective_offsets`, `:2016-2017`).
+   - Nhưng `PositionSizing::notional()`/`SimulationConfig::executable_notional()`
+     là code **dùng chung** giữa live runtime và mọi đường đo research, gọi
+     từ 4 chỗ **không có ledger/ATR context**:
+     `finance-core/src/portfolio_risk.rs:272-308` (`widened_for_simulation` —
+     nới risk-gate cap trước khi thấy kline nào; doc comment tại chỗ này nêu
+     đích danh sự cố Round 84: gate chưa nới từng khiến `one_target` âm thầm
+     reject ~100% quyết định của `equity_fraction`/`risk_fraction`),
+     `portfolio_risk.rs:622,664,691,694,809` (thêm risk-gate check), và
+     `finance-api/src/config.rs:439-475` (`apply_leverage_constraints` — đưa
+     `notional()` vào tra bracket margin lúc validate config).
+   - 2 câu hỏi thiết kế chưa có bằng chứng để trả lời, không phải câu hỏi
+     backtest: (1) `notional()` trả về gì khi KHÔNG có ATR context — phải
+     không nới-thiếu gate (lặp lại đúng lớp lỗi Round 84) mà vẫn đủ hữu hạn
+     để `bracket_for_notional` tra được — 2 ràng buộc này không tự nhiên
+     thoả mãn cùng lúc bằng một giá trị đoán; (2) notional tiến ra vô cực
+     khi ATR thực tế → 0 (cùng dạng nghịch đảo khoảng cách như `RiskFraction`,
+     vốn đã cap qua `executable_notional`'s `equity*leverage` min tại
+     `:1264-1266`) — cần 1 clamp tường minh, có cơ sở, không phải hằng số
+     bịa ra.
+   - Viết vội fallback/clamp trong cùng round để có 1 con số sẽ lặp lại
+     đúng lớp lỗi chương trình này từng trả giá 2 lần (Round 84's silent
+     gate under-widening; MTF lookahead bug fixed tại `3c16745`, dẫn lại bởi
+     Round 434 cho cơ chế khác) — nên round này dừng ở design, không
+     implement/backtest.
+   - File: `round435-volatility-scaled-sizing-design-survey-confirms-shared-risk-gate-blast-radius-not-narrow-research-only.md`.
+   - **Bước kế tiếp cụ thể:** 1 round riêng implement `PositionSizing::
+     VolatilityScaled` + fallback/clamp có justification + unit test đủ như
+     `RiskFraction` (`trading_modes.rs:1268-1291`, `portfolio_risk.rs:198-271`,
+     `cargo test --workspace --exclude finance-redis` xanh) **trước khi** bất
+     kỳ round nào chạy Docker backtest dùng sizing mode này.
 4. **Cross-route correlation-aware allocation** — có bằng chứng nền từ
    Round 342: `bybit XAUT` và `exness XAU` tương quan **giá** +0,996 nhưng
    tương quan **PnL Portfolio** chỉ +0,287 (cơ chế decorrelation hiện tại
@@ -10099,11 +10135,16 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
    (rủi ro drawdown đồng thời chưa quản lý). User đề xuất trực tiếp
    (2026-09-04), chưa implement/backtest.
 
-Ưu tiên cho vòng research tiếp theo: implement + backtest thật mục 3 hoặc 4
-(chọn 1 trong 2, không làm đồng thời cả hai trong 1 round — factorial risk
-nếu gộp trước khi từng cái đứng độc lập được kiểm chứng). Cùng chuẩn evidence
-như mục 1/2: train/validation/holdout defensible, không cherry-pick, sweep
-đủ range tham số trước khi kết luận đóng hay mở.
+Ưu tiên cho vòng research tiếp theo: mục 3 giờ đã có design survey (Round
+435) — bước kế tiếp của nó là 1 round implement + unit-test riêng (không
+backtest trong cùng round đó), xem chi tiết ngay phía trên. Mục 4 (cross-route
+correlation-aware allocation) vẫn hoàn toàn mở, chưa design survey lẫn
+backtest — ứng viên tự nhiên cho round research tiếp theo nếu muốn một hướng
+có thể ra số ngay thay vì cần một round implementation riêng trước. Cùng
+chuẩn evidence như mục 1/2: train/validation/holdout defensible, không
+cherry-pick, sweep đủ range tham số trước khi kết luận đóng hay mở; và cùng
+chuẩn round 434/435 đã đặt ra: không viết code sizing/risk-gate hay alignment
+xuyên-instrument vội trong cùng round định ra số.
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
