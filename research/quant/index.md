@@ -10015,7 +10015,7 @@ Ba hệ quả:
 
 Chi tiết: `research/quant/rounds/round334-REJECTED-the-6-8-per-week-coincidence-dissolves-on-a-refined-grid-and-the-volatility-prediction-locates-the-band.md`.
 
-## 0.5. Hướng mới đề xuất sau Round 432 — 6/8 MỤC ĐÃ ĐÓNG (mục 1 Round 433, mục 2 Round 437, mục 3 Round 439, mục 4 Round 436, mục 5 Round 443, mục 6 Round 444), mục 7-8 MỞ (design survey Round 445, tìm qua web search vì mục 3+0.5 lại cạn sau Round 444)
+## 0.5. Hướng mới đề xuất sau Round 432 — 7/8 MỤC ĐÃ ĐÓNG (mục 1 Round 433, mục 2 Round 437, mục 3 Round 439, mục 4 Round 436, mục 5 Round 443, mục 6 Round 444, mục 7 Round 448), mục 8 MỞ (tìm qua web search vì mục 3+0.5 lại cạn sau Round 444)
 
 Round 432 audit kết luận không còn cơ chế Alpha/Portfolio nào mở trong ~90
 candidate hiện có (mục 3). Hai hướng **thật sự mới**, chưa từng xuất hiện
@@ -10430,6 +10430,11 @@ provider khác, vì chưa có round nào TRƯỚC round445 tìm-mà-không-ra k�
    (12/24/48) × lookback N × {breakout, reversion} × {có/không xác nhận
    volume-above-average tại bin cắt} trên `exness XAU` trước, chưa chọn 1 bộ
    tham số đoán mò để tránh lặp lại lớp lỗi round434/435 đã tự nêu.
+   **ĐÃ ĐÓNG — Round 448 REJECTED:** toàn bộ grid đã implement trong research
+   registry nhưng không có ô nào sống sót qua train/validation/holdout trên
+   cutoff disjoint `2025-04-01T00:00:00Z`; transfer BTC cũng không giữ được
+   candidate được chọn từ XAU. Không tiêu thêm vòng vào cùng cơ chế. Evidence:
+   `round448-REJECTED-volume-profile-fails-disjoint-cutoff.md`.
 8. **ML classifier đơn giản (gradient boosting/logistic regression) trên
    feature OHLCV chuẩn** — nguồn:
    [QuantInsti — Forecasting Markets using XGBoost](https://blog.quantinsti.com/forecasting-markets-using-extreme-gradient-boosting-xgboost/),
@@ -10496,6 +10501,19 @@ OpenSpec/OPS và không đổi production. Item 7 giữ mở cho một cutoff **
 hoặc walk-forward đã đăng ký trước trên XAU, sau đó mới xem xét Portfolio gate.
 Item 8 ML vẫn chưa triển khai. Full evidence:
 `round447-NEEDS-MORE-RESEARCH-volume-profile-independent-cutoff-still-xau-local-not-transferable.md`.
+
+**Round 448 (2026-09-04, operator iteration 250) — REJECTED:** item 7 được
+chạy đúng grid 12 ô trên cutoff disjoint `2025-04-01T00:00:00Z`, dùng 2
+container Docker bounded qua SSH tunnel read-only. XAU có 96.234 nến và 0
+unverified gap; không candidate nào đạt PF > 1 qua cả train/validation/holdout.
+Breakout b12 l288 tốt nhất ở validation nhưng PF chỉ `0,7357 / 1,0374 / 0,8078`
+và PnL holdout `-0,21520` USD. BTC có 144.001 nến và 0 unverified gap; toàn bộ
+breakout l288 âm ở holdout, còn reversion b12/b24 l288 chỉ dương riêng
+holdout (PF `1,0510 / 1,0856`) trong khi train/validation đều dưới 1 nên không
+được chọn. Đây là bằng chứng disjoint bác bỏ Volume Profile grid đã đăng ký,
+không phải lý do để cherry-pick ô BTC. Item 7 đóng; item 8 ML vẫn mở và chưa
+implement. Không Portfolio gate, không OpenSpec/OPS, không production change.
+Full evidence: `round448-REJECTED-volume-profile-fails-disjoint-cutoff.md`.
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
