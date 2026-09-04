@@ -10266,6 +10266,44 @@ round440's DATA-ISSUE). Đọc lại mục 0.5 này cộng mục 1/2/3/6: cả 4
 `/quant-research` tổng quát). Zero container, zero backtest. File:
 `round441-NO-CHANGE-no-new-open-alpha-or-portfolio-direction-since-round440.md`.
 
+**Round 442 (2026-09-04) — web search bắt buộc lần đầu áp dụng (command
+text cập nhật cùng ngày), tìm ra 2 cơ chế mới, design survey xong, CHƯA
+implement/backtest:**
+
+5. **Statistical arbitrage / pairs trading trên spread mean-reverting**
+   giữa 2 instrument cointegrated (Engle-Granger/Johansen framing; nguồn:
+   QuantInsti EPAT, Analytics Vidhya, `arxiv.org/pdf/2309.16008`,
+   `arxiv.org/pdf/1701.05016`). Khác round436 (correlation-aware allocation
+   — throttle exposure trên decision stream sẵn có, không trade spread giá)
+   và round437 (cross-instrument lead-lag — dùng return của leader làm
+   feature, không bet convergence giá). **HIGH buildability** — tái dùng
+   nguyên hạ tầng 2-instrument round437 đã xây (`--leader-*` CLI flags,
+   `merge_multi_timeframe_klines`, no-lookahead guard pattern); chỉ cần 1
+   `Strategy` mới (`SpreadReversionStrategy`) tính rolling z-score của
+   `log(exness_XAU) - log(bybit_XAUT)` (2 route cùng vàng, tương quan giá
+   +0,996 đã xác nhận round342/436 — hedge ratio ~1.0 hợp lý làm điểm khởi
+   đầu). Named next step: implement + unit test no-lookahead guard + z-score
+   trước, backtest sau (round437's honest-metrics-only scope, chỉ
+   PF/win-rate qua plain sweep, không Sharpe/Sortino vì `--gate-strategy` đã
+   bị xoá round55).
+6. **Hurst-exponent regime filter** (rolling R/S estimator, H>0.5=trending,
+   H<0.5=mean-reverting, gate chọn family strategy phù hợp; nguồn:
+   Macrosynergy, quantneuraledge). Khác `RealizedVolatilityRegimeFilterStrategy`
+   (round130 — đo biên độ biến động qua ATR-ratio, không đo tính persistence
+   của return) và mọi trend filter đã đóng (SMA/ADX-style, round94). **HIGH
+   buildability** — tái dùng nguyên wrapper shape của round130 (`inner: Box<dyn
+   Strategy>` + rolling `VecDeque`), chỉ thay công thức ATR-ratio bằng R/S
+   Hurst estimator. Single-instrument, fully causal, không rủi ro lookahead
+   kiểu đã chặn round434/435. Named next step: unit test R/S calculation trên
+   synthetic series có Hurst exponent đã biết trước khi tin trên dữ liệu
+   thật, thử wrap lại 1 vài mechanism đã đóng (Donchian/Keltner round88/91)
+   xem Hurst-gating có cứu được không.
+
+Cả 2 chưa viết dòng Rust nào, chưa unit test — round442 dừng ở thiết kế theo
+đúng chỉ dẫn "ưu tiên ghi ý tưởng lại cho round sau nếu không chắc ngân sách
+đủ". File:
+`round442-NEEDS-MORE-RESEARCH-web-search-surfaces-two-new-mechanisms-statistical-arbitrage-spread-and-hurst-regime-filter-design-survey.md`.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
