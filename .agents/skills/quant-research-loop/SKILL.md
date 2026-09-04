@@ -38,6 +38,19 @@ The launcher depends on the repository-local `uv` project at
 `tools/orchestrator/`; bootstrap it with `uv sync --project
 tools/orchestrator` before running the quant command in a new environment.
 
+**The prompt's "iteration N" is the coordinator session's own attempt
+counter, not the global research round number** — do not treat them as the
+same value. `quant-research-state state`'s `iteration` field can also lag
+behind both. To find the actual next round number (what the new
+`research/quant/rounds/round<N>-*.md` file should be called), check the
+highest existing round file and the latest `docs(research): round <N>` commit
+in `git log` — the round-file/commit sequence is the one continuous,
+authoritative counter; the coordinator's per-session iteration is a distinct,
+resettable bookkeeping value used only for provider-attempt tracking under
+`.ops/runtime/phase-agents/quant-runs/<session-id>/attempt-*.meta.json`. A
+quota interruption resumes the coordinator's *attempt* at the stated
+iteration; it says nothing about which round number is next.
+
 ## Non-negotiable invariants
 
 - Do not fabricate metrics, infer missing inputs, cherry-pick windows, or treat
