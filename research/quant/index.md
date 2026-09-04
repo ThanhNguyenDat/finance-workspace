@@ -10015,7 +10015,7 @@ Ba hệ quả:
 
 Chi tiết: `research/quant/rounds/round334-REJECTED-the-6-8-per-week-coincidence-dissolves-on-a-refined-grid-and-the-volatility-prediction-locates-the-band.md`.
 
-## 0.5. Hướng mới đề xuất sau Round 432 — mục 1 đã ĐÓNG (Round 433), mục 2 vẫn mở/blocked
+## 0.5. Hướng mới đề xuất sau Round 432 — mục 1 đã ĐÓNG (Round 433), mục 2 vẫn mở (design survey Round 434, chưa backtest)
 
 Round 432 audit kết luận không còn cơ chế Alpha/Portfolio nào mở trong ~90
 candidate hiện có (mục 3). Hai hướng **thật sự mới**, chưa từng xuất hiện
@@ -10039,16 +10039,49 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
    `research/quant/rounds/round433-REJECTED-short-term-k-bar-return-reversal-fails-on-both-routes-across-all-5-variants-and-all-3-splits.md`.
    Đã thêm vào bảng đóng mục 3.
 2. **Cross-instrument lead-lag** (return của 1 instrument dự đoán
-   instrument khác, vd BTC dẫn XAU). **KHÔNG buildable ngay, vẫn mở**: đọc
-   `crates/finance-strategy/src/engine.rs:30` xác nhận
-   `trait Strategy::evaluate(&self, kline: &Kline)` chỉ nhận đúng 1
-   candle của 1 instrument mỗi lần — không có đường nạp dữ liệu instrument
-   thứ hai. MTF filter hiện có (`--higher-timeframe-interval`) chỉ nạp thêm
-   1 interval khác của CÙNG instrument, không phải instrument khác. Cần
-   thay đổi kiến trúc nạp dữ liệu trước khi test được — việc lớn hơn hẳn
-   mục 1, nên tách riêng thành 1 round khảo sát thiết kế trước khi backtest.
-   Chưa có round nào làm việc này; đây là hướng mở duy nhất còn lại từ đề
-   xuất 2026-09-04.
+   instrument khác, vd BTC dẫn XAU). **KHÔNG buildable ngay trên production
+   engine, vẫn mở — Round 434 làm design survey (không backtest), thu hẹp
+   phạm vi blocker và đề xuất bước kế tiếp cụ thể:**
+   - Blocker rộng hơn chỉ 1 dòng `Strategy::evaluate`: xác nhận thêm
+     `Kline` (`finance-core/src/kline.rs:9-23`) không có field cho
+     instrument thứ 2; toàn bộ replay bootstrap scope theo đúng 1
+     `MarketSubscription` (`historical_strategy_engine`,
+     `bootstrap_pending_intervals` — `finance-api/src/historical_replay.rs`),
+     và quan trọng nhất: `alpha_ledgers` là `BTreeMap<String, _>` key theo
+     riêng `kline.timeframe` (`historical_replay.rs:264-269,305`) — 2
+     instrument cùng có interval `5m` sẽ ĐỤNG NHAU trên map này, nên chỉ
+     thêm 1 stream vào merge loop KHÔNG đủ, phải key lại toàn bộ theo
+     `(instrument, interval)`. Live path dùng chung `StrategyEngine::
+     evaluate_all` (`finance-strategy/src/engine.rs:303-311`), cùng ràng
+     buộc 1-Kline-mỗi-lần, không phải quirk riêng của replay bootstrap —
+     nên fix production-deployable phải sửa code dùng chung
+     `finance-core`+`finance-api`+`finance-strategy`, không phải 1 caller.
+   - **Đường tắt khả thi cho riêng mục đích backtest (không đụng
+     production):** `finance-research/src/main.rs:29-46`
+     (`merge_multi_timeframe_klines`) đã có sẵn merge chronological
+     `close_time`-order đúng no-lookahead cho 2 series CÙNG instrument;
+     `klines::load_at` đã nhận `InstrumentIdentity` tuỳ ý; `strategies.rs`
+     đã có tiền lệ Strategy research-only (`KBarReturnReversalStrategy`,
+     Round 433). Có thể build 1 binary/mode research-only: nạp 2 series
+     instrument khác nhau, align as-of (bar đã đóng gần nhất của series
+     phụ, luôn TRƯỚC `close_time` của bar chính — không bao giờ đồng thời
+     hay sau, để giữ no-lookahead), tính lagged-return feature, rồi tái sử
+     dụng đúng `execution_rules`/`portfolio_measurement`/`split` hiện có để
+     đo PF/Sharpe/Sortino train/validation/holdout thật — kiểm tra edge có
+     tồn tại không TRƯỚC khi đầu tư sửa kiến trúc engine ở trên.
+   - **Vì sao Round 434 dừng ở thiết kế, chưa build/backtest:** bước align
+     as-of giữa 2 instrument có lịch giao dịch khác nhau (BTC 24/7 vs
+     XAU/FX có gap cuối tuần/lễ) đúng loại code từng gây lookahead bug tinh
+     vi trong chương trình này (bug merge MTF `open_time`-vs-`close_time` đã
+     làm sai 7 strategy live nhiều tháng trước fix `3c16745`; Round 348's
+     cost-flag gate ẩn). Viết vội trong cùng round này để có 1 con số sẽ
+     lặp lại đúng loại lỗi chương trình này tồn tại để tránh — cần 1 round
+     riêng implement + unit-test phần align trước khi tin số liệu.
+   - File: `round434-NEEDS-MORE-RESEARCH-cross-instrument-lead-lag-design-survey-confirms-engine-wide-not-trait-only-blocker.md`.
+   - **Bước kế tiếp cụ thể:** 1 round riêng implement prototype backtest-only
+     nêu trên (BTC/binance dẫn XAU/exness và chiều ngược lại, `5m`), xử lý rõ
+     session-gap của series phụ, báo cáo train/validation/holdout PF/Sharpe/
+     Sortino trung thực trước khi quyết định đầu tư sửa kiến trúc engine.
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
