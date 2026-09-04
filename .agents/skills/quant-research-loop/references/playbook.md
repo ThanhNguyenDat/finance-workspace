@@ -1491,6 +1491,10 @@ to `docs/archive/legacy-handoff-agent.md`.
   the window, so no `--days` value yields a fresh one (r352's blocker applies to
   the Alpha layer too). Once a scan picks winners by holdout PnL, the only
   unseen data left is forward time - say so instead of implying confirmation.
+- **Pre-register a minimum validation trade count for threshold selection.** A
+  zero-trade validation cell can tie at zero PnL and win a naive argmax while
+  providing no evidence; exclude such cells from selection, report them, and
+  keep the holdout untouched.
 
 - **Never count a `strategy_scores` row without checking `trades > 0`.** A
   strategy whose signal side never changes opens one position and never closes

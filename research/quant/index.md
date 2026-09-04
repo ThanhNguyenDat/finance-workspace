@@ -10532,6 +10532,27 @@ causal và chạy temporal OOS. Round 240 được dùng để sửa điều hư
 OpenSpec/OPS và không đổi production. Evidence:
 `round449-NEEDS-MORE-RESEARCH-ml-logistic-dependency-spike-builds-under-research-cap.md`.
 
+**Round 450 (2026-09-04, operator iteration 252) — REJECTED:** item 8 đã đi
+qua prerequisite bằng adapter research-only `logistic_regression_ohlcv_v1`:
+logistic regression fit trên năm feature OHLCV chuẩn hoá từ train
+(`body_return`, `range_return`, `close_location`, `log_volume`, `log_trades`),
+threshold `{0.50,0.55,0.60}` chọn trên validation với minimum 20 lệnh rồi mới
+đọc holdout. Hai container Docker bounded cùng cutoff disjoint
+`2025-04-01T00:00:00Z`, `days=500`, 60/20/20; XAU/Exness có 96.234 nến và BTC/
+Binance 144.001 nến, cả hai `unverified_gap_count=0`.
+
+XAU: threshold được chọn 0,50 vì hai threshold cao hơn không có lệnh;
+train/validation/holdout lần lượt **-158,5431 / -59,3903 / -60,7054 USD**
+với PF **0,0099 / 0,0057 / 0,0035**. BTC: threshold 0,55 có validation
+**+1,0951 USD / PF 1,3957 / 76 lệnh** và holdout **+0,7839 / PF 1,1779 /
+133 lệnh**, nhưng train vẫn **-1,2939 / PF 0,9276 / 305 lệnh**; threshold
+0,60 bị loại do validation chỉ 4 lệnh. Vì candidate không qua train
+selection, không ổn định cross-route (XAU thất bại), và không có walk-forward
+thứ hai, identity này **REJECTED**, không promote. `cargo test -p
+finance-research` **163 passed**, fmt và Docker release build xanh. ML family
+vẫn mở cho một model/feature schema thực sự khác; không test lại identity này.
+Chi tiết: `round450-REJECTED-ml-logistic-ohlcv-causal-model-fails-selection-or-cross-route.md`.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
@@ -10606,6 +10627,7 @@ OpenSpec/OPS và không đổi production. Evidence:
 | Swing 4h/1d full sweep trên XAU (chưa từng chạy — Round 17 chỉ làm BTC) | 205 | Binance có 4 candidate vượt 1.0 cả 3 split (`engulfing_pattern` 1.44/1.58/1.73, `heikin_ashi_momentum_3`, 2 biến thể mtf_stochastic) nhưng **exness phủ định toàn bộ** (0.65/0.86/0.70 v.v.) với mẫu lớn hơn 4-5 lần. Nguyên nhân: binance XAU chỉ có 1,543 nến 4h (~257 ngày) vs exness 7,986 (~3.6 năm) → artifact mẫu nhỏ, cùng chữ ký đã falsify ATR breakout (r61)/Donchian (r88)/Fibonacci (r106). **Cảnh báo: đừng mở lại các cơ chế đã đóng ở 5m dựa trên kết quả 4h của riêng binance XAU.** Lead yếu duy nhất: `mtf_stochastic_14_3_30_70_sma10_trend_filtered` có train+holdout >1 ở CẢ 2 broker nhưng validation exness 0.70 và mẫu binance 18/7/9 — chưa đạt bar |
 | Larry Connors RSI(2) 10/90 (cơ chế thật từ literature: RSI cực nhanh + ngưỡng cực đoan + trend filter dài hạn) | 204 | Bare: PF 0.024-0.111 cả 2 broker, 41,981 lệnh/train ở exness — over-trading thuần túy trên nhiễu 5m, **cơ chế oscillator thứ 8** thất bại đúng kiểu này (sau Stochastic/CCI/MFI/OBV/Elder Ray/Vortex/Awesome). Bản +SMA200 filter khá hơn NHIỀU (0.05→0.7, tái khẳng định filter mới là nơi có edge) nhưng vẫn <1 mọi ô (binance 0.707/0.905/0.750, exness 0.425/0.552/0.865) và 2 broker không đồng thuận split nào đỡ nhất → không có shape ổn định. Không cần cross-window 18 tháng vì không ô nào gần breakeven |
 | Awesome Oscillator (Bill Williams, SMA(5)/SMA(34) của midpoint high+low, zero-line cross) | 150 | PF 0.494-0.538 ổn định cả 3 split — cơ chế thứ 7 (sau Stochastic/CCI/MFI/OBV/Elder Ray/Vortex) thất bại cùng lý do: oscillator thuần không kèm trend/regime filter luôn thua ở 5m, bất kể cơ chế smoothing cụ thể — bằng chứng hội tụ mạnh đây là trần cấu trúc, không phải đặc thù 1 indicator |
+| Logistic regression trên feature OHLCV chuẩn hoá (`body_return`, `range_return`, `close_location`, `log_volume`, `log_trades`) với threshold 0,50/0,55/0,60 | 450 | Identity `logistic_regression_ohlcv_v1` bị bác: XAU/Exness lỗ cả train/validation/holdout; BTC/Binance chỉ dương ở validation và holdout tại threshold 0,55 nhưng train âm, còn threshold 0,60 chỉ có 4 validation trade. Không đủ selection hoặc cross-route evidence; ML family vẫn mở cho model/feature schema khác |
 | Session time-of-day filter (UTC hour, London/NY overlap 12-16h và exclude-Asian 6-22h, áp lên candle_momentum/rsi_mean_reversion) | 164 | PF<1 nhất quán cross-instrument (BTC+XAU) mọi biến thể candle_momentum. 1 outlier XAU RSI holdout PF 0.971 (55 trade, train/validation thấp hơn nhiều) — dạng "chỉ holdout thắng" đã biết là false-positive, không promote |
 | 5m entries gated bởi 1d SMA trend filter (`--interval 5m --higher-timeframe-interval 1d`, motivated bởi swing edge Round 172-180) trên XAU | 181 | ĐÓNG sạch — cả 7 biến thể (candle_momentum/rsi/bollinger/keltner) train PF>1 nhưng sập validation+holdout, dạng overfitting kinh điển |
 | Funding rate contrarian threshold (nguồn thông tin THẬT SỰ khác OHLCV, dùng public Binance API do bearer token nội bộ bị chặn) | 168, 171 | Correlation sơ bộ có vẻ hứa hẹn (decile cực trị: funding dương cực đoan → return 8h kế tiếp -0.131%) nhưng ĐÓNG dứt điểm sau khi test đúng phương pháp 3-way split thời gian thật: train PF 1.30, validation PF 8.17 (n=10, artifact mẫu mỏng), **holdout PF 0.35** — dạng "chỉ train+validation đẹp, đảo trên holdout" kinh điển |
