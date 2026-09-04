@@ -26,19 +26,33 @@ không status-check các thread bị block bởi lý do bên ngoài (chờ thờ
 lịch, chờ quyết định sản phẩm, chờ hạ tầng không truy cập được).
 
 **Nếu backlog nội bộ (`research/quant/index.md` mục 3 + mục 0.5) không còn
-hướng nào mở**, trước khi kết luận `NO-CHANGE`, dùng web search tìm cơ chế
-Alpha hoặc Portfolio-construction mới — mechanism/kỹ thuật cụ thể chưa từng
-xuất hiện trong mục 3 (không phải biến thể tham số của cái đã đóng), ví dụ
-literature/kỹ thuật quant thực tế: thống kê arbitrage, machine-learning
-signal đơn giản, volume-profile/market-profile, order-book microstructure,
-regime-detection (Hurst exponent...), risk-parity/vol-targeting variant khác
-mục 0.5 đã test. Ghi rõ nguồn tìm được vào `index.md` mục 0.5 kèm lý do vì
-sao khác các mục 3 đã đóng, y hệt cách 4 hướng 2026-09-04 đã được ghi trước
-khi implement. Chỉ kết luận `NO-CHANGE` khi web search cũng không tìm được
-cơ chế nào đủ cụ thể và khác biệt để implement — không được bịa cơ chế chỉ
-để có việc làm, và không implement ngay trong cùng round tìm ra ý tưởng trừ
-khi đã đủ ngân sách backtest của round (ưu tiên ghi ý tưởng lại cho round
-sau nếu không chắc).
+hướng nào mở**, trước khi kết luận `NO-CHANGE`, tìm cơ chế Alpha hoặc
+Portfolio-construction mới qua nhiều nguồn — không chỉ web search chung
+chung: academic paper (arxiv, SSRN...), quant blog/writeup (QuantInsti,
+Macrosynergy...), social/community thảo luận chiến lược (r/algotrading,
+quant Twitter/X, TradingView ý tưởng/script cộng đồng cho đúng instrument
+XAU/BTC nếu tìm được). Tìm mechanism/kỹ thuật cụ thể chưa từng xuất hiện
+trong mục 3 (không phải biến thể tham số của cái đã đóng) — ví dụ thống kê
+arbitrage, machine-learning signal đơn giản, volume-profile/market-profile,
+order-book microstructure, regime-detection, risk-parity/vol-targeting
+variant khác mục 0.5 đã test. Ghi rõ nguồn tìm được (link/tên bài/tên
+account nếu có) vào `index.md` mục 0.5 kèm lý do vì sao khác các mục 3 đã
+đóng, y hệt cách round442 đã ghi. Không implement ngay trong cùng round tìm
+ra ý tưởng trừ khi đã đủ ngân sách backtest của round (ưu tiên ghi ý tưởng
+lại cho round sau nếu không chắc).
+
+**Nếu đã tìm qua tất cả nguồn trên mà vẫn không ra cơ chế nào cụ thể và khác
+biệt** (không phải chỉ 1 round — kiểm tra `index.md` xem có bao nhiêu round
+liên tiếp gần nhất đã thử search mà không ra kết quả), pin role
+`quant_research` sang provider còn lại (`uv run --project tools/orchestrator
+agent-role-state pin quant_research codex` nếu đang auto/claude, hoặc
+`... pin quant_research claude` nếu đang codex) để 1-2 round tiếp theo chạy
+bằng model khác — model khác có thể tìm ra hướng khác. Ghi rõ vào `index.md`
+lý do pin (bao nhiêu round trước đã search không ra gì) và tự `... auto
+quant_research` trả về chế độ tự động sau khi round pin đó chạy xong, không
+để pin vĩnh viễn. Chỉ kết luận `NO-CHANGE` khi cả tìm kiếm đa nguồn lẫn thử
+provider khác đều không ra cơ chế mới — không được bịa cơ chế chỉ để có việc
+làm.
 
 ## Bắt đầu vòng
 
