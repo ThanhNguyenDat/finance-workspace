@@ -10015,6 +10015,40 @@ Ba hệ quả:
 
 Chi tiết: `research/quant/rounds/round334-REJECTED-the-6-8-per-week-coincidence-dissolves-on-a-refined-grid-and-the-volatility-prediction-locates-the-band.md`.
 
+## 0.5. Hướng mới đề xuất sau Round 432 (chưa test) — bar để mở lại research compute
+
+Round 432 audit kết luận không còn cơ chế Alpha/Portfolio nào mở trong ~90
+candidate hiện có (mục 3). Hai hướng **thật sự mới**, chưa từng xuất hiện
+trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
+(2026-09-04), chưa test:
+
+1. **Short-term k-bar return reversal** (autocorrelation reversal cổ điển —
+   sau N nến cùng chiều liên tiếp, kỳ vọng đảo chiều). Khác cơ chế RSI
+   (oscillator có ngưỡng cố định) và Bollinger (band biến động) — dựa trực
+   tiếp vào chuỗi return gần nhất, không cần indicator trung gian.
+   **Buildable ngay** trong kiến trúc hiện tại (`trait Strategy::evaluate`
+   nhận 1 kline/lần) — implement như 1 `Strategy` mới trong
+   `crates/finance-research/src/strategies.rs`, wrap bằng
+   `SmaTrendFilterStrategy`/session-filter đã có sẵn để test 2-3 biến thể
+   trong 1 lần setup (base + trend filter + session filter — không phải
+   ensemble hand-average, đúng pattern wrapper đã dùng cho mọi filter khác
+   trong chương trình).
+2. **Cross-instrument lead-lag** (return của 1 instrument dự đoán
+   instrument khác, vd BTC dẫn XAU). **KHÔNG buildable ngay**: đọc
+   `crates/finance-strategy/src/engine.rs:30` xác nhận
+   `trait Strategy::evaluate(&self, kline: &Kline)` chỉ nhận đúng 1
+   candle của 1 instrument mỗi lần — không có đường nạp dữ liệu instrument
+   thứ hai. MTF filter hiện có (`--higher-timeframe-interval`) chỉ nạp thêm
+   1 interval khác của CÙNG instrument, không phải instrument khác. Cần
+   thay đổi kiến trúc nạp dữ liệu trước khi test được — việc lớn hơn hẳn
+   mục 1, nên tách riêng thành 1 round khảo sát thiết kế trước khi backtest.
+
+Ưu tiên: implement + backtest thật mục 1 trước (base signal + factorial
+2-3 filter combo, train/validation/holdout đầy đủ). Nếu PF>1 nhất quán
+xuất hiện, đó là lý do hợp lệ để mở lại research compute theo bar round432
+đã đặt ra. Không cherry-pick tham số riêng lẻ để tạo dáng promotable —
+sweep đủ range như mọi mechanism khác trong mục 3 trước khi kết luận.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
