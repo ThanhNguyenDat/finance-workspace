@@ -121,15 +121,37 @@ def _get_thread_result(result_queue: Queue[tuple[str, Any]]) -> Any:
     return value
 
 
+def _collect_codex_turn(
+    turn_handle: Any, on_message: Callable[[Any], None] | None = None
+) -> Any:
+    from openai_codex._run import _collect_turn_result  # noqa: PLC0415
+
+    stream = turn_handle.stream()
+    try:
+
+        def _tee() -> Any:
+            for event in stream:
+                if on_message is not None:
+                    on_message(event)
+                yield event
+
+        return _collect_turn_result(_tee(), turn_id=turn_handle.id)
+    finally:
+        stream.close()
+
+
 def supervise_codex_turn(
     turn_handle: Any,
     *,
     timeout_seconds: float,
     kill_after_seconds: float,
+    on_message: Callable[[Any], None] | None = None,
 ) -> SupervisionOutcome[Any]:
-    """Run one Codex turn with interrupt then hard-kill escalation."""
+    """Run one streaming Codex turn with interrupt then hard-kill escalation."""
 
-    worker, result_queue = _thread_result(turn_handle.run)
+    worker, result_queue = _thread_result(
+        lambda: _collect_codex_turn(turn_handle, on_message)
+    )
     worker.join(timeout_seconds)
     if worker.is_alive():
         interrupt_worker, interrupt_queue = _thread_result(turn_handle.interrupt)

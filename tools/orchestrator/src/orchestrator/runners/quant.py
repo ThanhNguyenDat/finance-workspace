@@ -119,11 +119,18 @@ def _codex(
     account_dir: Path | None,
     stdout: Path,
     timeout_seconds: int,
+    on_message: Callable[[object], None] | None = None,
 ) -> tuple[int, str, object]:
     env = child_environment()
     if account_dir:
         env["CODEX_HOME"] = str(account_dir)
     codex = None
+
+    def record_message(value: object) -> None:
+        append_jsonl(stdout, value)
+        if on_message is not None:
+            on_message(value)
+
     try:
         codex = start_codex(
             CodexConfig(codex_bin=executable("codex", PREFIX), cwd=str(cwd), env=env),
@@ -142,9 +149,9 @@ def _codex(
             ),
             timeout_seconds=timeout_seconds,
             kill_after_seconds=30,
+            on_message=record_message,
         )
         result = outcome.result
-        append_jsonl(stdout, result)
         result_class = classify_sdk_result(
             result,
             provider="codex",
@@ -448,6 +455,7 @@ def run(argv: list[str]) -> int:
                         account_dir,
                         stdout,
                         int(timeout_text),
+                        on_message=record_stream,
                     )
                 append_event(
                     session_id,

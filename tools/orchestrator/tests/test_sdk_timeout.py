@@ -45,9 +45,18 @@ class _CompletingClaude:
 class _CompletingCodex:
     def __init__(self) -> None:
         self.interrupt_calls = 0
+        self.id = "turn-completing"
+        self.messages: list[object] = []
 
-    def run(self) -> str:
-        return "completed"
+    def stream(self):
+        from openai_codex.generated.v2_all import Turn, TurnCompletedNotification, TurnStatus
+        from openai_codex.models import Notification
+
+        turn = Turn(id=self.id, items=[], status=TurnStatus.completed)
+        yield Notification(
+            method="turn/completed",
+            payload=TurnCompletedNotification(thread_id="thread-completing", turn=turn),
+        )
 
     def interrupt(self) -> None:
         self.interrupt_calls += 1
@@ -71,15 +80,19 @@ def test_claude_timer_is_cancelled_after_normal_completion() -> None:
 
 def test_codex_timer_is_cancelled_after_normal_completion() -> None:
     handle = _CompletingCodex()
+    streamed: list[object] = []
     outcome = supervise_codex_turn(
         handle,
         timeout_seconds=1,
         kill_after_seconds=1,
+        on_message=streamed.append,
     )
-    assert outcome.result == "completed"
+    assert outcome.result.id == "turn-completing"
     assert not outcome.timed_out
     assert not outcome.hard_killed
     assert handle.interrupt_calls == 0
+    assert len(streamed) == 1
+    assert streamed[0].method == "turn/completed"
 
 
 def test_claude_helper_hard_kills_after_ignored_interrupt(tmp_path: Path) -> None:
