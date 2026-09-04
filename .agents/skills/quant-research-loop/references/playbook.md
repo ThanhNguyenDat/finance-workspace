@@ -109,6 +109,14 @@ fabricate one.
   `--json` result — so `file.json` needs no jsonl-log-stripping before
   `json.load()`, and `file.err` is where to look for the candle-count/window
   log lines if `--json`'s own fields don't cover something.
+- **ML dependency spikes need an API smoke compile, not an empty crate build**
+  (round 449). Use a disposable crate in the same Rust builder base as
+  `Dockerfile-research`, cap it at the research CPU/RAM/swap limits, and compile
+  a minimal `Dataset::new` → model `.fit(...)` path. Invoke the image with
+  `bash -c`, not `bash -lc`: a login shell can omit the Rust image's Cargo path.
+  Treat a successful dependency build as buildability evidence only; it is not
+  market or train/validation/holdout evidence. Root-owned target artifacts from
+  the disposable container must be removed through a narrowly scoped cleanup.
 - **`--daily-profit-gate` does NOT model the deployed Portfolio construction** (round 356).
   `daily_profit_gate.rs:376-412` replays each decision through `ledger.on_kline` and nothing
   else: **no `PortfolioConstructionState::construct`, no `minimum_hold_decisions`, and no

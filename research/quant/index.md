@@ -10449,10 +10449,14 @@ provider khác, vì chưa có round nào TRƯỚC round445 tìm-mà-không-ra k�
    nào. Thêm dependency mới vào workspace chạy backtest trong Docker container
    giới hạn cứng 2 CPU/4 GB RAM/2 GB swap là rủi ro chưa đo được (build-time,
    binary size), khác hẳn mục 7 (chỉ thêm 1 `Strategy` dùng field có sẵn).
-   Named next step: 1 round riêng spike xem 1 dependency tối thiểu (vd
-   `linfa` logistic regression, không kéo GPU/BLAS) có compile sạch trong
-   `docker/Dockerfile-research` dưới cap tài nguyên hiện tại hay không, TRƯỚC
-   khi làm feature engineering hay backtest.
+   **Round 449 đã chạy dependency spike:** `linfa-logistic 0.8.1` cùng API
+   `Dataset::new`/`LogisticRegression::fit` compile thành công trong builder
+   `rust:1.88-slim-bookworm` với cap 2 CPU/4 GiB RAM/6 GiB swap; lock 64
+   packages, build 10,15 giây, exit 0. Đây chỉ là bằng chứng buildability,
+   chưa có feature schema, market data hay train/validation/holdout nên chưa
+   phải candidate/backtest. Named next step: adapter research-only với feature
+   OHLCV causal cố định, fit train, threshold validation, đánh giá holdout
+   disjoint/walk-forward qua engine cost-aware.
 
 Zero container, zero backtest round này (đúng quy tắc round434/435/442 áp
 dụng cho design-survey). File:
@@ -10514,6 +10518,19 @@ holdout (PF `1,0510 / 1,0856`) trong khi train/validation đều dưới 1 nên 
 không phải lý do để cherry-pick ô BTC. Item 7 đóng; item 8 ML vẫn mở và chưa
 implement. Không Portfolio gate, không OpenSpec/OPS, không production change.
 Full evidence: `round448-REJECTED-volume-profile-fails-disjoint-cutoff.md`.
+
+**Round 449 (2026-09-04, operator iteration 251) — NEEDS-MORE-RESEARCH:**
+item 8 ML được kiểm tra prerequisite đã đăng ký. Một disposable Rust crate
+dùng `linfa-logistic 0.8.1` compile và smoke-test API fit trong cùng builder
+base của `docker/Dockerfile-research`, cap `2 CPU / 4 GiB RAM / 6 GiB swap`;
+Cargo khóa 64 packages và build exit 0 sau 10,15 giây. Một lần đầu dùng
+`bash -lc` lỗi `cargo not found` (exit 127), sau đó chạy lại bằng `bash -c`
+theo đúng Docker guidance và thành công. Không có market data, instrument,
+backtest, train/validation/holdout hay metric; item 8 vẫn mở để viết adapter
+causal và chạy temporal OOS. Round 240 được dùng để sửa điều hướng: Portfolio
+`--portfolio-atr-periods` đã test 7/14/28 và đóng, không chạy lại. Không tạo
+OpenSpec/OPS và không đổi production. Evidence:
+`round449-NEEDS-MORE-RESEARCH-ml-logistic-dependency-spike-builds-under-research-cap.md`.
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
@@ -10800,11 +10817,9 @@ chứng thực tế qua 83 round**, user xác nhận đồng ý:
     (`config.rs:110` hardcode compile-in, Round 87 dùng đúng `one_target`
     nên không bị ảnh hưởng). Chi tiết →
     `research/quant/rounds/round151-risk-fraction-sizing-mode-catastrophic-under-negative-edge.md`.
-  - `--portfolio-atr-periods` (chu kỳ ATR khi protective-kind=`atr`) vẫn
-    chưa biến thiên — mục duy nhất còn thật sự mở trong Rule 1, ưu tiên
-    thấp (protective-kind hiện tại là `fractional`, không phải `atr`, nên
-    lever này không áp dụng cho production hiện tại trừ khi đổi protective
-    kind trước).
+  - `--portfolio-atr-periods` (chu kỳ ATR khi protective-kind=`atr`) đã được
+    test ở Round 240 với 7/14/28 và kết luận inert; `protective_kind` hiện tại
+    là `fractional`, nên không còn Portfolio lever mở trong backlog này.
   - **BÀI HỌC QUY TRÌNH QUAN TRỌNG (2026-08-25):** trước khi bắt đầu bất kỳ
     Rule 1 investigation nào, **grep `research/quant/rounds/round8[7-9]*.md` và
     `round9[0-2]*.md` trước** — mục "Thứ tự ưu tiên" này được viết ngay sau
