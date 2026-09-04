@@ -6226,6 +6226,53 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 429 — REJECTED: đọc số Round428 cho `bybit XAUT` **đảo ngược hoàn toàn** trên một holdout tách rời (disjoint)
+
+Round428 tự nêu bước tiếp theo trong mục "what would move this": chạy thêm
+holdout tách rời (disjoint) thứ hai/ba trên `bybit XAUT` để xem đọc số
+Sharpe/Sortino/gross-dương có sống sót ngoài đúng một cửa sổ hay không, theo
+đúng chuẩn Round391-392. Vòng này chạy đúng bước đó bằng `--as-of` dịch về
+đúng mốc bắt đầu holdout của Round428 (`2026-05-26T18:40:00Z`), tạo ra
+holdout `2026-03-05` → `2026-05-26` (83 ngày quan sát) — không trùng lặp
+holdout Round428 (`2026-05-26` → `2026-09-03`) ngoại trừ đúng 1 nến 5 phút
+tại ranh giới (0,004% trong 23.637 nến holdout của vòng này, công bố rõ chứ
+không làm tròn thành "không trùng"). Cửa sổ cũng là **cửa sổ bộ phận** (chỉ
+118.185 nến so với 143.998 của Round428 — lịch sử chỉ chạm tới ~410 ngày
+trước mốc as-of này, không đủ 500 ngày yêu cầu), khiến cả hai nhánh đều trượt
+`minimum_holdout_days` (82,07 so với ngưỡng 90) — đọc mọi số dưới đây như
+xếp hạng tương đối, không phải verdict gate.
+
+**Kết quả đảo ngược hoàn toàn**: corner (band 0,02/0,04, hold 288) đi từ
+gross +0,6614/net +0,6246/Sharpe +2,046/Sortino +3,826 (Round428) sang gross
+**−0,20623**/net **−0,80573**/Sharpe **−3,223**/Sortino **−4,195** trên
+holdout tách rời này — 9/12 check trượt (kể cả `gross_pnl_positive`, vốn đã
+ĐẠT ở Round428) so với 4/12 trượt ở Round428. Nhánh deployed control cùng
+cửa sổ cũng đảo dấu tương tự (gross +0,5048 → −0,29989, net +0,1379 →
+−0,81658) — xác nhận đây là thuộc tính của **cửa sổ**, không riêng cấu hình
+corner. Đây là lần đảo-ngược-trên-holdout-tách-rời thứ hai trong toàn bộ arc
+(sau phát hiện gross toàn hạm đội của Round391-392), lần này trên
+route/cấu hình khác.
+
+**Một điểm sống sót**: xếp hạng tương đối corner > deployed vẫn lặp lại trên
+cả hai cửa sổ (mọi metric của corner tốt hơn deployed, dù cả hai đã đổi
+dấu) — nhưng 2 cửa sổ đồng thuận về THỨ TỰ chưa đạt chuẩn ≥3 holdout độc lập
+mà Round391-392 đặt ra để coi là đã xác lập. Tần suất giao dịch của nhánh
+deployed cũng dao động mạnh giữa hai cửa sổ liền kề (4,13/tuần → 6,738/tuần,
++63%, gần Target 3 nhất từng đo trên route này).
+
+**REJECTED**: khép lại đúng câu hỏi Round428 tự đặt ra — đọc số mạnh nhất
+toàn arc cho corner này không sống sót qua kiểm tra holdout tách rời đầu
+tiên. Cộng với Round427 (`binance BTC` thua trước phí) và tình trạng
+không-gate-eligible cấu trúc của `exness XAU` (Round335-336), **không còn
+route nào cho ra đọc số corner sống sót dù chỉ một kiểm tra độ vững** — ô
+dương duy nhất còn lại (Round428) nay đã được kiểm tra và trượt. Không đổi
+production, không implement gì. Hai container đã dọn sạch (`docker ps -a`
+rỗng — sau khi lần chạy đầu bị mất log do đua với `--rm`, đã chạy lại đúng 2
+container với `docker logs -f` chạy đồng thời, không tốn thêm ngân sách
+container vì lần đầu bị mất log trước khi đọc được số nào), tunnel đã đóng
+(`ss -tlnp` xác nhận). File:
+`round429-REJECTED-the-round428-corner-reading-on-bybit-xaut-reverses-completely-on-a-disjoint-holdout.md`.
+
 ## Round 428 — REJECTED: cùng "góc có lãi" Round 365/366 (band 0,02/0,04 + hold 288), lần này trên `bybit XAUT` — đạt Sharpe/Sortino/cost-ratio holdout thật MẠNH NHẤT từ trước tới giờ cho corner này, nhưng vẫn hụt Target 3 tới 4,3 lần
 
 Hoàn tất đúng việc Round427 để mở: "`bybit XAUT` gate-eligible và chưa test
