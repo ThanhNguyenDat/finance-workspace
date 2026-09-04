@@ -10257,6 +10257,15 @@ round439, cả 4 mục vẫn đóng như trên — không có container/backtest
 round này. File:
 `round440-DATA-ISSUE-round439s-skill-upsert-was-never-committed-recovered-and-pushed.md`.
 
+**Round 441 — NO-CHANGE, tái xác nhận không đổi lần nữa:** tiếp quản sau một
+gián đoạn provider-quota khác (`transient-rate-limit`, session limit reset
+7:30pm), lần này xảy ra SAU khi round440 đã commit/push xong — `git status`
+sạch, `HEAD == origin/main` ngay từ đầu, không có gì cần khôi phục (khác
+round440's DATA-ISSUE). Đọc lại mục 0.5 này cộng mục 1/2/3/6: cả 4 hướng vẫn
+đóng, không có ý tưởng user-proposed mới nào trong prompt round này (lệnh
+`/quant-research` tổng quát). Zero container, zero backtest. File:
+`round441-NO-CHANGE-no-new-open-alpha-or-portfolio-direction-since-round440.md`.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
