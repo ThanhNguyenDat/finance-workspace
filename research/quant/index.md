@@ -10015,7 +10015,7 @@ Ba hệ quả:
 
 Chi tiết: `research/quant/rounds/round334-REJECTED-the-6-8-per-week-coincidence-dissolves-on-a-refined-grid-and-the-volatility-prediction-locates-the-band.md`.
 
-## 0.5. Hướng mới đề xuất sau Round 432 — 6/6 MỤC ĐÃ ĐÓNG (mục 1 Round 433, mục 2 Round 437, mục 3 Round 439, mục 4 Round 436, mục 5 Round 443, mục 6 Round 444)
+## 0.5. Hướng mới đề xuất sau Round 432 — 6/8 MỤC ĐÃ ĐÓNG (mục 1 Round 433, mục 2 Round 437, mục 3 Round 439, mục 4 Round 436, mục 5 Round 443, mục 6 Round 444), mục 7-8 MỞ (design survey Round 445, tìm qua web search vì mục 3+0.5 lại cạn sau Round 444)
 
 Round 432 audit kết luận không còn cơ chế Alpha/Portfolio nào mở trong ~90
 candidate hiện có (mục 3). Hai hướng **thật sự mới**, chưa từng xuất hiện
@@ -10392,6 +10392,66 @@ chỉ wrap đúng 1 biến thể mỗi loại (biến thể mạnh nhất của 
 trung thực theo đúng quy ước round443 đã dùng với `entry_z`, không khẳng định
 sweep thêm sẽ đổi kết luận nhưng cũng không loại trừ. **Cả 6/6 mục đề xuất
 sau Round 432 nay đã đóng.**
+
+**Round 445 (2026-09-04) — mục 3+0.5 lại cạn hoàn toàn ngay sau round444;
+web search bắt buộc lần 2, tìm ra 2 cơ chế mới, design survey xong, CHƯA
+implement/backtest (đúng round đầu tiên sau khi cạn — chưa đến ngưỡng pin
+provider khác, vì chưa có round nào TRƯỚC round445 tìm-mà-không-ra kể từ khi
+0.5 đóng lại):**
+
+7. **Volume Profile / Market Profile (POC + Value Area breakout-hoặc-reversion)**
+   — dựng histogram khối lượng-theo-giá qua rolling N nến đóng (mỗi nến phân
+   bổ đều `volume` của nó qua các bin giá trong khoảng `[low, high]` của
+   chính nó — đúng phép xấp xỉ chuẩn khi không có tick data, theo tài liệu
+   TradingView đã dẫn), đọc ra **POC** (bin khối lượng lớn nhất) và **Value
+   Area** (VAH/VAL, dải bin quanh POC chứa 70% khối lượng cửa sổ). Nguồn:
+   [Medium — Volume Point of Control and Value Area Analysis](https://medium.com/@pyquantlab/volume-point-of-control-and-value-area-analysis-for-trading-cd545c2e081b),
+   [TradingView — Volume profile indicators: basic concepts](https://www.tradingview.com/support/solutions/43000502040-volume-profile-indicators-basic-concepts/),
+   [TradingView community script — VAH Entry / VAL Exit Xauusd](https://www.tradingview.com/script/sylmBxzG-VAH-Entry-VAL-Exit-Xauusd-by-TheMarketVengeance)
+   (dành riêng XAUUSD, khớp ưu tiên XAU trước của chương trình này),
+   [Tradezella — Volume Profile Trading Strategy](https://www.tradezella.com/strategies/volume-profile-strategy).
+   Khác mọi cơ chế volume đã đóng trong mục 3 (OBV round113, MFI round114,
+   taker buy/sell imbalance round72-75 — oscillator trên TỔNG khối lượng,
+   không có cấu trúc theo bin giá) và khác `SessionVwapReversionStrategy`
+   (round18/21, đóng — volume-weighted nhưng chỉ ra 1 mean+stddev band, không
+   có mode (POC) hay Value Area bất đối xứng 70% khối lượng). **HIGH
+   buildability** — `Kline` đã có sẵn mọi field cần (`high`/`low`/`close`/
+   `volume`, `finance-core/src/kline.rs:9-23`), không cần schema/CLI mới
+   ngoài đăng ký 1 `Strategy` mới; pattern tích luỹ nhân-quả theo cửa sổ
+   trượt đã có sẵn 2 lần trong `crates/finance-research/src/strategies.rs`
+   (`SessionVwapReversionStrategy:2965-3109` tích luỹ volume-weighted state
+   qua `Mutex<HashMap<..>>`/`VecDeque` eviction đúng shape cần cho histogram;
+   `RealizedVolatilityRegimeFilterStrategy:3859`/`HurstRegimeFilterStrategy:3990`
+   dùng cùng idiom rolling-window). Không rủi ro lookahead mới — histogram
+   tại bar t bao gồm chính volume của bar t, giống hệt cách
+   `SessionVwapReversionStrategy` đã làm với VWAP chạy của nó, thấp rủi ro
+   hơn hẳn round434 (as-of join 2 lịch giao dịch khác nhau) hay round435 (4
+   call site risk-gate không context). Named next step: sweep bin_count
+   (12/24/48) × lookback N × {breakout, reversion} × {có/không xác nhận
+   volume-above-average tại bin cắt} trên `exness XAU` trước, chưa chọn 1 bộ
+   tham số đoán mò để tránh lặp lại lớp lỗi round434/435 đã tự nêu.
+8. **ML classifier đơn giản (gradient boosting/logistic regression) trên
+   feature OHLCV chuẩn** — nguồn:
+   [QuantInsti — Forecasting Markets using XGBoost](https://blog.quantinsti.com/forecasting-markets-using-extreme-gradient-boosting-xgboost/),
+   [Medium — Gradient Boosting for Stock Market Prediction](https://medium.com/@fyang1989/gradient-boosting-for-stock-market-prediction-a-tsla-case-study-backtest-f4dd2fb680fc),
+   [ScienceDirect — Cascading logistic regression onto gradient boosted decision trees](https://www.sciencedirect.com/science/article/abs/pii/S1568494619305289).
+   Khác toàn bộ ~93 hướng mục 3 và 6 hướng mục 0.5 — tất cả đều là rule viết
+   tay (ngưỡng indicator/crossover/pattern/regime-gate/sizing formula), chưa
+   hướng nào fit model thống kê lên feature lịch sử. **Buildability THẤP HƠN
+   mục 7, ưu tiên thấp hơn** — xác nhận bằng chứng thay vì suy đoán:
+   `grep -rn "linfa\|smartcore\|ndarray\|xgboost\|lightgbm\|candle" --include="Cargo.toml" finance-live-action/`
+   không ra kết quả nào — workspace hoàn toàn không có crate ML/linear-algebra
+   nào. Thêm dependency mới vào workspace chạy backtest trong Docker container
+   giới hạn cứng 2 CPU/4 GB RAM/2 GB swap là rủi ro chưa đo được (build-time,
+   binary size), khác hẳn mục 7 (chỉ thêm 1 `Strategy` dùng field có sẵn).
+   Named next step: 1 round riêng spike xem 1 dependency tối thiểu (vd
+   `linfa` logistic regression, không kéo GPU/BLAS) có compile sạch trong
+   `docker/Dockerfile-research` dưới cap tài nguyên hiện tại hay không, TRƯỚC
+   khi làm feature engineering hay backtest.
+
+Zero container, zero backtest round này (đúng quy tắc round434/435/442 áp
+dụng cho design-survey). File:
+`round445-NEEDS-MORE-RESEARCH-volume-profile-poc-value-area-design-survey-new-mechanism-after-muc-0.5-re-exhausted.md`.
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
