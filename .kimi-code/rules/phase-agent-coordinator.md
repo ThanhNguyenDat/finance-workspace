@@ -1,1 +1,0 @@
-../../.agents/rules/phase-agent-coordinator.md

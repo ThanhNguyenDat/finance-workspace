@@ -1,1 +1,0 @@
-../../.agents/rules/coding-and-verification.md

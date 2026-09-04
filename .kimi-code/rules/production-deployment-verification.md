@@ -1,1 +1,0 @@
-../../.agents/rules/production-deployment-verification.md

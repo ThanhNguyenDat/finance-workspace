@@ -1,1 +1,0 @@
-../../.agents/rules/observability-logging.md
