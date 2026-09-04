@@ -59,6 +59,11 @@ iteration; it says nothing about which round number is next.
 - Do not create OPS work for non-promoted outcomes.
 - Preserve trading safety, no-lookahead, cost, fill, and route-specific
   semantics; a measurement defect is not a strategy improvement.
+- A changed `--as-of` cutoff is not independent evidence by itself: compare the
+  actual train/validation/holdout spans and label overlap with earlier runs.
+  Call a window independent only when the relevant holdout is disjoint (or use
+  walk-forward segments with non-overlapping evaluation periods); otherwise
+  preserve the result as a shifted, overlapping confirmation.
 
 ## Detailed guidance
 
