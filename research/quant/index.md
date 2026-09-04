@@ -10040,7 +10040,7 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
    Đã thêm vào bảng đóng mục 3.
 2. **Cross-instrument lead-lag** (return của 1 instrument dự đoán
    instrument khác, vd BTC dẫn XAU). **KHÔNG buildable ngay trên production
-   engine, vẫn mở — Round 434 làm design survey (không backtest), thu hẹp
+   engine — Round 434 làm design survey (không backtest), thu hẹp
    phạm vi blocker và đề xuất bước kế tiếp cụ thể:**
    - Blocker rộng hơn chỉ 1 dòng `Strategy::evaluate`: xác nhận thêm
      `Kline` (`finance-core/src/kline.rs:9-23`) không có field cho
@@ -10078,10 +10078,32 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
      lặp lại đúng loại lỗi chương trình này tồn tại để tránh — cần 1 round
      riêng implement + unit-test phần align trước khi tin số liệu.
    - File: `round434-NEEDS-MORE-RESEARCH-cross-instrument-lead-lag-design-survey-confirms-engine-wide-not-trait-only-blocker.md`.
-   - **Bước kế tiếp cụ thể:** 1 round riêng implement prototype backtest-only
-     nêu trên (BTC/binance dẫn XAU/exness và chiều ngược lại, `5m`), xử lý rõ
-     session-gap của series phụ, báo cáo train/validation/holdout PF/Sharpe/
-     Sortino trung thực trước khi quyết định đầu tư sửa kiến trúc engine.
+   - **ĐÃ IMPLEMENT + BACKTEST + ĐÓNG, Round 437**: `CrossInstrumentLeadLagStrategy`
+     + CLI `--leader-broker`/`--leader-market-type`/`--leader-base-asset`/
+     `--leader-quote-asset` (`crates/finance-research/src/{strategies,main}.rs`,
+     finance-live-action commit `8e6e5a2`). Prototype đúng như round434 đề
+     xuất: merge chronological 2 instrument cùng interval qua
+     `merge_multi_timeframe_klines` sẵn có, phân biệt leader/follower bằng
+     `kline.instrument.key()`, as-of guard strict-before (feature chỉ đọc
+     khi `leader_close_time < follower_close_time`) — 7 unit test phủ cả
+     trường hợp tie same-timestamp và feed out-of-order trước khi tin bất kỳ
+     số nào, `cargo test --workspace --exclude finance-redis` xanh 32/32.
+     Backtest 2 container (`--days 500`, plain sweep, k∈{1,3}×
+     follow/fade×2 hướng leader/follower — XAU dẫn BTC và BTC dẫn XAU):
+     **cả 24 ô (4 candidate × 2 hướng × 3 split) đều PF<1**, tệ hơn hẳn
+     baseline `KBarReturnReversalStrategy` đã đóng (PF tới 0.82) — tốt nhất
+     chỉ 0.225 (XAU dẫn BTC, k=3, holdout). Validity gate:
+     `merged_candle_count=241470` khớp chính xác cả 2 hướng (143998+97472).
+     Cả 2 hướng đều thua, fade≈follow cùng độ lớn mỗi ô (không phải đối
+     xứng gương một bên thắng) — cùng chữ ký "nhiễu áp đảo chi phí bất kể
+     hướng" đã thấy ở order-flow imbalance (Round 72), không phải overfit
+     hay artifact 1 hướng. Nguyên nhân cấu trúc: `minimum_cumulative_move=0.0`
+     khiến gần như mọi bar follower đều có tín hiệu (~700 lệnh/tuần), khác
+     hẳn `KBarReturnReversalStrategy` (đòi hỏi k bar liên tiếp cùng dấu, tự
+     nhiên hiếm) — ngưỡng magnitude lớn hơn CHƯA được sweep (cùng phạm vi
+     bằng chứng hẹp round433 tự chấp nhận khi đóng hướng của chính nó), ghi
+     lại như giới hạn thật thay vì khẳng định đã loại trừ hoàn toàn. File:
+     `round437-REJECTED-cross-instrument-lead-lag-prototype-loses-on-all-24-cells-both-directions-both-k-both-hypotheses.md`.
 
 3. **Volatility-scaled sizing (vol-targeting)** — scale notional nghịch đảo
    theo realized volatility gần đây (route biến động cao → size nhỏ hơn,
@@ -10153,14 +10175,16 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
    pháp permutation độc lập thay vì chỉ đọc magnitude thô.
    File: `round436-REJECTED-cross-route-correlation-aware-allocation-improves-both-windows-raw-but-fails-a-permutation-control-out-of-sample.md`.
 
-**Trạng thái sau Round 436**: mục 1 đóng (round433), mục 4 đóng (round436,
-cấu hình đã test — không loại trừ hoàn toàn 1 rule khác trên 1 route pair
-khác). Mục 2 (cross-instrument lead-lag) và mục 3 (volatility-scaled sizing)
-vẫn mở, cả hai đều đã dừng ở design survey (round434/435) vì đụng shared
-engine code — bước kế tiếp của CẢ HAI là 1 round implementation + unit-test
-riêng (không backtest trong cùng round đó) trước khi có thể ra số, xem chi
-tiết ngay phía trên mục tương ứng. Không còn hướng nào trong mục 0.5 có thể
-ra số ngay mà không cần 1 round implementation riêng trước.
+**Trạng thái sau Round 437**: mục 1 đóng (round433), mục 2 đóng (round437,
+prototype backtest-only đã build+test+chạy — cả 24 ô đều thua, ngưỡng
+magnitude lớn hơn chưa sweep, xem chi tiết ngay phía trên), mục 4 đóng
+(round436, cấu hình đã test — không loại trừ hoàn toàn 1 rule khác trên 1
+route pair khác). Chỉ còn mục 3 (volatility-scaled sizing) mở, dừng ở design
+survey (round435) vì đụng shared risk-gate code dùng chung live+research —
+bước kế tiếp là 1 round implementation + unit-test riêng (không backtest
+trong cùng round đó) trước khi có thể ra số, xem chi tiết ngay phía trên mục
+đó. Không còn hướng nào khác trong mục 0.5 có thể ra số ngay mà không cần 1
+round implementation riêng trước.
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
@@ -10255,6 +10279,7 @@ ra số ngay mà không cần 1 round implementation riêng trước.
 | Engulfing pattern + SMA(10) same-timeframe trend filter | 104 | Cải thiện nhất quán 12/12 ô (+0.05 tới +0.14 PF tuyệt đối) nhưng baseline (103) xuất phát quá thấp — ô tốt nhất chỉ đạt PF 0.506 (BTC/exness holdout), còn cách breakeven rất xa. `SmaTrendFilterStrategy` (wrapper generic, cùng-timeframe, không cần `--higher-timeframe-interval`) giữ lại để tái dùng cho candidate khác |
 | Fibonacci Golden Zone(100) + SMA(10) trend filter — **near-miss gần nhất phiên này** | 106 | 5 năm: PF>1 validation+holdout, nhất quán 2 broker BTC (binance 1.447/1.248, exness 1.141/1.026) — bằng chứng mạnh nhất trước cross-check. Cross-check 18 tháng bắt buộc: ĐẢO HÌNH DẠNG hoàn toàn cả 2 broker (train giờ >1, validation tụt <1), mẫu mỏng hơn — đóng. Ví dụ rõ nhất trong chương trình cho lý do cross-window check bắt buộc |
 | Short-term k-bar return-autocorrelation reversal (fade N nến cùng chiều liên tiếp, cơ chế run-length thuần — khác RSI/Bollinger/Keltner, đề xuất mới sau audit Round 432) | 433 | `KBarReturnReversalStrategy` mới, 5 biến thể (k=2/3/5 bare, k=3+SMA10 trend filter, k=3+session London) trên `exness XAU` + `binance BTC`, `--days 500`. **Cả 30 ô (5×2×3) đều PF<1**, tốt nhất 0.82 (XAU train). PF tăng đơn điệu theo k trên cả 2 route khi trade count sập nhưng không vượt 1.0 — cùng arithmetic "tiến về breakeven từ dưới khi hoạt động biến mất" đã đóng ở lever hold Portfolio-layer (Round 363), ở đây là tham số độ chặt entry Alpha-layer |
+| Cross-instrument lead-lag (return của leader instrument dự đoán follower instrument — BTC/binance ⇄ XAU/exness, cơ chế mới đọc kline instrument thứ 2, đề xuất mới sau audit Round 432) | 437 | `CrossInstrumentLeadLagStrategy` mới (backtest-only, as-of strict-before guard, không đụng production engine), k∈{1,3}×follow/fade×2 hướng leader/follower trên `binance BTC`⇄`exness XAU`, `--days 500`. **Cả 24 ô (4×2×3) đều PF<1**, tốt nhất 0.225 (XAU dẫn BTC, k=3, holdout) — tệ hơn hẳn baseline `KBarReturnReversalStrategy`. Cả 2 hướng đều thua, fade≈follow cùng độ lớn mỗi ô (không phải 1 bên thắng) — chữ ký "nhiễu áp đảo chi phí bất kể hướng" giống order-flow imbalance (Round 72). Nguyên nhân: `minimum_cumulative_move=0.0` khiến gần như mọi bar follower có tín hiệu (~700 lệnh/tuần); ngưỡng magnitude lớn hơn chưa sweep (giới hạn bằng chứng hẹp, cùng mức round433 tự chấp nhận) |
 
 ## 4. Gap hạ tầng/công cụ — chặn khả năng verify chính xác hơn
 
