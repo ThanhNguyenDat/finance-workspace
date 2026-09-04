@@ -199,6 +199,10 @@ def test_quant_claude_rotates_from_personal_02_to_personal(
     monkeypatch.setenv("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK", "1")
     monkeypatch.setenv("PHASE_AGENT_QUANT_TIMEOUT_SECONDS", "2")
     candidates.ensure_state()
+    # quant_research now resolves codex first (matching implement/fix); pin
+    # claude explicitly since this test exercises claude's own
+    # personal-02-to-personal account rotation, not provider selection.
+    candidates.mutate("pin", ["pin", "quant_research", "claude"])
     assert run_phase_agent_command.run(["quant-research"]) == 0
     current_lock, state = candidates.with_state()
     try:
@@ -324,8 +328,8 @@ def test_configure_show_has_stable_table_fixture(
     configure_agent_roles.show()
     output = capsys.readouterr().out
     expected = """ROLE             MODE     PROVIDER MODEL                    ACCOUNT      EFFORT
-quant_research   auto     claude   sonnet                   -            high
 quant_research   auto     codex    gpt-5.6-luna             -            high
+quant_research   auto     claude   sonnet                   -            high
 plan             auto     claude   opus                     -            medium
 plan             auto     codex    gpt-5.6-terra            -            high
 implement        auto     codex    gpt-5.6-luna             -            high

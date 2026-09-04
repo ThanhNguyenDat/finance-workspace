@@ -105,8 +105,8 @@ def default_state() -> dict[str, Any]:
                 "mode": "auto",
                 "pinned_provider": None,
                 "candidates": [
-                    candidate("claude", "sonnet", "high"),
                     candidate("codex", "gpt-5.6-luna", "high"),
+                    candidate("claude", "sonnet", "high"),
                 ],
             },
             "plan": {
@@ -371,7 +371,7 @@ def import_legacy(state: dict[str, Any]) -> dict[str, Any]:
             profile = old["profiles"].get(legacy_role)
             if isinstance(profile, dict):
                 index = {
-                    "quant_research": 0,
+                    "quant_research": 1,
                     "plan": 0,
                     "implement": 1,
                     "verify": 0,
