@@ -10015,26 +10015,31 @@ Ba hệ quả:
 
 Chi tiết: `research/quant/rounds/round334-REJECTED-the-6-8-per-week-coincidence-dissolves-on-a-refined-grid-and-the-volatility-prediction-locates-the-band.md`.
 
-## 0.5. Hướng mới đề xuất sau Round 432 (chưa test) — bar để mở lại research compute
+## 0.5. Hướng mới đề xuất sau Round 432 — mục 1 đã ĐÓNG (Round 433), mục 2 vẫn mở/blocked
 
 Round 432 audit kết luận không còn cơ chế Alpha/Portfolio nào mở trong ~90
 candidate hiện có (mục 3). Hai hướng **thật sự mới**, chưa từng xuất hiện
 trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
-(2026-09-04), chưa test:
+(2026-09-04):
 
 1. **Short-term k-bar return reversal** (autocorrelation reversal cổ điển —
    sau N nến cùng chiều liên tiếp, kỳ vọng đảo chiều). Khác cơ chế RSI
    (oscillator có ngưỡng cố định) và Bollinger (band biến động) — dựa trực
    tiếp vào chuỗi return gần nhất, không cần indicator trung gian.
-   **Buildable ngay** trong kiến trúc hiện tại (`trait Strategy::evaluate`
-   nhận 1 kline/lần) — implement như 1 `Strategy` mới trong
-   `crates/finance-research/src/strategies.rs`, wrap bằng
-   `SmaTrendFilterStrategy`/session-filter đã có sẵn để test 2-3 biến thể
-   trong 1 lần setup (base + trend filter + session filter — không phải
-   ensemble hand-average, đúng pattern wrapper đã dùng cho mọi filter khác
-   trong chương trình).
+   **ĐÃ IMPLEMENT + BACKTEST + ĐÓNG, Round 433**: `KBarReturnReversalStrategy`
+   (`crates/finance-research/src/strategies.rs`, finance-live-action commit
+   `d62bbff`), 5 biến thể (bare k=2/3/5, k=3+SMA(10) trend filter,
+   k=3+London-session filter) trên `exness XAU` và `binance BTC`,
+   `--days 500`, train/validation/holdout đầy đủ. **Cả 30 ô (5 biến thể × 2
+   route × 3 split) đều PF<1** — ô tốt nhất 0.82 (XAU train, không phải
+   validation/holdout). PF tăng đơn điệu theo k trên cả 2 route khi trade
+   count sập, nhưng không bao giờ vượt 1.0 — cùng arithmetic đã đóng lever
+   hold Portfolio-layer (Round 363: kéo dài filter tiến về breakeven từ
+   dưới lên khi hoạt động biến mất, không phải edge thật). Chi tiết:
+   `research/quant/rounds/round433-REJECTED-short-term-k-bar-return-reversal-fails-on-both-routes-across-all-5-variants-and-all-3-splits.md`.
+   Đã thêm vào bảng đóng mục 3.
 2. **Cross-instrument lead-lag** (return của 1 instrument dự đoán
-   instrument khác, vd BTC dẫn XAU). **KHÔNG buildable ngay**: đọc
+   instrument khác, vd BTC dẫn XAU). **KHÔNG buildable ngay, vẫn mở**: đọc
    `crates/finance-strategy/src/engine.rs:30` xác nhận
    `trait Strategy::evaluate(&self, kline: &Kline)` chỉ nhận đúng 1
    candle của 1 instrument mỗi lần — không có đường nạp dữ liệu instrument
@@ -10042,12 +10047,8 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
    1 interval khác của CÙNG instrument, không phải instrument khác. Cần
    thay đổi kiến trúc nạp dữ liệu trước khi test được — việc lớn hơn hẳn
    mục 1, nên tách riêng thành 1 round khảo sát thiết kế trước khi backtest.
-
-Ưu tiên: implement + backtest thật mục 1 trước (base signal + factorial
-2-3 filter combo, train/validation/holdout đầy đủ). Nếu PF>1 nhất quán
-xuất hiện, đó là lý do hợp lệ để mở lại research compute theo bar round432
-đã đặt ra. Không cherry-pick tham số riêng lẻ để tạo dáng promotable —
-sweep đủ range như mọi mechanism khác trong mục 3 trước khi kết luận.
+   Chưa có round nào làm việc này; đây là hướng mở duy nhất còn lại từ đề
+   xuất 2026-09-04.
 
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
@@ -10141,6 +10142,7 @@ sweep đủ range như mọi mechanism khác trong mục 3 trước khi kết lu
 | Two-candle engulfing pattern (candlestick body-containment reversal, không trend filter) | 103 | PF 0.16-0.42 toàn bộ 12 ô (3 split × 4 route) — THẤP NHẤT từng quan sát trong chương trình. Cost ablation xác nhận cost-limited (no-cost PF→0.97-0.99) nhưng tần suất tín hiệu cực cao (34k trade/route, 4-15× candidate khác) khuếch đại chi phí mạnh hơn hẳn mọi candidate trước |
 | Engulfing pattern + SMA(10) same-timeframe trend filter | 104 | Cải thiện nhất quán 12/12 ô (+0.05 tới +0.14 PF tuyệt đối) nhưng baseline (103) xuất phát quá thấp — ô tốt nhất chỉ đạt PF 0.506 (BTC/exness holdout), còn cách breakeven rất xa. `SmaTrendFilterStrategy` (wrapper generic, cùng-timeframe, không cần `--higher-timeframe-interval`) giữ lại để tái dùng cho candidate khác |
 | Fibonacci Golden Zone(100) + SMA(10) trend filter — **near-miss gần nhất phiên này** | 106 | 5 năm: PF>1 validation+holdout, nhất quán 2 broker BTC (binance 1.447/1.248, exness 1.141/1.026) — bằng chứng mạnh nhất trước cross-check. Cross-check 18 tháng bắt buộc: ĐẢO HÌNH DẠNG hoàn toàn cả 2 broker (train giờ >1, validation tụt <1), mẫu mỏng hơn — đóng. Ví dụ rõ nhất trong chương trình cho lý do cross-window check bắt buộc |
+| Short-term k-bar return-autocorrelation reversal (fade N nến cùng chiều liên tiếp, cơ chế run-length thuần — khác RSI/Bollinger/Keltner, đề xuất mới sau audit Round 432) | 433 | `KBarReturnReversalStrategy` mới, 5 biến thể (k=2/3/5 bare, k=3+SMA10 trend filter, k=3+session London) trên `exness XAU` + `binance BTC`, `--days 500`. **Cả 30 ô (5×2×3) đều PF<1**, tốt nhất 0.82 (XAU train). PF tăng đơn điệu theo k trên cả 2 route khi trade count sập nhưng không vượt 1.0 — cùng arithmetic "tiến về breakeven từ dưới khi hoạt động biến mất" đã đóng ở lever hold Portfolio-layer (Round 363), ở đây là tham số độ chặt entry Alpha-layer |
 
 ## 4. Gap hạ tầng/công cụ — chặn khả năng verify chính xác hơn
 
