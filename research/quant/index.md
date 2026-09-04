@@ -6226,6 +6226,43 @@ Truy vấn Timescale read-only, `exness XAU` 5m từ 2024-09-01, gap = `|open_t 
 
 Chi tiết: `research/quant/rounds/round346-REJECTED-dropping-the-protective-band-is-profitable-at-300-days-and-worse-at-900-and-the-gap-fill-risk-is-quantified-small.md`.
 
+## Round 431 — REJECTED: holdout tách rời thứ TƯ trên `bybit XAUT` **đảo lại** — corner chỉ thắng deployed **3/4 cửa sổ**, không phải 3/3 như Round430 kết luận, và độ sâu lịch sử đã cạn cho route này
+
+Round430 tự đặt câu hỏi liệu độ sâu lịch sử `bybit XAUT` có còn đủ cho cửa
+sổ tách rời thứ tư không. Vòng này chạy đúng cửa sổ đó (`--as-of
+2025-12-30T01:15:00.000Z`, lùi thêm ~65 ngày từ điểm bắt đầu holdout
+Round430), cùng corner (band 0,02/0,04, hold 288) so với deployed control
+(band 0,01/0,02, hold 36) qua `--daily-profit-gate`.
+
+**Cửa sổ D (2025-11-07 → 2025-12-30, 52,53 ngày, candle_count 75640 — nhỏ
+hơn cả C's 94549, xác nhận độ sâu lịch sử tiếp tục co lại đúng lo ngại của
+Round430; ở `--days 500` nghĩa là lịch sử `bybit XAUT` dùng được chỉ còn tới
+khoảng 2025-04):** corner net **−0,01071**/Sharpe **−0,0887** (8 lệnh,
+1,066/tuần — mẫu mỏng nhất trong cả chuỗi 4 cửa sổ); deployed net
+**+0,01911**/Sharpe **+0,1536** (20 lệnh, 2,665/tuần). **Deployed thắng
+corner** ở cửa sổ này — đảo ngược thứ tự đã thấy ở cả 3 cửa sổ trước (A, B,
+C).
+
+**Sửa lại tuyên bố "3/3" của Round430:** gộp cả 4 cửa sổ (A=R428, B=R429,
+C=R430, D=vòng này), corner chỉ thắng deployed trên net PnL/Sharpe ở **3/4
+cửa sổ**, không phải "MỌI cửa sổ" như Round430 khẳng định. Một pattern đạt
+chuẩn "3 cửa sổ trở lên" ở đúng lúc đo được 3 cửa sổ không đồng nghĩa nó
+sống sót cửa sổ thứ tư — đúng dạng thất bại đã thấy nhiều lần trong arc
+(Round340 → Round391, Round371 → Round372). **Không đổi kết luận REJECTED**:
+tần suất corner cả 4 cửa sổ (1,066/1,61/2,815/2,878 mỗi tuần) không bao giờ
+gần Target 3 (7,0).
+
+**Đóng nhánh disjoint-window cho corner này trên `bybit XAUT`:** candle_count
+giảm dần 143998→118185→94549→75640 qua 4 cửa sổ — một cửa sổ thứ năm sẽ còn
+ngắn hơn nữa, dưới ngưỡng có ý nghĩa. Không chạy thêm cửa sổ nào cho corner
+này trên route này.
+
+**Sửa dữ liệu phụ:** 2 dòng CSV của Round430 (`optimize_loop_update_v2.csv`)
+bị thiếu 4 cột cuối (`target1_profitable`/`target2_makedecision`/
+`target3_freq_ge1day_or_7week`/`notes`) — lỗi ghi thiếu, đã bổ sung đúng
+theo nội dung round430.md trong vòng này (DATA-ISSUE phụ, không phải phát
+hiện mới, không đổi kết luận Round430). File: `round431-*.md`.
+
 ## Round 430 — REJECTED: holdout tách rời thứ BA trên `bybit XAUT` — corner thắng deployed band về net PnL/Sharpe ở **3/3 cửa sổ**, nhưng tần suất vẫn không bao giờ đạt Target 3
 
 Trả lời dứt điểm câu hỏi Round429 tự nêu: "corner có thắng deployed band ở
