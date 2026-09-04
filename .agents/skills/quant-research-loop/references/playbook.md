@@ -95,6 +95,20 @@ fabricate one.
   `docker kill <name> && docker rm -f <name>` to stop it — confirm with
   `docker ps -a --filter "ancestor=finance-research-local:latest"` that
   nothing is left running before ending the round.
+- **`docker run -d ... > file.json` captures the printed container ID, not the
+  command's output** (round 443) — `-d` makes `docker run` exit immediately
+  after printing the new container's ID, so redirecting *that* invocation's
+  stdout writes one 64-character hex string, not the `--json` payload. Always
+  capture output with a separate `docker logs -f <name> > file.json
+  2>file.err` after the container starts (works even after the container has
+  already finished and self-removed via `--rm`, as long as `logs -f` is
+  issued before that happens — for a fast research run, launch it immediately
+  after the `docker run -d`). Bonus finding from doing this correctly:
+  `finance-research`'s own ECS application logs (the "backtest candle count"
+  etc. lines) go to **stderr**, and stdout carries **only** the pretty-printed
+  `--json` result — so `file.json` needs no jsonl-log-stripping before
+  `json.load()`, and `file.err` is where to look for the candle-count/window
+  log lines if `--json`'s own fields don't cover something.
 - **`--daily-profit-gate` does NOT model the deployed Portfolio construction** (round 356).
   `daily_profit_gate.rs:376-412` replays each decision through `ledger.on_kline` and nothing
   else: **no `PortfolioConstructionState::construct`, no `minimum_hold_decisions`, and no
