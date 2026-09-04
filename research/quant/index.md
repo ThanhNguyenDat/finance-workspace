@@ -10083,6 +10083,28 @@ trong danh sách candidate hay mục 3, do user đề xuất trực tiếp
      session-gap của series phụ, báo cáo train/validation/holdout PF/Sharpe/
      Sortino trung thực trước khi quyết định đầu tư sửa kiến trúc engine.
 
+3. **Volatility-scaled sizing (vol-targeting)** — scale notional nghịch đảo
+   theo realized volatility gần đây (route biến động cao → size nhỏ hơn,
+   route biến động thấp → size lớn hơn, giữ risk-per-trade ổn định qua thời
+   gian). Khác `risk_fraction`/`equity_fraction` đã đóng (Round 89-90/
+   151-152) — 2 cái đó scale theo equity hiện có, không đọc biến động thị
+   trường. Đây là kỹ thuật Portfolio construction chuẩn ngành, chưa từng
+   test trong chương trình này. User đề xuất trực tiếp (2026-09-04), chưa
+   implement/backtest.
+4. **Cross-route correlation-aware allocation** — có bằng chứng nền từ
+   Round 342: `bybit XAUT` và `exness XAU` tương quan **giá** +0,996 nhưng
+   tương quan **PnL Portfolio** chỉ +0,287 (cơ chế decorrelation hiện tại
+   chưa rõ nguyên nhân, chỉ mới xác nhận hiện tượng). Chưa ai test chủ động
+   giảm exposure đồng thời khi correlation giữa các route tăng đột biến
+   (rủi ro drawdown đồng thời chưa quản lý). User đề xuất trực tiếp
+   (2026-09-04), chưa implement/backtest.
+
+Ưu tiên cho vòng research tiếp theo: implement + backtest thật mục 3 hoặc 4
+(chọn 1 trong 2, không làm đồng thời cả hai trong 1 round — factorial risk
+nếu gộp trước khi từng cái đứng độc lập được kiểm chứng). Cùng chuẩn evidence
+như mục 1/2: train/validation/holdout defensible, không cherry-pick, sweep
+đủ range tham số trước khi kết luận đóng hay mở.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
