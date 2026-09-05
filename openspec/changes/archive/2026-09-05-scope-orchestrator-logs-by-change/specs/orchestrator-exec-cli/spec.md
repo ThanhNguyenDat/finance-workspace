@@ -1,3 +1,8 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: codex-exec writes a JSONL log file`
+- TO: `### Requirement: Both commands write a JSONL log file, organized per change`
+
 ## MODIFIED Requirements
 
 ### Requirement: Both commands write a JSONL log file, organized per change
@@ -18,7 +23,7 @@ omitted, `<name>` SHALL default to `adhoc-<YYYY-MM-DD>` using the
 Asia/Ho_Chi_Minh (UTC+7) local date; the per-line `timestamp` field
 remains UTC regardless of this default's timezone.
 
-#### Scenario: A successful run is logged under its change directory
+#### Scenario: A successful run is logged
 - **WHEN** an operator runs either command with `--change <name>` and the
   turn completes
 - **THEN** `tools/orchestrator/logs/<name>/<command>.log` contains one JSON
