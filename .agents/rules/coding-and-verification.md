@@ -41,10 +41,20 @@ all applicable objective evidence is required and must not be called independent
 Required order for a non-trivial change:
 
 ```text
-phase-agent PLAN → phase-agent IMPLEMENT → local checks → local commit
-→ fresh phase-agent VERIFY → phase-agent FIX (if needed) → fresh FINAL_VERIFY
+PLAN (OpenSpec proposal/design/tasks) → IMPLEMENT → local checks → local commit
+→ independent VERIFY → FIX (if needed) → independent FINAL_VERIFY
 → push main → GitHub Actions → Coolify → production verification
 ```
+
+Claude plans and verifies by default; Codex implements and fixes by default
+(`CLAUDE.md`'s Role/Working Model role boundary). Either falls back to the
+other when the default provider for that step is confirmed out of quota.
+There is no coordinator or resolver that detects quota and switches
+providers automatically — that mechanism was deleted along with the old
+`tools/orchestrator/`; provider selection and fallback are a manual,
+operator- or session-level decision. "Independent"/"fresh" above means a
+verification pass that re-derives evidence rather than trusting the
+implementer's own summary, not a separate provider identity.
 
 This does **not** relax anything else in this file: still run the full local
 verification pass before committing, still keep each commit small and
@@ -130,10 +140,10 @@ request, that overrides this note for that request only.
   flag for a job's schedule ownership without a tested distributed lease.
 - Run native automation Go tests with a hard timeout in GitHub Actions.
 
-### Phase-agent orchestration tooling
+### Orchestrator tooling
 
-- `uv` is required for the Python-backed state and OPS CLIs under
-  `tools/orchestrator/`.
+- `uv` is required for the Python-backed CLIs under `tools/orchestrator/`
+  (`codex-exec`, `claude-exec`, `sync-agent-links`).
 - Bootstrap the project with `uv sync --project tools/orchestrator`
   before invoking the executable wrappers in
   `tools/orchestrator/bin/`; the wrappers use `uv run --project`

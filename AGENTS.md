@@ -17,23 +17,28 @@ Codex owns:
 
 Codex does **not** own product or architecture redesign unless the user explicitly asks for it.
 
-Default phase-agent candidate order:
+Default provider role boundary:
 
 ```text
 PLAN / VERIFY / FINAL_VERIFY = Claude first, Codex fallback
 IMPLEMENT / FIX              = Codex first, Claude fallback
-ORCHESTRATE                   = deterministic OPS shell state
 ```
 
-`uv run --project tools/orchestrator agent-role-state` is authoritative for current candidate order and
-provider health. A fallback provider inherits the role's complete scope,
-tests, safety and evidence obligations. Same-provider process separation must
-not be described as provider-independent verification.
+"Fallback" means: when the first-choice provider is confirmed out of quota
+for that piece of work, the other provider covers it, preserving the same
+implementation/test/safety contract. This is a manual, operator- or
+session-level decision — there is no coordinator or resolver that detects
+quota and switches providers automatically; that mechanism (and
+`agent-role-state`, the CLI that used to report it) was deleted along with
+the old `tools/orchestrator/`. A fallback provider inherits the role's
+complete scope, tests, safety and evidence obligations. Same-provider
+process separation must not be described as provider-independent
+verification.
 
-`/ops:e2e` is the project-level autonomous lifecycle. `/opsx:*` remains the
-native OpenSpec primitive namespace. OpenSpec changes own requirements,
-design, tasks, and acceptance; `.ops/changes/<change>/handoff.md` owns only a
-concise coordination note; `.ops` runtime state is transient and gitignored.
+`/opsx:*` is the native OpenSpec command namespace for planning artifacts.
+OpenSpec changes own requirements, design, tasks, and acceptance;
+`.ops/changes/<change>/handoff.md` owns only a concise coordination note
+when one exists; `.ops` runtime state is transient and gitignored.
 
 ---
 
@@ -85,8 +90,9 @@ Durable workspace artifacts use these canonical roots:
   engineering planning and execution.
 
 Do not recreate a top-level `raw/` directory. New engineering requests enter
-through the native `/opsx:*` OpenSpec workflow and, when execution is needed,
-the `/ops:e2e` lifecycle.
+through the native `/opsx:*` OpenSpec workflow; implementation then follows
+the provider role boundary above (Codex first, Claude fallback) directly —
+there is no separate automatic execution lifecycle.
 
 Repository ownership rules:
 

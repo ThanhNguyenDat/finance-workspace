@@ -1,6 +1,6 @@
 ---
 name: quant-research-loop
-description: Run one bounded quant-research iteration for Finance Live Action BTC/XAU strategies, using honest unseen-data evidence and promoting only actionable results through one stable OpenSpec + OPS change. Use for manual terminal quant optimization work.
+description: Run one bounded quant-research iteration for Finance Live Action BTC/XAU strategies, using honest unseen-data evidence and promoting only actionable results through one stable OpenSpec change. Use for manual terminal quant optimization work.
 ---
 
 # Quant Research Loop
@@ -17,7 +17,7 @@ result (`REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, `NEEDS-MORE-RESEARCH`, or
 
 ## Core workflow
 
-1. Read the priority backlog and active OpenSpec/OPS work; legacy handoff is
+1. Read the priority backlog and active OpenSpec work; legacy handoff is
    history only.
 2. Choose one fresh or unresolved hypothesis, prioritizing XAU then BTC.
 3. Run bounded, containerized research with pinned inputs and honest train/
@@ -25,31 +25,17 @@ result (`REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, `NEEDS-MORE-RESEARCH`, or
 4. Check production only when the claim concerns live behavior.
 5. Classify the result and preserve raw evidence, metrics, assumptions, and
    invalidated conclusions.
-6. For `PROMOTE` only, create/reuse one stable OpenSpec change and enter the
-   canonical OPS lifecycle with research-origin references.
+6. For `PROMOTE` only, create the OpenSpec change via `/opsx:propose` with
+   research-origin references, then stop at planning — no automatic
+   implementation lifecycle follows; implementation is a separate manual
+   decision by the operator.
 7. Clean up temporary containers/tunnels and report limitations precisely.
 
-The terminal launcher records the iteration exactly once before invoking the
-`quant_research` phase agent. Provider selection comes from atomic phase-agent
-state; a confirmed quota interruption may continue through another candidate
-without incrementing the iteration or discarding existing artifacts.
-
-The launcher depends on the repository-local `uv` project at
-`tools/orchestrator/`; bootstrap it with `uv sync --project
-tools/orchestrator` before running the quant command in a new environment.
-
-**The prompt's "iteration N" is the coordinator session's own attempt
-counter, not the global research round number** — do not treat them as the
-same value. `quant-research-state state`'s `iteration` field can also lag
-behind both. To find the actual next round number (what the new
-`research/quant/rounds/round<N>-*.md` file should be called), check the
-highest existing round file and the latest `docs(research): round <N>` commit
-in `git log` — the round-file/commit sequence is the one continuous,
-authoritative counter; the coordinator's per-session iteration is a distinct,
-resettable bookkeeping value used only for provider-attempt tracking under
-`.ops/runtime/phase-agents/quant-runs/<session-id>/attempt-*.meta.json`. A
-quota interruption resumes the coordinator's *attempt* at the stated
-iteration; it says nothing about which round number is next.
+There is no launcher or background orchestrator tracking iterations for this
+loop anymore — the operator runs each round manually. **The round-file
+sequence under `research/quant/rounds/` is the sole source of truth for the
+next round number**: find the highest existing `round<N>-*.md` file (or the
+latest `docs(research): round <N>` commit in `git log`) and use `N+1`.
 
 ## Non-negotiable invariants
 

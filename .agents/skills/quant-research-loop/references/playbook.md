@@ -24,10 +24,11 @@ shipped fix — never a no-op round.
 
 ## Round structure
 
-1. **Confirm the recorded iteration and routing.** The terminal launcher has
-   already incremented the quant iteration exactly once. Read quant and
-   phase-agent state; do not increment again or invoke provider probes from the
-   research prompt. A quota continuation keeps the same iteration.
+1. **Determine the round number.** There is no launcher or background
+   orchestrator tracking iterations — the round-file sequence under
+   `research/quant/rounds/` is the sole source of truth. Find the highest
+   existing `round<N>-*.md` file (or the latest `docs(research): round <N>`
+   commit in `git log`) and use `N+1`.
 2. **Research.** Read the backlog doc, decide the round's focus: extend an
    open lead, close a stale one with fresh data, or search for a genuinely
    new mechanism (Rule 2/3 of the standing `/loop` prompt: web search,
@@ -39,7 +40,7 @@ shipped fix — never a no-op round.
    (decision frequency, current weights, checkpoint health) rather than
    backtest performance — see "Production verification" below.
 5. **Classify** the result as REJECTED, NO-CHANGE, DATA-ISSUE,
-   NEEDS-MORE-RESEARCH, or PROMOTE. Only PROMOTE may enter OpenSpec + OPS.
+   NEEDS-MORE-RESEARCH, or PROMOTE. Only PROMOTE may enter OpenSpec.
 6. **Promote, if actionable** — require defensible evidence, clear scope,
    acceptance criteria, risk/trading safety, and rollback; see "Promotion and
    Codex-down mode" below.
@@ -1290,25 +1291,24 @@ timestamps; a stale, non-advancing cluster is a real bug, not normal).
 ## Promotion and provider failover
 
 Only a result classified PROMOTE enters engineering. Derive one stable,
-meaningful kebab-case change name, create/reuse complete native OpenSpec
-artifacts that reference the research evidence, then enter the existing
-`/ops:e2e` lifecycle with the same change name. Attach immutable origin
-references with `ops-runtime.sh trace-origin` during PLAN. Never implement
-runtime code directly from a research-only result and never copy the OPS state
-machine into the research command.
+meaningful kebab-case change name, create the OpenSpec change via
+`/opsx:propose` with research-origin references, then stop at planning —
+there is no automatic lifecycle after that. Never implement runtime code
+directly from a research-only result.
 
-OPS resolves each model-owned phase from ordered phase-agent candidates.
-Confirmed account/global quota opens only that provider's circuit; generic 429,
-timeout, network and implementation failures do not. A candidate selected for
-an active attempt remains immutable until its process exits. If quota interrupts
-partial PLAN/IMPLEMENT/FIX work, the next eligible candidate continues the
-actual diff/commits under the same phase, round and repository lock.
+Codex implements and fixes by default; Claude covers it when Codex is
+confirmed out of quota (`CLAUDE.md`'s Role/Working Model role boundary — and
+symmetrically, Codex covers PLAN/VERIFY when Claude is out of quota). Only a
+confirmed account/global quota exhaustion justifies falling back to the
+other provider; a generic 429, timeout, network blip, or implementation
+failure does not. There is no coordinator that detects this automatically —
+whoever is operating the round makes that call, and continues the same
+diff/commits under the same change if a fallback happens mid-work.
 
-1. Route actionable implementation only through `/ops:e2e` and
-   `uv run --project tools/orchestrator run-phase-agent`; do not modify runtime code outside that lifecycle or
-   invoke Codex/Claude directly. Read a sibling implementation first — e.g. an
-   existing `Strategy` impl or `StrategyKind` variant — before writing a new
-   one. Verification labels come from actual mutator/verifier providers.
+1. Implement directly against the plan, per the role boundary above; do not
+   invoke a deleted `/ops:e2e`/`run-phase-agent` lifecycle — neither exists
+   anymore. Read a sibling implementation first — e.g. an existing
+   `Strategy` impl or `StrategyKind` variant — before writing a new one.
 2. Test locally inside Docker with a CPU cap, same as the backtest tooling
    rule above: `docker run --rm --cpus=3 -v "$PWD":/app -w /app
    rust:1.88-slim-bookworm bash -c "apt-get update -qq && apt-get install -y -qq

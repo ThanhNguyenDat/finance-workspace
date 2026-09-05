@@ -2,8 +2,9 @@
 
 ## Role
 
-Claude is the default planning/verification provider and a fallback
-implementation provider in the phase-agent workflow.
+Claude is the default planning/verification provider. Codex is the default
+implementation/fix provider. Each is the other's fallback when its own
+default provider is out of quota.
 
 Claude owns:
 
@@ -14,16 +15,19 @@ Claude owns:
 - implementation review;
 - verification against specs, rules, tests, CI, and production behavior.
 
-Claude does **not** own normal implementation work while Codex is eligible.
-When the resolver selects Claude after deterministic provider failure or a
-manual phase pin, Claude owns that bounded attempt and must preserve the same
-implementation/test/safety contract.
+Claude does not own normal implementation work while Codex has quota
+available. There is no automatic resolver or coordinator that selects a
+provider per attempt — that mechanism was deleted along with the old
+`tools/orchestrator/`. Provider selection is a manual, operator- or
+session-level judgment call: when Codex is confirmed out of quota, Claude
+implements that bounded piece of work directly and must preserve the same
+implementation/test/safety contract described below; when Claude is out of
+quota for PLAN/VERIFY, Codex covers that instead.
 
-`/ops:e2e` is the project-level autonomous lifecycle: deterministic shell state
-orchestrates logical phase agents, with Claude/Codex selected per attempt. `/opsx:*`
-remains the native OpenSpec command namespace. OpenSpec changes hold
-requirements/design/tasks; `.ops/changes/<change>/handoff.md` holds only the
-concise coordination note; `.ops` runtime state is transient and gitignored.
+`/opsx:*` is the native OpenSpec command namespace for planning artifacts.
+OpenSpec changes hold requirements/design/tasks; `.ops/changes/<change>/handoff.md`
+holds only the concise coordination note when one exists; `.ops` runtime
+state is transient and gitignored.
 
 ---
 
@@ -271,9 +275,20 @@ Role boundary:
 
 ```text
 PLAN / VERIFY / FINAL_VERIFY = Claude first, Codex fallback
-IMPLEMENT / FIX              = Codex first, Claude fallback
-ORCHESTRATE                   = deterministic OPS shell state
+IMPLEMENT / FIX               = Codex first, Claude fallback
 ```
+
+"Fallback" means: when the first-choice provider is confirmed out of quota
+for that piece of work, the other provider covers it, preserving the same
+contract. This is a manual, operator- or session-level decision — there is
+no coordinator or resolver that detects quota and switches providers
+automatically; that mechanism was deleted along with the old
+`tools/orchestrator/`.
+
+There is no automatic resolver or coordinator that routes IMPLEMENT/FIX to
+a provider per attempt — that mechanism was deleted along with the old
+`tools/orchestrator/` coordinator. Provider selection for implementation is
+either Claude by default or an explicit operator decision to use Codex.
 
 ---
 
