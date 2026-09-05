@@ -58,6 +58,17 @@ running PLAN and VERIFY through `ClaudeProvider` (already built for
   stable change name; creating the OpenSpec change via `/opsx:propose`
   remains the operator's own interactive Claude session's job, unchanged —
   a scripted turn has no slash-command/skill discovery to invoke it anyway.
+- When `--cwd` is omitted, `quant-research-exec` now manages its own git
+  worktree for the whole cycle: sync `<default-branch>` to `origin`, create
+  a worktree + branch for the round, run every stage there, and on a
+  successful FINALIZE, merge that branch back into `<default-branch>` and
+  remove the worktree — reusing the mechanics already established in
+  `.agents/rules/coding-and-verification.md`'s "Per-change worktree
+  workflow". This is what makes `while true; do quant-research-exec;
+  sleep <n>; done` actually safe to run with zero parameters: without it,
+  every iteration would write into the same tree the operator (or the next
+  iteration) is also using. A caller that passes `--cwd` explicitly
+  disables this and operates directly in the given directory, unchanged.
 
 ## Capabilities
 

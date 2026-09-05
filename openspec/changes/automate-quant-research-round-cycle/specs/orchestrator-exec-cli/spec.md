@@ -141,14 +141,51 @@ invocation.
 
 ### Requirement: --round resolution and derived --change are unchanged
 `quant-research-exec` SHALL keep resolving `--round` (auto-detect for a new
-round by scanning `research/quant/rounds/round<N>-*.md`) before PLAN runs,
-and deriving `--change quant-research-round-<N>` for JSONL log scoping,
-with `--role` removed from `add-quant-research-exec-command`'s prior
-surface. Every JSONL log line SHALL additionally carry a `stage` field
-identifying which part of the cycle produced it.
+round by scanning `research/quant/rounds/round<N>-*.md`) before PLAN runs
+(during SYNC when `--cwd` is omitted; directly against the given `--cwd`
+otherwise), and deriving `--change quant-research-round-<N>` for JSONL log
+scoping, with `--role` removed from `add-quant-research-exec-command`'s
+prior surface. Every JSONL log line SHALL additionally carry a `stage`
+field identifying which part of the cycle produced it.
 
 #### Scenario: Round-scoped log carries a stage field
 - **WHEN** any stage of the cycle emits a log line
 - **THEN** that line's JSON object includes a `stage` field naming the
-  stage (e.g. `"plan"`, `"implement"`, `"verify"`, `"ask"`, `"fix"`,
-  `"finalize"`)
+  stage (e.g. `"sync"`, `"plan"`, `"setup_worktree"`, `"implement"`,
+  `"verify"`, `"ask"`, `"fix"`, `"finalize"`, `"merge"`)
+
+### Requirement: The command manages its own git worktree unless --cwd is given
+When `--cwd` is omitted, `quant-research-exec` SHALL, before PLAN runs,
+fast-forward local `<default-branch>` to `origin/<default-branch>` and
+resolve the round number against that synced tree (SYNC); PLAN SHALL then
+run directly in that synced tree, with no worktree yet. Only after PLAN
+produces a brief SHALL the system create a dedicated git worktree and
+branch (`.agents/worktrees/quant-research-round-<N>`, reusing SYNC's
+already-resolved `<N>`) for the rest of the cycle; every stage from
+IMPLEMENT onward SHALL use that worktree as its `cwd`. On a successful
+FINALIZE, the system SHALL fast-forward-merge (or
+rebase-then-fast-forward-merge if `<default-branch>` advanced during the
+cycle) that branch into local `<default-branch>`, then remove the worktree
+and delete the branch. On any hard error, the system SHALL leave the
+worktree and branch in place rather than removing them. When `--cwd` is
+given explicitly, the system SHALL skip all of this (including for PLAN)
+and operate directly in the given directory for every stage, exactly as
+`add-quant-research-exec-command` specified.
+
+#### Scenario: A bare invocation creates and later removes its own worktree
+- **WHEN** an operator runs `quant-research-exec` with no `--cwd`, and the
+  cycle reaches FINALIZE successfully
+- **THEN** PLAN ran before any worktree existed, a worktree was created
+  after PLAN produced a brief, every stage from IMPLEMENT onward operated
+  inside it, and after FINALIZE the worktree no longer exists and its
+  branch has been merged into local `<default-branch>`
+
+#### Scenario: A failed cycle leaves its worktree for inspection
+- **WHEN** the cycle exits with a hard error (e.g. the fix budget is
+  exhausted)
+- **THEN** the round's worktree and branch still exist on disk afterward
+
+#### Scenario: An explicit --cwd disables worktree management
+- **WHEN** an operator runs `quant-research-exec --cwd <dir>`
+- **THEN** the command neither creates nor merges nor removes any
+  worktree, and operates directly in `<dir>`

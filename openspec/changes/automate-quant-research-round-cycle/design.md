@@ -28,6 +28,14 @@ Existing surface this builds on:
 - Round 453 (this session) ran under the prior single-stage, operator-
   supplied-plan design and will finish under it; this design applies to
   rounds started after this change merges.
+- `.agents/rules/coding-and-verification.md`'s "Per-change worktree
+  workflow" (`adopt-per-change-worktree-workflow`, merged this session)
+  already establishes the create/sync/merge/cleanup mechanics this design
+  reuses for rounds run without an explicit `--cwd` (Decision 10): worktree
+  at `.agents/worktrees/<name>`, branch from local `<default-branch>`
+  after fast-forwarding it to `origin/<default-branch>`, merge back
+  `--ff-only` (rebase-then-ff if `<default-branch>` moved during the
+  cycle), then `git worktree remove` + `git branch -d`.
 
 ## Goals / Non-Goals
 
@@ -71,10 +79,23 @@ Existing surface this builds on:
 **1. Stage sequence and state machine.**
 
 ```
-PLAN (Claude)
+SYNC (git, no LLM call — skipped when --cwd is explicitly given)
+   │  fast-forward local <default-branch> to origin/<default-branch>, then
+   │  resolve the round number <N> by scanning research/quant/rounds/ in
+   │  that synced tree (Decision 10) — cheap, file-based, needs no brief.
+   │  This is also when the round's log path (logs/quant-research-round-<N>/)
+   │  becomes known, so PLAN's own log lines land in the right place.
+   │  No worktree yet; PLAN itself writes nothing to disk.
+   ▼
+PLAN (Claude, runs directly in the synced main tree / given --cwd)
    │  reads research/quant/index.md, reports CSV, recent round files, and
    │  .agents/domain/quant-research-domain.md; picks one open hypothesis
    │  (XAU before BTC); designs the test; writes a brief for Codex
+   ▼
+SETUP-WORKTREE (git, no LLM call — skipped when --cwd is explicitly given)
+   │  now that a brief exists, create/enter a fresh worktree + branch
+   │  named after the already-resolved <N> (Decision 10); every stage from
+   │  here on uses this worktree as its cwd
    ▼
 IMPLEMENT (Codex)
    │  runs the backtest against PLAN's brief; drafts round file + CSV/
@@ -82,14 +103,16 @@ IMPLEMENT (Codex)
    ▼
 VERIFY (Claude, resumes PLAN's session)  ──QUESTION──▶ ASK (Codex, one turn)
    │                                          └──▶ VERIFY continues (same pass)
-   ├─ PASS ──▶ FINALIZE (Codex: commit)
-   │
+   ├─ PASS ──▶ FINALIZE (Codex: commit, on the round's branch)
+   │                       │
    └─ DEFECT ──▶ FIX (Codex) ──▶ VERIFY again ─┬─ PASS ──▶ FINALIZE
-                     ▲                          │
-                     └──────── DEFECT ──────────┘
-                (attempts 1-5; attempt 3+ escalates model/effort —
-                 see Decision 6; attempt 5 still DEFECT is a hard error,
-                 nothing committed)
+                     ▲                          │              │
+                     └──────── DEFECT ──────────┘              ▼
+                (attempts 1-5; attempt 3+ escalates      MERGE + CLEANUP
+                 model/effort — see Decision 6; attempt   (git, no LLM call
+                 5 still DEFECT is a hard error, nothing   — skipped when
+                 committed, and the worktree is left       --cwd was given;
+                 in place, not pruned, for inspection)      Decision 10)
 ```
 
 Every box is one `CodexProvider.run_turn` or `ClaudeProvider.run_turn`
@@ -280,11 +303,71 @@ took ~20 minutes) — still overridable via `--timeout-seconds`.
 **9. Logging: one log file per round, a `stage` field on every line.**
 
 Still `tools/orchestrator/logs/quant-research-round-<N>/quant-research-exec.log`
-(unchanged path convention — `<N>` is now resolved before PLAN even runs,
-same auto-detect logic as before), but every emitted JSONL line now
-includes `"stage": "plan" | "implement" | "verify" | "ask" | "fix" |
-"finalize"` so a reader (or a future log-streaming UI) can reconstruct
-which part of the cycle produced which event.
+(unchanged path convention — `<N>` is now resolved during SYNC, before
+PLAN even runs, same auto-detect logic as before, just run against the
+just-synced `<default-branch>` rather than whatever `--cwd` happened to
+contain), but every emitted JSONL line now includes `"stage": "sync" |
+"plan" | "setup_worktree" | "implement" | "verify" | "ask" | "fix" |
+"finalize" | "merge"` so a reader (or a future log-streaming UI) can
+reconstruct which part of the cycle produced which event. `sync`/
+`setup_worktree`/`merge` lines are plain git-command records (no LLM
+turn), logged the same way for one continuous per-round trail.
+
+**10. `quant-research-exec` manages its own git worktree end to end, unless
+the caller opts out via an explicit `--cwd`.**
+
+Reusing `.agents/rules/coding-and-verification.md`'s "Per-change worktree
+workflow" mechanics (already established this session for OpenSpec
+changes) rather than inventing new ones:
+
+- **When `--cwd` is omitted** (the bare, fully-autonomous invocation this
+  whole redesign exists for): SYNC runs first, before PLAN — `git fetch
+  origin`, `git merge --ff-only origin/<default-branch>` in whatever
+  directory the command was invoked from (local `<default-branch>` may be
+  ahead with not-yet-pushed commits from other work; sync it *to* origin,
+  never replace it *with* origin), then resolve the round number `<N>` by
+  scanning `research/quant/rounds/` in that now-synced tree — cheap and
+  file-based, it does not need PLAN's brief. PLAN then runs directly in
+  that tree; it writes nothing to disk, so it needs no isolation, and its
+  log lines already land under the now-known `logs/quant-research-round-<N>/`
+  (Decision 9). Only *after* PLAN produces a brief does SETUP-WORKTREE run:
+  `git worktree add .agents/worktrees/quant-research-round-<N> -b
+  quant-research-round-<N> <default-branch>` (branch name reuses the
+  already-resolved `<N>`, no re-scan needed). IMPLEMENT onward all use that
+  worktree path as their `cwd` — never the directory `quant-research-exec`
+  itself was invoked from, and never the pre-worktree tree PLAN read from.
+- **When `--cwd` is given explicitly**: SYNC and SETUP-WORKTREE and
+  MERGE+CLEANUP are all skipped entirely; the command behaves exactly as
+  if worktree management were absent, operating directly in the given
+  directory for every stage including PLAN. This is the opt-out for a
+  caller that already manages its own isolation (e.g. an interactive
+  Claude session that created and entered a worktree itself, the pattern
+  used earlier this session before this decision existed) — passing
+  `--cwd .` from inside such a worktree reproduces that manual flow
+  exactly.
+- **On a successful FINALIZE**: MERGE+CLEANUP runs — sync
+  `<default-branch>` to `origin/<default-branch>` again (it may have moved
+  during the cycle's run, which can take a long time), fast-forward-merge
+  the round's branch in (rebase-then-ff-merge if that fails), then
+  `git worktree remove` and `git branch -d`. This is the *only* thing that
+  prunes the worktree; nothing else does.
+- **On any hard error** (unparseable PLAN/VERIFY marker, exhausted fix
+  budget, a stage's own turn failing outright): the worktree and its
+  branch are left in place, uncommitted or committed-but-unmerged as the
+  failure left them, for the operator to inspect. `quant-research-exec`
+  never deletes evidence of a failed cycle.
+- Push is explicitly out of scope here, same as every other change in this
+  repo: MERGE+CLEANUP updates local `<default-branch>` only, per
+  `.agents/rules/coding-and-verification.md`'s "push remains the release
+  gate" — an operator (or a separate batched step) pushes when ready.
+
+Alternative considered: leave worktree management to the caller always
+(the manual pattern used for round 453 and the smoke test earlier this
+session). Rejected once `while true; do quant-research-exec; sleep <n>;
+done` with zero parameters became the explicit requirement — a caller
+that never touches this command between iterations cannot also be the one
+creating/entering/merging/cleaning up a worktree per round; the tool has
+to own that lifecycle itself for the loop to be safe at all.
 
 ## Risks / Trade-offs
 
@@ -322,6 +405,21 @@ which part of the cycle produced which event.
 - [`.claude/commands/quant/research.md`'s Bước 1-8 describe the old
   hand-driven flow] → Tracked as its own task (see tasks.md) so it isn't
   forgotten.
+- [Two `quant-research-exec` invocations run back-to-back (or genuinely
+  concurrently) without the operator changing anything between them] →
+  Each resolves its own round number and worktree name from
+  `research/quant/rounds/` freshly at SYNC time; a genuinely concurrent
+  pair could both compute the same `<N>` and collide creating the same
+  worktree path. This design does not add a lock (consistent with "no
+  automatic resolver/coordinator" project-wide) — `while true; do
+  quant-research-exec; sleep <n>; done` runs invocations sequentially
+  (each waits for the previous one to exit), which avoids this in the
+  documented usage; running two such loops at once against the same repo
+  is an operator error, not a case this design defends against.
+- [MERGE+CLEANUP's rebase-then-ff-merge hits a real conflict] → Ordinary
+  conflict resolution, surfaced as an error with the worktree left in
+  place (same as any other hard error) rather than silently discarded or
+  force-pushed through.
 
 ## Migration Plan
 
