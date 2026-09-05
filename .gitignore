@@ -11,7 +11,8 @@
 .env.*
 !.env.example
 *.log
-tools/orchestrator/accounts.yaml
+tools/orchestrator/config.yaml
+tools/orchestrator/logs/
 
 # Do not ignore raw/: handoff and research history are workspace artifacts.
 
