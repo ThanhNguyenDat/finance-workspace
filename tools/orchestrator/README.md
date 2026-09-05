@@ -19,7 +19,7 @@ three commands and no persistent coordination state.
   sends one assembled IMPLEMENT or FIX stage to the Codex SDK.
 
 The provider commands (`codex-exec` and `claude-exec`) accept `--prompt-file <path>`
-instead of a positional prompt, `--cwd <dir>`, `--timeout-seconds <n>` (default 300), `--model <name>`, and`--effort <level>` (both passed straight through to the SDK, which validates
+instead of a positional prompt, `--cwd <dir>`, `--timeout-seconds <n>` (default 300), `--model <name>`, and `--effort <level>` (both passed straight through to the SDK, which validates
 them — this tool does not duplicate that validation). Neither provider command reads
 or writes any state shared with another invocation — two concurrent runs
 never interact. The `quant-research-exec` command is stateless too.
@@ -115,7 +115,7 @@ back to.
 ### Role/scope advisory warning
 
 The provider commands accept `--role {plan,implement,verify,fix,final_verify}`
-and,when the invoked provider's `config.yaml` entry has a non-empty `scope`
+and, when the invoked provider's `config.yaml` entry has a non-empty `scope`
 list, print an advisory warning to stderr (and log a `{"type": "warning",
 ...}` line) if `--role` isn't in that list:
 
