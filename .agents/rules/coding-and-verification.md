@@ -17,33 +17,67 @@
 - Keep local `main` and `origin/main` equal — fetch and fast-forward local
   `main` before branching and again immediately after every merge, so the
   two never drift apart.
+- History stays fully linear: merge with `--ff-only`; if `main` moved during
+  the change, rebase the branch onto the latest `main` first, then
+  fast-forward. Never a plain `git merge` that creates a merge commit.
 
-### Solo-maintainer exception: commit directly to `main`
+### Per-change worktree workflow
 
-User confirmed explicitly (2026-08-19): this ecosystem (`finance-mw`,
-`finance-broker`, `finance-live-action`, `mt5`) has exactly one maintainer,
-so the branch/PR ceremony above exists to prevent conflicts between
-concurrent writers — a problem this project doesn't have. **Commit and push
-directly to `main`** for every change, across all four repos; do not create
-feature branches or PRs as a matter of routine. This has already been the
-actual practice throughout every session in this ecosystem (every commit in
-`git log` on every repo lands directly on `main`) — this note makes that
-explicit and searchable instead of leaving it as an unwritten, easy-to-miss
-inconsistency between this file and observed behavior.
+Every OpenSpec change gets its own git worktree and branch, in every
+affected repository (`finance-workspace`, `finance-mw`, `finance-broker`,
+`finance-live-action`, `mt5`), from the moment the change is scaffolded
+until it merges — no exception for a docs-only or single-file change. This
+supersedes a prior "commit directly to `main`" solo-maintainer exception:
+that exception assumed no concurrent writers ever touch the same tree,
+which stopped being true once a background Codex turn could commit to the
+same working tree an interactive session was also using at the same time
+(`adopt-per-change-worktree-workflow`, 2026-09-05).
 
-Direct-to-main means there is no mandatory feature-branch or PR ceremony, and
-a local commit on `main` is allowed. The **push remains the release gate**:
-non-trivial implementation must receive a fresh configured FINAL_VERIFY process
-before it is pushed. Provider-independent verification is preferred. When quota
-or an explicit phase pin yields the same provider, process-separated review plus
-all applicable objective evidence is required and must not be called independent.
+- **Location**: `.agents/worktrees/<change-name>` inside the repo being
+  changed — not `.claude/worktrees/`, so the location is shared/Codex-
+  visible like the rest of `.agents/`. Branch name is the change's own
+  kebab-case name, no prefix.
+- **Create**: `git worktree add .agents/worktrees/<change-name> -b
+  <change-name> origin/<default-branch>` (this already checks the new
+  branch out inside the new worktree — no separate `checkout` needed), then
+  switch into it with Claude Code's `EnterWorktree({ path: ... })`.
+- **Timing**: `finance-workspace`'s own worktree (it always holds
+  `openspec/changes/<name>/`) is created before running `openspec new
+  change`. Any other repository a cross-repo change touches gets its own
+  worktree lazily, right before the first edit lands there — a git worktree
+  cannot span repositories, so a cross-repo change has one worktree per
+  affected repo, sharing the change's branch name for traceability.
+- **Provider turns**: every `codex-exec`/`claude-exec`/`quant-research-exec`
+  call for the change passes `--cwd <that repo's worktree path>`, never the
+  main tree. This is the mechanism that actually removes the concurrency
+  risk.
+- **Merge**: fast-forward only (rebase onto the latest default branch first
+  if it moved), per repository, once that repository's branch has passed
+  FINAL_VERIFY (see required order below) — see the "History stays fully
+  linear" bullet above for the exact commands.
+- **Cleanup**: `EnterWorktree` was entered via `path`, so `ExitWorktree`
+  cannot `remove` it — only `action: "keep"` returns to the original
+  directory. After merging, clean up manually: `git worktree remove
+  .agents/worktrees/<change-name>` then `git branch -d <change-name>`.
+- Every affected repository must gitignore `.agents/worktrees/` — a nested
+  worktree shows up as an untracked directory in the outer repo's `git
+  status` otherwise.
+
+The **push remains the release gate**: non-trivial implementation must
+receive a fresh configured FINAL_VERIFY process before it is pushed.
+Provider-independent verification is preferred. When quota or an explicit
+phase pin yields the same provider, process-separated review plus all
+applicable objective evidence is required and must not be called
+independent.
 
 Required order for a non-trivial change:
 
 ```text
-PLAN (OpenSpec proposal/design/tasks) → IMPLEMENT → local checks → local commit
-→ independent VERIFY → FIX (if needed) → independent FINAL_VERIFY
-→ push main → GitHub Actions → Coolify → production verification
+PLAN (OpenSpec proposal/design/tasks, in the change's worktree) → IMPLEMENT
+→ local checks → local commit (on the change's branch) → independent VERIFY
+→ FIX (if needed) → independent FINAL_VERIFY → merge (ff/rebase, per repo)
+→ worktree/branch cleanup → push main → GitHub Actions → Coolify
+→ production verification
 ```
 
 Claude plans and verifies by default; Codex implements and fixes by default
@@ -59,8 +93,8 @@ implementer's own summary, not a separate provider identity.
 This does **not** relax anything else in this file: still run the full local
 verification pass before committing, still keep each commit small and
 reviewable, still push and track CI to a real green, still verify the deployed
-revision and behavior in production. The exception is narrowly about branch
-ceremony, not about skipping verification.
+revision and behavior in production. The worktree-per-change requirement is
+about isolating *where* edits happen, not about skipping verification.
 
 ## Required verification order
 

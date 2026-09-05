@@ -20,3 +20,6 @@ tools/orchestrator/logs/
 .ops/**/runtime/
 __pycache__/
 .venv/
+
+# Per-change worktree workflow (.agents/rules/coding-and-verification.md)
+.agents/worktrees/
