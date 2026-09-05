@@ -10632,6 +10632,13 @@ chỉ còn mở cho model/feature mechanism khác hoặc một data-quality roun
 scope riêng; không test lại logistic v1/v2. Chi tiết:
 `round453-DATA-ISSUE-decision-tree-temporal-v3-xau-rejects-btc-invalid-history.md`.
 
+
+**Round 454 (2026-09-05) — DATA-ISSUE:** item 8 thử `gaussian_naive_bayes_temporal_v4`, một cơ chế generative Gaussian Naive Bayes khác logistic regression Round 450/451/452 và decision tree Round 453, trên cùng temporal feature schema causal (`return_1`, `return_3`, `return_12`, `realized_vol_12`, `volume_surprise_24`). Dependency `linfa-bayes 0.8.1` smoke-compile pass; `cargo test -p finance-research` đạt **172/172** (baseline Round 453 là 169), fmt pass, clippy thường chỉ còn warning pre-existing, release Docker image build pass. Hai route dùng cutoff disjoint `2025-10-01T00:00:00Z`, `days=500`, split 60/20/20, 5m, fee 5 bps, slippage 2 bps, funding 1 bps.
+
+XAU/Exness có **97.048 nến**, train/validation/holdout **58.229/19.410/19.409**, 5m `unverified_gap_count=0` và 359 session-gap groups được authority xác nhận. Threshold 0,55 được chọn (246 validation trades): train/validation/holdout PnL **-2,27718/-2,59322/-1,11736 USD**, PF **0,4823/0,3978/0,2699**, holdout 80 trades và 5,6743 trades/tuần. Threshold 0,50 cũng lỗ nặng; 0,60 chỉ có 8 validation trades nên bị loại. XAU sub-result bị bác, không promote.
+
+BTC/Binance có **144.001 nến**, train/validation/holdout **86.401/28.800/28.800**, liên tục với `unverified_gap_count=0`, nhưng GaussianNB fail-closed trước fit tại `training candle 46853 has invalid OHLCV history` (boundary open-time tính trên 5m grid: `2024-10-28T16:25:00Z`). Không ghi BTC metric và không gọi đây là BTC rejection; classification tổng thể giữ **DATA-ISSUE**. Named next step là data-quality investigation riêng cho malformed BTC candle/lookback rồi mới chạy lại transfer; không interpolation/synthetic-fill trong round này. Không chạy Portfolio gate, không OpenSpec/OPS, không đổi production. Full evidence: `research/quant/rounds/round454-DATA-ISSUE-gaussian-naive-bayes-temporal-v4-xau-rejects-btc-invalid-history.md`.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
