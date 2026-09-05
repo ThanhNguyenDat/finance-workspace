@@ -1,7 +1,7 @@
 ## 1. Prompt assembly and round-number resolution
 
 - [x] 1.1 Add a helper that reads
-      `.agents/skills/quant-research-domain/SKILL.md` relative to `--cwd`,
+      `.agents/domain/quant-research-domain.md` relative to `--cwd`,
       strips the leading `---\n...\n---\n` frontmatter block, and returns
       the remaining body; raise a clear error (caught at the CLI boundary,
       `emit_error` + exit 1) when the file is missing or no closing

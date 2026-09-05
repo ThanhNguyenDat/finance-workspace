@@ -29,8 +29,11 @@ never interact. The `quant-research-exec` command is stateless too.
 `quant-research-exec` is a thin wrapper around the same `CodexProvider`
 machinery used by `codex-exec`, so it keeps the existing bounded turn,
 account-failover, redaction, event streaming, and JSONL logging behavior. It
-reads `.agents/skills/quant-research-domain/SKILL.md` relative to `--cwd`,
-removes its YAML frontmatter, and appends the supplied stage brief.
+reads `.agents/domain/quant-research-domain.md` relative to `--cwd` (a raw
+reference doc, deliberately outside `.agents/skills/` so it isn't scanned or
+synced as an invocable skill) and appends the supplied stage brief. It also
+best-effort `chmod`s that file read-only after each read, as a guard against
+an agent editing domain rules mid-round.
 
 For `--role implement`, `--round <N>` is optional. When omitted, the command
 scans `research/quant/rounds/round<N>-*.md` under `--cwd` and uses the next

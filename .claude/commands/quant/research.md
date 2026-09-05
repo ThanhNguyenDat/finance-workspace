@@ -8,7 +8,7 @@ hay orchestrator riêng nào chạy nền cho vòng này nữa). Không tạo `/
 daemon, scheduler, sleep, hay tự gọi lại chính mình.
 
 **Trước khi bắt đầu**: đọc và áp dụng
-[quant-research-domain](../../../.agents/skills/quant-research-domain/SKILL.md)
+[quant-research-domain](../../../.agents/domain/quant-research-domain.md)
 — đó là nguồn duy nhất cho nhiệm vụ của vòng, ràng buộc backtest, tiêu chí
 phân loại kết quả, và promotion gate. File này (`research.md`) chỉ định
 nghĩa **flow** điều phối Claude/Codex bên dưới; không lặp lại nội dung của
@@ -101,7 +101,7 @@ index, dọn container/tunnel tạm, báo giới hạn thực tế.
 ## PROMOTE
 
 Nếu classification là `PROMOTE`, xem
-[quant-research-domain](../../../.agents/skills/quant-research-domain/SKILL.md)
+[quant-research-domain](../../../.agents/domain/quant-research-domain.md)
 "Khi kết quả là PROMOTE" — đây là bước Claude PLAN kế tiếp (dùng
 `/opsx:propose`, xem `.claude/commands/opsx/propose.md`), không giao cho
 Codex.

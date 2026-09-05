@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import functools
 import re
+import stat
 import sys
 from pathlib import Path
 from typing import NoReturn
@@ -30,30 +31,29 @@ _ROUND_FILE_RE = re.compile(r"^round(\d+)-.*\.md$")
 _ROLES = ("implement", "fix")
 
 
-def read_domain_skill(cwd: Path) -> str:
-    """Read the quant domain skill body, excluding its YAML frontmatter."""
+def read_domain_rules(cwd: Path) -> str:
+    """Read the raw quant domain rules content.
 
-    path = cwd / ".agents" / "skills" / "quant-research-domain" / "SKILL.md"
+    Deliberately outside `.agents/skills/`: that directory is scanned and
+    synced as invocable agent skills, which risks an agent treating this
+    reference content as something to revise. `.agents/domain/` holds plain
+    reference material instead -- no frontmatter, no workflow references,
+    just the domain rules text as-is."""
+
+    path = cwd / ".agents" / "domain" / "quant-research-domain.md"
     try:
         content = path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise FileNotFoundError(
-            f"quant research domain skill not found: {path}"
+            f"quant research domain rules not found: {path}"
         ) from exc
 
-    opening = "---\n"
-    closing = "\n---\n"
-    if not content.startswith(opening):
-        raise ValueError(
-            f"malformed frontmatter in quant research domain skill: {path}"
-        )
-    closing_index = content.find(closing, len(opening))
-    if closing_index == -1:
-        raise ValueError(
-            "malformed frontmatter in quant research domain skill "
-            f"(missing closing delimiter): {path}"
-        )
-    return content[closing_index + len(closing) :]
+    try:
+        path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+    except OSError:
+        pass  # best-effort: read-only protection, not the primary function
+
+    return content
 
 
 def highest_round_number(cwd: Path) -> int:
@@ -209,7 +209,7 @@ def main(
     )
 
     async def _main() -> int:
-        domain_body = read_domain_skill(cwd)
+        domain_body = read_domain_rules(cwd)
         return await run_turn(
             assemble_prompt(domain_body, prompt),
             cwd=args.cwd,

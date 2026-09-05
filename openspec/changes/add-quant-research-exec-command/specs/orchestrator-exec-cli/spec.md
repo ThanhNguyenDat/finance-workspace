@@ -68,7 +68,7 @@ provide.
 
 ### Requirement: Prompt is assembled from the round's domain-rules skill
 `quant-research-exec` SHALL read
-`.agents/skills/quant-research-domain/SKILL.md` relative to `--cwd`, remove
+`.agents/domain/quant-research-domain.md` relative to `--cwd`, remove
 its leading YAML frontmatter block, and use the remaining body as the base
 instructions for the Codex turn, followed by the operator-supplied prompt as
 that turn's specific brief. The command SHALL NOT duplicate or hard-code
@@ -78,13 +78,13 @@ non-zero with an error before invoking the Codex SDK.
 
 #### Scenario: Successful prompt assembly
 - **WHEN** an operator runs `quant-research-exec --role implement "<plan>"`
-  and `.agents/skills/quant-research-domain/SKILL.md` exists with a
+  and `.agents/domain/quant-research-domain.md` exists with a
   well-formed frontmatter block
 - **THEN** the Codex turn receives a prompt consisting of that file's body
   (frontmatter removed) followed by `<plan>`
 
 #### Scenario: Missing instructions file
-- **WHEN** `.agents/skills/quant-research-domain/SKILL.md` does not exist
+- **WHEN** `.agents/domain/quant-research-domain.md` does not exist
   under `--cwd`
 - **THEN** the command exits non-zero with an error and does not invoke the
   Codex SDK

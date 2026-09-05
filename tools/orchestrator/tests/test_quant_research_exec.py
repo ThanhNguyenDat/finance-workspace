@@ -5,30 +5,30 @@ import pytest
 from orchestrator.cli import _shared, quant_research_exec
 
 
-def _write_domain_skill(cwd: Path, content: str) -> None:
-    path = cwd / ".agents" / "skills" / "quant-research-domain" / "SKILL.md"
+def _write_domain_rules(cwd: Path, content: str) -> None:
+    path = cwd / ".agents" / "domain" / "quant-research-domain.md"
     path.parent.mkdir(parents=True)
     path.write_text(content, encoding="utf-8")
 
 
-def test_read_domain_skill_strips_frontmatter(tmp_path) -> None:
-    _write_domain_skill(
-        tmp_path, "---\nname: domain\ndescription: test\n---\n\n## Rules\nbody\n"
-    )
+def test_read_domain_rules_returns_raw_content(tmp_path) -> None:
+    _write_domain_rules(tmp_path, "## Rules\nbody\n")
 
-    assert quant_research_exec.read_domain_skill(tmp_path) == "\n## Rules\nbody\n"
+    assert quant_research_exec.read_domain_rules(tmp_path) == "## Rules\nbody\n"
 
 
-def test_read_domain_skill_reports_missing_file(tmp_path) -> None:
-    with pytest.raises(FileNotFoundError, match="domain skill not found"):
-        quant_research_exec.read_domain_skill(tmp_path)
+def test_read_domain_rules_reports_missing_file(tmp_path) -> None:
+    with pytest.raises(FileNotFoundError, match="domain rules not found"):
+        quant_research_exec.read_domain_rules(tmp_path)
 
 
-def test_read_domain_skill_reports_missing_closing_delimiter(tmp_path) -> None:
-    _write_domain_skill(tmp_path, "---\nname: domain\ndescription: test\n")
+def test_read_domain_rules_makes_file_read_only(tmp_path) -> None:
+    _write_domain_rules(tmp_path, "## Rules\nbody\n")
+    path = tmp_path / ".agents" / "domain" / "quant-research-domain.md"
 
-    with pytest.raises(ValueError, match="missing closing delimiter"):
-        quant_research_exec.read_domain_skill(tmp_path)
+    quant_research_exec.read_domain_rules(tmp_path)
+
+    assert not (path.stat().st_mode & 0o222)
 
 
 def test_highest_round_number_scans_round_files(tmp_path) -> None:
@@ -110,7 +110,7 @@ def test_fix_without_round_exits_before_provider_call(tmp_path, capsys) -> None:
 
 
 def test_derived_round_change_scopes_log_path(tmp_path) -> None:
-    _write_domain_skill(tmp_path, "---\nname: domain\n---\nDOMAIN")
+    _write_domain_rules(tmp_path, "DOMAIN")
     from .fakes import (
         FakeThread,
         FakeTurnHandle,
@@ -139,9 +139,7 @@ def test_derived_round_change_scopes_log_path(tmp_path) -> None:
 
 
 def test_prompt_uses_domain_body_then_round_brief(tmp_path) -> None:
-    _write_domain_skill(
-        tmp_path, "---\nname: domain\ndescription: test\n---\nDOMAIN RULES"
-    )
+    _write_domain_rules(tmp_path, "DOMAIN RULES")
     from .fakes import (
         FakeThread,
         FakeTurnHandle,

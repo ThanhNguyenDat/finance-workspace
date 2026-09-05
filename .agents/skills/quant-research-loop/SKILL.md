@@ -18,7 +18,7 @@ result (`REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, `NEEDS-MORE-RESEARCH`, or
 This skill is the round **lifecycle** (who does what, in what order). For
 the round's **domain rules** — task scope, backtest constraints, the exact
 classification criteria, and the promotion gate conditions — read
-[quant-research-domain](../quant-research-domain/SKILL.md). Every stage
+[quant-research-domain](../../domain/quant-research-domain.md). Every stage
 below (Claude's plan/verify, Codex's implement/fix) must satisfy that
 skill's rules, not just this one's ordering.
 

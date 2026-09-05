@@ -11,7 +11,7 @@ already implemented and unchanged by this design:
   against `openspec/changes/` on disk; omitted falls back to
   `adhoc-<date>`), `check_role_scope`/`emit_warning` (advisory only),
   `emit_event`/`emit_result`/`emit_error` (redacted stdout + JSONL).
-- `.agents/skills/quant-research-domain/SKILL.md`: the round's domain rules
+- `.agents/domain/quant-research-domain.md`: the round's domain rules
   (task scope, backlog-reading rules, backtest constraints, classification,
   promotion gate) — separated out of `.claude/commands/quant/research.md`
   (which now holds only the round lifecycle/flow) specifically so this
@@ -30,7 +30,7 @@ already implemented and unchanged by this design:
   single command, instead of hand-copying the plan into a file and
   hand-building `--change`/`--role` flags for `codex-exec`.
 - Keep the round's domain rules in exactly one place
-  (`.agents/skills/quant-research-domain/SKILL.md`); this command reads that
+  (`.agents/domain/quant-research-domain.md`); this command reads that
   file, it does not fork or restate its content.
 - Reuse every existing `CodexProvider`/logging/redaction/failover behavior
   unchanged — this command is a thin, purpose-specific composition, not a
@@ -48,7 +48,7 @@ already implemented and unchanged by this design:
   slash-command/skill discovery to invoke `/opsx:propose` even if it were
   Claude's turn running here. `quant-research-exec` never runs this step;
   the operator's own Claude session does it, exactly as documented in
-  `.agents/skills/quant-research-domain/SKILL.md`'s "Khi kết quả là
+  `.agents/domain/quant-research-domain.md`'s "Khi kết quả là
   PROMOTE" section.
 - Any cross-invocation memory (which round is "in progress", how many fix
   attempts have run). Each invocation is independent and stateless, matching
@@ -128,8 +128,8 @@ one-off Codex turn.
 **4. Prompt assembly: strip frontmatter, prepend the domain skill's body,
 append the caller's brief.**
 
-Read `.agents/skills/quant-research-domain/SKILL.md` from
-`<cwd>/.agents/skills/quant-research-domain/SKILL.md`, split off the leading
+Read `.agents/domain/quant-research-domain.md` from
+`<cwd>/.agents/domain/quant-research-domain.md`, split off the leading
 `---\nname: ...\ndescription: "..."\n---\n` YAML frontmatter block, and use
 everything after it as the base instructions. The final prompt sent to
 Codex is `<domain skill body>\n\n## This round's brief\n\n<PROMPT>`. Missing
@@ -179,7 +179,7 @@ decision — both already state the bound.
   Codex's own turn finds a mismatched or missing round file and reports
   that, rather than silently corrupting the wrong file.
 - [Frontmatter-splitting logic breaks if
-  `.agents/skills/quant-research-domain/SKILL.md`'s format changes] → Narrow,
+  `.agents/domain/quant-research-domain.md`'s format changes] → Narrow,
   well-tested string operation (split on the second `---` line) with a hard
   error on failure rather than silent fallback; covered by a unit test using
   the real current file content.
