@@ -10604,6 +10604,34 @@ feature mechanism khác, không chạy lại v2.
 
 Evidence: `round452-REJECTED-logistic-temporal-v2-fails-earlier-cutoff-robustness-test.md`.
 
+**Round 453 (2026-09-05) — DATA-ISSUE:** item 8 thử một mechanism khác thật
+với logistic: `linfa-trees 0.8.1` decision tree nông, dùng lại causal temporal
+schema Round 451 (`return_1/3/12`, `realized_vol_12`, `volume_surprise_24`),
+depth `{3,4,5}`, threshold `{0,50;0,55;0,60}`, minimum 20 validation trades.
+Smoke compile dưới cap 2 CPU / 4 GiB RAM / 6 GiB swap exit 0; `cargo test
+-p finance-research` 169/169 pass; release Docker image build pass.
+
+XAU/Exness có cửa sổ mới với **97.450 nến**, train/validation/holdout
+58.470/19.490/19.490, holdout thực tế 2026-05-28 → 2026-09-04 và 0
+unverified gap. Cell được chọn là depth 3 / threshold 0,50; PF
+train/validation/holdout **0,5335 / 0,3352 / 0,3665**, PnL
+**-8,28310 / -7,66372 / -4,15145**, 534 holdout trades (~37,79/tuần).
+Toàn bộ depth 3-5 ở threshold 0,50 đều PF<1 trên cả ba split; threshold cao
+hơn là zero-trade. XAU sub-result vì vậy bị bác.
+
+BTC/Binance có **144.001 nến**, holdout 2026-05-28 → 2026-09-05 và 0
+unverified gap, nhưng cả ba ML adapter fail closed tại `training candle 36940
+has invalid OHLCV history`. Không ghi metric BTC và không gọi đây là
+decision-tree transfer. Vì round yêu cầu route XAU rồi transfer BTC nhưng
+transfer bị chặn bởi dữ liệu, classification tổng thể là **DATA-ISSUE**, không
+phải promote và không phải một BTC rejection được bịa ra.
+
+Không chạy Portfolio gate, không có Sharpe/Sortino/SQN/decision-rate
+Portfolio-faithful; không tạo OpenSpec/OPS, không đổi production. ML item 8
+chỉ còn mở cho model/feature mechanism khác hoặc một data-quality round có
+scope riêng; không test lại logistic v1/v2. Chi tiết:
+`round453-DATA-ISSUE-decision-tree-temporal-v3-xau-rejects-btc-invalid-history.md`.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
