@@ -5,7 +5,7 @@ Minimal, stateless CLI tooling for running a single bounded provider turn.
 The previous `tools/orchestrator/` (SQLite coordinator, lease/fencing,
 account rotation, operator-approval-question flow, full phase-agent
 lifecycle) was removed intentionally. This package starts over with exactly
-two commands and no persistent coordination state.
+three commands and no persistent coordination state.
 
 ## Commands
 
@@ -15,17 +15,43 @@ two commands and no persistent coordination state.
 - `claude-exec "<prompt>"` — sends the prompt to the Claude Agent SDK for
   exactly one bounded turn, streams turn/tool events to stdout, prints the
   final result, and exits non-zero on failure or timeout.
+- `quant-research-exec "<brief>"` — reads the quant research domain rules and
+  sends one assembled IMPLEMENT or FIX stage to the Codex SDK.
 
-Both accept `--prompt-file <path>` instead of a positional prompt, `--cwd
-<dir>`, `--timeout-seconds <n>` (default 300), `--model <name>`, and
-`--effort <level>` (both passed straight through to the SDK, which validates
-them — this tool does not duplicate that validation). Neither command reads
+The provider commands (`codex-exec` and `claude-exec`) accept `--prompt-file <path>`
+instead of a positional prompt, `--cwd <dir>`, `--timeout-seconds <n>` (default 300), `--model <name>`, and`--effort <level>` (both passed straight through to the SDK, which validates
+them — this tool does not duplicate that validation). Neither provider command reads
 or writes any state shared with another invocation — two concurrent runs
-never interact.
+never interact. The `quant-research-exec` command is stateless too.
+
+### quant-research-exec
+
+`quant-research-exec` is a thin wrapper around the same `CodexProvider`
+machinery used by `codex-exec`, so it keeps the existing bounded turn,
+account-failover, redaction, event streaming, and JSONL logging behavior. It
+reads `.agents/skills/quant-research-domain/SKILL.md` relative to `--cwd`,
+removes its YAML frontmatter, and appends the supplied stage brief.
+
+For `--role implement`, `--round <N>` is optional. When omitted, the command
+scans `research/quant/rounds/round<N>-*.md` under `--cwd` and uses the next
+round number. For `--role fix`, `--round <N>` is required and the command
+rejects the invocation before starting a provider turn when it is missing.
+
+The log scope is derived from the resolved round and cannot be overridden:
+
+```bash
+uv run --project tools/orchestrator quant-research-exec \
+  --role implement --round 453 --prompt-file ./plan.txt
+# -> tools/orchestrator/logs/quant-research-round-453/quant-research-exec.log
+```
+
+Call `--role fix` at most once per round. If Claude's re-check still finds a
+problem after that fix, close the round as `NEEDS-MORE-RESEARCH` or
+`DATA-ISSUE` instead of fixing again.
 
 ### Logging
 
-Both commands append one JSON line per streamed event, per result, and per
+All commands append one JSON line per streamed event, per result, and per
 error (each with a UTC timestamp) to a log file, in addition to printing to
 stdout/stderr — a running history on top of the same per-invocation output.
 
@@ -88,8 +114,8 @@ back to.
 
 ### Role/scope advisory warning
 
-Both commands accept `--role {plan,implement,verify,fix,final_verify}` and,
-when the invoked provider's `config.yaml` entry has a non-empty `scope`
+The provider commands accept `--role {plan,implement,verify,fix,final_verify}`
+and,when the invoked provider's `config.yaml` entry has a non-empty `scope`
 list, print an advisory warning to stderr (and log a `{"type": "warning",
 ...}` line) if `--role` isn't in that list:
 

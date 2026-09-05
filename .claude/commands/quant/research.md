@@ -52,15 +52,15 @@ tả chính xác 4 bước dưới đây, bằng tiếng Anh, cho bất kỳ age
 Giao plan ở trên cho Codex chạy backtest thật, qua `tools/orchestrator`:
 
 ```bash
-uv run --project tools/orchestrator codex-exec \
+uv run --project tools/orchestrator quant-research-exec \
   --prompt-file <đường dẫn file plan> \
   --role implement \
-  --change quant-research-round-<N> \
+  --round <N> \
   --timeout-seconds 3600
 ```
 
-`--change quant-research-round-<N>` (cùng `<N>` ở bước 1) để log của cả
-Claude lẫn Codex trong vòng này gom chung một thư mục
+`quant-research-exec` tự suy ra `change=quant-research-round-<N>` (cùng `<N>` ở
+bước 1) để log của Codex trong vòng này nằm trong một thư mục
 `tools/orchestrator/logs/quant-research-round-<N>/` thay vì rơi vào bucket
 `adhoc-<ngày>` không liên quan. Yêu cầu Codex trong plan: chạy đúng ràng buộc
 domain skill nêu trên, phân loại kết quả, và **viết draft** round file + cập
@@ -79,10 +79,10 @@ bước 7.
 ## Bước 7 — Codex (FIX), chỉ khi bước 6 phát hiện vấn đề
 
 ```bash
-uv run --project tools/orchestrator codex-exec \
+uv run --project tools/orchestrator quant-research-exec \
   --prompt-file <đường dẫn file mô tả vấn đề cụ thể> \
   --role fix \
-  --change quant-research-round-<N> \
+  --round <N> \
   --timeout-seconds 1800
 ```
 
