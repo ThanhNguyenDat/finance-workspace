@@ -78,6 +78,97 @@ class _FailoverProvider(BaseProvider):
         return ProviderResult(success=False, text=None, error=f"failed-{self._attempt}")
 
 
+class _RaisingProvider(BaseProvider):
+    """Fake provider whose stream() raises, exercising the generic exception
+    safety net in `_run_one_attempt` (rather than a graceful failed result)."""
+
+    name = "fake-raising"
+    ACCOUNT_FAILOVER_ERRORS = frozenset({"exhausted"})
+
+    def __init__(
+        self,
+        *,
+        accounts=None,
+        exc_factory=lambda: Exception("boom"),
+        pre_set_error_code: str | None = None,
+        classify_result: str | None = None,
+        succeed_on_attempt: int | None = None,
+    ) -> None:
+        super().__init__(accounts=accounts)
+        self._exc_factory = exc_factory
+        self._pre_set_error_code = pre_set_error_code
+        self._classify_result = classify_result
+        self._succeed_on_attempt = succeed_on_attempt
+        self._attempt = -1
+        self.started_accounts: list[str | None] = []
+
+    async def start_turn(
+        self, prompt: str, *, cwd: str | None, account: str | None
+    ) -> None:
+        self._attempt += 1
+        self.started_accounts.append(account)
+
+    async def stream(self) -> AsyncIterator[Any]:
+        if self._attempt == self._succeed_on_attempt:
+            yield "ok"
+            return
+        if self._pre_set_error_code is not None:
+            self._last_error_code = self._pre_set_error_code
+            yield "pre-event"
+        raise self._exc_factory()
+
+    async def interrupt(self) -> None:
+        pass
+
+    def _classify_exception(self, exc: Exception) -> str | None:
+        return self._classify_result
+
+    def collect_result(self) -> ProviderResult:
+        return ProviderResult(success=True, text=f"ok-{self._attempt}", error=None)
+
+
+def test_exception_with_preset_error_code_triggers_failover() -> None:
+    provider = _RaisingProvider(
+        accounts=["one", "two"], pre_set_error_code="exhausted", succeed_on_attempt=1
+    )
+    result = asyncio.run(
+        provider.run_turn("p", cwd=None, timeout_seconds=5, on_event=lambda _e: None)
+    )
+    assert result == ProviderResult(success=True, text="ok-1", error=None)
+    assert provider.started_accounts == ["one", "two"]
+
+
+def test_exception_without_classification_does_not_trigger_failover() -> None:
+    provider = _RaisingProvider(accounts=["one", "two"], classify_result=None)
+    result = asyncio.run(
+        provider.run_turn("p", cwd=None, timeout_seconds=5, on_event=lambda _e: None)
+    )
+    assert result.success is False
+    assert "boom" in (result.error or "")
+    assert provider.started_accounts == ["one"]
+
+
+def test_exception_classified_by_hook_triggers_failover() -> None:
+    provider = _RaisingProvider(
+        accounts=["one", "two"], classify_result="exhausted", succeed_on_attempt=1
+    )
+    result = asyncio.run(
+        provider.run_turn("p", cwd=None, timeout_seconds=5, on_event=lambda _e: None)
+    )
+    assert result == ProviderResult(success=True, text="ok-1", error=None)
+    assert provider.started_accounts == ["one", "two"]
+
+
+def test_keyboard_interrupt_is_not_caught_by_the_exception_safety_net() -> None:
+    provider = _RaisingProvider(accounts=["one"], exc_factory=KeyboardInterrupt)
+    with pytest.raises(KeyboardInterrupt):
+        asyncio.run(
+            provider.run_turn(
+                "p", cwd=None, timeout_seconds=5, on_event=lambda _e: None
+            )
+        )
+
+
 def test_run_turn_forwards_events_and_returns_collected_result() -> None:
     seen: list[Any] = []
     provider = _FakeProvider(events=["a", "b"])

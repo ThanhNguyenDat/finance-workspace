@@ -62,6 +62,24 @@ class FakeTurnHandle:
         self.interrupted = True
 
 
+class RaisingTurnHandle:
+    """Simulates an SDK exception mid-turn (e.g. CodexRpcError,
+    TransportClosedError) instead of a graceful completed/failed turn."""
+
+    def __init__(self, exc: Exception, events: list | None = None):
+        self._exc = exc
+        self._events = events or []
+        self.interrupted = False
+
+    async def stream(self):
+        for turn_event in self._events:
+            yield turn_event
+        raise self._exc
+
+    async def interrupt(self):
+        self.interrupted = True
+
+
 class HangingTurnHandle:
     def __init__(self):
         self.interrupted = False

@@ -69,6 +69,18 @@ class BaseProvider(ABC):
     async def aclose(self) -> None:  # noqa: B027 - intentionally optional to override
         """Release resources. Default no-op; override if a provider needs one."""
 
+    def _classify_exception(self, exc: Exception) -> str | None:
+        """Map an SDK exception to a failover error code, or `None`.
+
+        Called only when `_last_error_code` is still unset after the
+        exception (an earlier event's classification always takes
+        precedence). Default: no classification -- a provider whose SDK
+        never raises an account-exhaustion-shaped exception (e.g. Codex,
+        which reports it gracefully instead) has nothing to override.
+        """
+
+        return None
+
     async def _run_one_attempt(
         self,
         prompt: str,
@@ -94,6 +106,12 @@ class BaseProvider(ABC):
                 )
             except ProviderTimeoutError as exc:
                 return ProviderResult(success=False, text=None, error=str(exc))
+            except Exception as exc:  # noqa: BLE001 - SDK boundary, see design.md
+                if self._last_error_code is None:
+                    self._last_error_code = self._classify_exception(exc)
+                return ProviderResult(
+                    success=False, text=None, error=f"{type(exc).__name__}: {exc}"
+                )
         finally:
             await self.aclose()
 

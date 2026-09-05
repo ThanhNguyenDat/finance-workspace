@@ -11,7 +11,12 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Callable
 from typing import Any, cast
 
-from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ResultMessage
+from claude_agent_sdk import (
+    AssistantMessage,
+    ClaudeAgentOptions,
+    ResultError,
+    ResultMessage,
+)
 from claude_agent_sdk import query as default_query
 
 from ..utils.config import resolve_account_list
@@ -20,6 +25,16 @@ from .base import BaseProvider, ProviderResult
 QueryFn = Callable[..., AsyncIterator[Any]]
 
 ACCOUNTS_ENV_VAR = "ORCHESTRATOR_CLAUDE_ACCOUNTS"
+
+# HTTP status -> AssistantMessage.error-shaped code, for classifying a
+# ResultError the SDK raised instead of yielding a graceful result. Any
+# other status (or a non-ResultError exception) is left unclassified.
+_RESULT_ERROR_STATUS_CODES = {
+    401: "authentication_failed",
+    403: "authentication_failed",
+    402: "billing_error",
+    429: "rate_limit",
+}
 
 
 def configured_accounts() -> list[str | None]:
@@ -79,6 +94,11 @@ class ClaudeProvider(BaseProvider):
     async def interrupt(self) -> None:
         if self._stream is not None:
             await self._stream.aclose()
+
+    def _classify_exception(self, exc: Exception) -> str | None:
+        if isinstance(exc, ResultError) and exc.api_error_status is not None:
+            return _RESULT_ERROR_STATUS_CODES.get(exc.api_error_status)
+        return None
 
     def collect_result(self) -> ProviderResult:
         if self._result_message is None:
