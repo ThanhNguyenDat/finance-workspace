@@ -17,75 +17,101 @@
       query_fn asserting the options object carries the given `resume`
       value, and that `last_session_id` reads the result message's session
       id after a turn.
+- [ ] 1.4 Confirm what tool access (bash, web search) a headless
+      `ClaudeProvider`/`claude_agent_sdk` turn has available by default,
+      and whether it needs explicit `ClaudeAgentOptions` configuration to
+      match the domain rules' backlog-exhaustion fallback (Module 1's
+      multi-source search when the internal backlog is exhausted). Record
+      the finding in this task (edit this line with what was found) rather
+      than assuming; adjust PLAN's turn configuration (task 2.2) if needed.
 
 ## 2. Cycle orchestration
 
-- [ ] 2.1 Rewrite `quant_research_exec.py`'s CLI surface: drop `--role`,
-      keep `--round` (same auto-detect-for-implement semantics, now
-      unconditional since there's one entry point), drop `--model`/
-      `--effort`, raise the default `--timeout-seconds` to 3600. Verify
-      `--help` output matches (no `--role`, no `--model`, no `--effort`,
-      default shown as 3600).
-- [ ] 2.2 Implement the IMPLEMENT stage: one `CodexProvider.run_turn` with
-      the domain rules + supplied plan, `resume_id=None` (fresh thread),
-      capturing `codex_session_id` from `last_session_id` after. Verify
-      with a fake Codex client that the assembled prompt matches the
-      existing (already-shipped) domain-rules-plus-brief shape.
-- [ ] 2.3 Implement the VERIFY stage: one `ClaudeProvider.run_turn` given
-      the domain rules, a description of what IMPLEMENT/FIX produced (the
-      round file path, CSV path, log path), and the `VERIFY_RESULT:`
-      format instruction; parse the last matching `VERIFY_RESULT:` line
-      per design.md Decision 3. Verify: PASS/FAIL/QUESTION are each parsed
-      correctly from a fake Claude result string; a result with no
+- [ ] 2.1 Rewrite `quant_research_exec.py`'s CLI surface: drop `--role`;
+      make the positional `PROMPT`/`--prompt-file` optional PLAN guidance
+      (not a required brief); keep `--round` (auto-detect, resolved before
+      PLAN runs); replace `--model`/`--effort` with `--codex-model`/
+      `--codex-effort`/`--codex-escalated-model`/`--claude-model`/
+      `--claude-effort`/`--claude-escalated-model`; raise the default
+      `--timeout-seconds` to 3600. Verify `--help` shows no `--role`, no
+      generic `--model`/`--effort`, all six new flags, and that
+      `quant-research-exec` with zero arguments parses successfully
+      (no "required" error).
+- [ ] 2.2 Implement the PLAN stage: one `ClaudeProvider.run_turn` with the
+      domain rules, the round-selection backlog files (index.md, metrics
+      CSV, recent round files), any optional operator guidance, and the
+      `PLAN_BRIEF:` format instruction (informed by task 1.4's findings for
+      tool access); parse the brief; capture `claude_session_id` from
+      `last_session_id`. Verify with a fake Claude client that a missing
+      `PLAN_BRIEF:` line raises the documented hard error before Codex is
+      ever invoked.
+- [ ] 2.3 Implement the IMPLEMENT stage: one `CodexProvider.run_turn` with
+      the domain rules + PLAN's brief, `resume_id=None` (fresh thread),
+      capturing `codex_session_id` from `last_session_id` after.
+- [ ] 2.4 Implement the VERIFY stage as a reusable function taking an
+      effort/model override: one `ClaudeProvider.run_turn` (resuming
+      `claude_session_id`) given a description of what IMPLEMENT/FIX
+      produced (round file path, CSV path, log path) and the
+      `VERIFY_RESULT:` format instruction; parse the last matching
+      `VERIFY_RESULT:` line, requiring VERIFY to judge evidence/
+      classification trustworthiness only (an honest negative outcome is
+      `PASS`, never `DEFECT`). Verify: PASS/DEFECT/QUESTION are each
+      parsed correctly from a fake Claude result string; a result with no
       matching line raises the documented hard error before any further
       stage runs.
-- [ ] 2.4 Implement the ASK round-trip: on `QUESTION <text>`, one Codex
+- [ ] 2.5 Implement the ASK round-trip: on `QUESTION <text>`, one Codex
       turn (resuming `codex_session_id`) answering `<text>`, then one
       Claude turn (resuming `claude_session_id`) with that answer,
-      accepting only `PASS`/`FAIL` from the continuation (a second
+      accepting only `PASS`/`DEFECT` from the continuation (a second
       `QUESTION` here is a hard error, not another round-trip). Verify
       with fakes asserting exactly one Codex turn and one Claude turn run
       for a `QUESTION` verdict, and that a second `QUESTION` in the
       continuation raises the documented error.
-- [ ] 2.5 Implement the FIX stage: on `FAIL` from the *first* verify pass,
-      one Codex turn (resuming `codex_session_id`) with the `FAIL` issue
-      text, then one more VERIFY pass (task 2.3's logic, reused). Verify
-      with fakes that FIX runs exactly once even if the re-verify also
-      fails (task 2.6 covers what happens then).
-- [ ] 2.6 Implement CLOSE-HONEST: on `FAIL` from the *second* verify pass
-      (i.e., after one FIX already ran), one Codex turn (resuming
-      `codex_session_id`) instructing an honest `NEEDS-MORE-RESEARCH`/
-      `DATA-ISSUE` reclassification and commit, skipping FINALIZE. Verify
-      no second FIX turn ever runs in this path.
-- [ ] 2.7 Implement FINALIZE: on `PASS` (first or post-fix verify pass),
-      one Codex turn (resuming `codex_session_id`) instructing commit and
-      cleanup. Verify this is the only path that reaches FINALIZE.
-- [ ] 2.8 Add a `stage` field to every JSONL log line (per design.md
-      Decision 8), reusing the existing `--change quant-research-round-<N>`-
-      derived log path unchanged. Verify log lines from a full fake cycle
-      each carry the correct `stage` value.
+- [ ] 2.6 Implement the bounded FIX loop: on `DEFECT`, up to 5 attempts of
+      (one Codex FIX turn resuming `codex_session_id` with the `DEFECT`
+      issue text, then task 2.4's VERIFY logic again resuming
+      `claude_session_id`). Attempts 1-2 use the given/default
+      `--codex-*`/`--claude-*` model/effort; attempt 3 onward escalates to
+      each provider's highest effort (and its `--*-escalated-model` if
+      given). If the 5th re-VERIFY still returns `DEFECT`, exit non-zero
+      with an error and do not run FINALIZE. Verify with fakes: exactly 5
+      FIX turns run when every re-VERIFY keeps returning `DEFECT` (never a
+      6th), attempts 1-2 use the base model/effort and attempt 3+ use the
+      escalated values, and a `PASS` on any attempt stops the loop
+      immediately and proceeds to FINALIZE.
+- [ ] 2.7 Implement FINALIZE: on `PASS` (from the first VERIFY pass or any
+      re-VERIFY within the fix loop), one Codex turn (resuming
+      `codex_session_id`) instructing commit and cleanup. Verify this is
+      the only path that reaches FINALIZE, and that exhausting the fix
+      loop (task 2.6) never reaches it.
+- [ ] 2.8 Add a `stage` field to every JSONL log line (`plan`, `implement`,
+      `verify`, `ask`, `fix`, `finalize`), reusing the existing
+      `--change quant-research-round-<N>`-derived log path unchanged.
+      Verify log lines from a full fake cycle each carry the correct
+      `stage` value.
 
 ## 3. Documentation
 
 - [ ] 3.1 Rewrite `tools/orchestrator/README.md`'s `quant-research-exec`
-      section for the new one-invocation cycle (drop `--role`/`--model`/
-      `--effort` mentions, document the verify/fix/close-honest/finalize
-      shape and the `stage` log field). Verify by reading it against the
-      implemented CLI and log output.
-- [ ] 3.2 Rewrite `.claude/commands/quant/research.md`'s Bước 3-8 to match:
-      Claude PLAN hands the plan to one `quant-research-exec` call; Claude
-      reads back the finished round's evidence for a final sanity check
-      instead of driving VERIFY/FIX itself turn-by-turn. Verify by reading
-      the updated file for internal consistency with the new command
-      behavior.
-- [ ] 3.3 Add a task to reconcile `add-quant-research-exec-command`'s
-      still-unarchived spec delta (`--role implement/fix`,
-      `.agents/domain/...` prompt assembly with no session continuity)
-      with this change's superseding delta before either is archived —
-      archiving both as-is would leave two deltas describing contradictory
-      requirements for the same command. Verify `openspec validate` on
-      both changes (or the combined result if archived together) does not
-      report a conflict.
+      section for the zero-required-argument full cycle (drop `--role`/
+      generic `--model`/`--effort` mentions, document the new per-provider
+      model/effort/escalated-model flags, the plan/verify/fix(5-attempt,
+      escalating)/finalize shape, and the `stage` log field). Verify by
+      reading it against the implemented CLI and log output.
+- [ ] 3.2 Rewrite `.claude/commands/quant/research.md`: Claude's
+      interactive session (or the operator directly) now runs one
+      `quant-research-exec` invocation per round instead of driving
+      PLAN/IMPLEMENT/VERIFY/FIX step by step; the command's remaining job
+      is reading back the finished round's result and, for `PROMOTE`,
+      running `/opsx:propose`. Verify by reading the updated file for
+      internal consistency with the new command behavior.
+- [ ] 3.3 Reconcile `add-quant-research-exec-command`'s still-unarchived
+      spec delta (`--role implement/fix`, operator-supplied brief required,
+      no session continuity) with this change's superseding delta before
+      either is archived — archiving both as-is would leave two deltas
+      describing contradictory requirements for the same command. Verify
+      `openspec validate` on both changes (or the combined result if
+      archived together) does not report a conflict.
 
 ## 4. Verification
 
@@ -97,7 +123,9 @@
 - [ ] 4.3 Exercise one real round end-to-end (real Codex + Claude SDK
       calls, not fakes) in a dedicated round worktree, per
       `.agents/rules/coding-and-verification.md`'s per-change worktree
-      workflow, and verify: IMPLEMENT drafts a round file, VERIFY
-      genuinely reads it independently (confirm via the JSONL log that a
-      real `ClaudeProvider` turn ran, not a stub), and the cycle reaches
-      either FINALIZE or CLOSE-HONEST — not left hanging.
+      workflow, running `quant-research-exec` with zero arguments. Verify:
+      PLAN genuinely picks a hypothesis from the real backlog (confirm via
+      the JSONL log that a real `ClaudeProvider` PLAN turn ran, not a
+      stub), IMPLEMENT drafts a round file, VERIFY independently reviews
+      it, and the cycle reaches either FINALIZE or the 5-attempt
+      fix-budget error — not left hanging.
