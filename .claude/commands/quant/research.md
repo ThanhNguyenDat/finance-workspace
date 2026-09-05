@@ -4,9 +4,18 @@ description: "Run exactly one bounded, state-aware quant research iteration"
 
 Thực hiện đúng một vòng nghiên cứu bounded bằng tiếng Việt, timezone vận hành
 `UTC+7 / Asia/Ho_Chi_Minh`. Operator chạy lệnh này thủ công (không có launcher
-hay orchestrator riêng nào chạy nền cho vòng này nữa — phiên hiện tại tự thực
-hiện toàn bộ vòng). Không tạo `/loop`, daemon, scheduler, sleep, hay tự gọi
-lại chính mình.
+hay orchestrator riêng nào chạy nền cho vòng này nữa). Không tạo `/loop`,
+daemon, scheduler, sleep, hay tự gọi lại chính mình.
+
+**Vai trò trong vòng**: phiên Claude hiện tại tự làm PLAN (chọn hypothesis,
+thiết kế test) và VERIFY (kiểm tra độc lập evidence trước khi commit); phần
+IMPLEMENT (chạy backtest thật) và FIX (sửa khi verify phát hiện vấn đề) giao
+cho Codex qua `codex-exec` của `tools/orchestrator` — đúng
+`CLAUDE.md`'s Role/Working Model (`PLAN/VERIFY = Claude first`,
+`IMPLEMENT/FIX = Codex first`). Cả 4 giai đoạn nằm trong CÙNG một round
+number, không tách thành 2 vòng trừ khi thực thi thật sự không hoàn thành
+được đúng plan ban đầu (xem `.agents/skills/quant-research-loop/SKILL.md`
+"Core workflow" để biết chi tiết điều kiện tách vòng).
 
 ## Nhiệm vụ (chỉ đúng 2 việc)
 
@@ -34,7 +43,8 @@ variant khác mục 0.5 đã test. Ghi rõ nguồn tìm được (link/tên bài
 account nếu có) vào `index.md` mục 0.5 kèm lý do vì sao khác các mục 3 đã
 đóng, y hệt cách round442 đã ghi. Không implement ngay trong cùng round tìm
 ra ý tưởng trừ khi đã đủ ngân sách backtest của round (ưu tiên ghi ý tưởng
-lại cho round sau nếu không chắc).
+lại cho round sau nếu không chắc). Web search / khảo sát nguồn này vẫn là
+việc của Claude (PLAN), không giao cho Codex.
 
 **Nếu đã tìm qua tất cả nguồn trên mà vẫn không ra cơ chế nào cụ thể và khác
 biệt** (không phải chỉ 1 round — kiểm tra `index.md` xem có bao nhiêu round
@@ -45,7 +55,7 @@ provider tự động nữa — đây là quyết định thủ công của oper
 luận `NO-CHANGE` khi tìm kiếm đa nguồn không ra cơ chế mới — không được bịa
 cơ chế chỉ để có việc làm.
 
-## Bắt đầu vòng
+## Bước 1-2 — Claude (PLAN)
 
 1. Xác định số round tiếp theo: tìm file `round<N>-*.md` lớn nhất trong
    `research/quant/rounds/` (hoặc `git log --oneline -- research/quant/rounds/`)
@@ -55,7 +65,61 @@ cơ chế chỉ để có việc làm.
    `research/quant/index.md`, rồi chỉ các round, study, audit hoặc sample liên
    quan dưới `research/quant/`. `docs/reviews/` chứa supporting operational
    reviews. `docs/archive/legacy-handoff-agent.md` chỉ là lịch sử legacy, không
-   phải engineering queue hoặc nguồn task/lifecycle status authoritative.
+   phải engineering queue hoặc nguồn task/lifecycle status authoritative. Chọn
+   một hypothesis còn mở (ưu tiên `XAU` rồi `BTC`), rồi viết một plan ngắn:
+   hypothesis, vì sao chọn nó tiếp theo, thiết kế test (route ưu tiên, split
+   train/validation/holdout hoặc walk-forward, giả định cost/fill, và bằng
+   chứng nào sẽ tính là `PROMOTE` so với các classification còn lại). Ghi plan
+   này ra một file tạm (ví dụ trong scratchpad session) để làm prompt cho
+   Codex — plan không cần round number hay file riêng dưới `research/quant/`.
+
+## Bước 3-5 — Codex (IMPLEMENT)
+
+Giao plan ở trên cho Codex chạy backtest thật, qua `tools/orchestrator`:
+
+```bash
+uv run --project tools/orchestrator codex-exec \
+  --prompt-file <đường dẫn file plan> \
+  --role implement \
+  --change quant-research-round-<N> \
+  --timeout-seconds 3600
+```
+
+`--change quant-research-round-<N>` (cùng `<N>` ở bước 1) để log của cả
+Claude lẫn Codex trong vòng này gom chung một thư mục
+`tools/orchestrator/logs/quant-research-round-<N>/` thay vì rơi vào bucket
+`adhoc-<ngày>` không liên quan. Yêu cầu Codex trong plan: chạy đúng ràng buộc
+ở "Nghiên cứu và xác minh" bên dưới, phân loại kết quả, và **viết draft**
+round file + cập nhật CSV/index nhưng **chưa commit** — Claude cần verify
+trước.
+
+## Bước 6 — Claude (VERIFY)
+
+Đọc trực tiếp evidence Codex tạo ra (CSV, log JSONL, draft round file) — không
+chỉ tin vào tóm tắt cuối turn của Codex. Kiểm tra độc lập theo
+"Non-negotiable invariants" của `quant-research-loop/SKILL.md`: không fabricate/
+cherry-pick, train/validation/holdout thực sự disjoint, không lookahead,
+classification khớp đúng số liệu. Nếu ổn, chuyển sang bước 8. Nếu có vấn đề,
+sang bước 7.
+
+## Bước 7 — Codex (FIX), chỉ khi bước 6 phát hiện vấn đề
+
+```bash
+uv run --project tools/orchestrator codex-exec \
+  --prompt-file <đường dẫn file mô tả vấn đề cụ thể> \
+  --role fix \
+  --change quant-research-round-<N> \
+  --timeout-seconds 1800
+```
+
+Mô tả đúng vấn đề Claude phát hiện (không lặp lại toàn bộ plan). Sau khi
+Codex sửa, quay lại bước 6 để Claude re-check nhanh phần vừa sửa.
+
+## Bước 8 — Codex (hoàn tất)
+
+Khi verify đạt, để Codex (trong cùng turn implement/fix cuối, hoặc 1 turn
+ngắn tiếp theo với `--role implement`) commit round file + mọi cập nhật CSV/
+index, dọn container/tunnel tạm, báo giới hạn thực tế.
 
 ## Nghiên cứu và xác minh
 
@@ -74,7 +138,8 @@ cơ chế chỉ để có việc làm.
   production resources cho exploration. Nếu cần SSH, chỉ dùng evidence
   read-only có phạm vi hẹp và không dump env/credentials.
 
-Sau research/backtest, cập nhật research truth nhất quán:
+Sau research/backtest (Codex, bước 3-5, verify bởi Claude ở bước 6), research
+truth phải nhất quán:
 
 - `research/quant/reports/optimize_loop_update_v2.csv` — một row cho mỗi
   instrument/broker/strategy touched, để trống metric không có evidence;
@@ -116,7 +181,9 @@ Nếu thiếu một điều kiện, giữ kết quả ở research-only classifi
 ## PROMOTE: OpenSpec, dừng ở planning
 
 Với `PROMOTE`, chỉ làm tới bước tạo OpenSpec planning artifact rồi dừng —
-không có cơ chế tự động implement/verify nào để giao việc tiếp:
+không có cơ chế tự động implement/verify nào để giao việc tiếp. Đây là việc
+của **Claude** (PLAN, phiên hiện tại) — không giao cho Codex, kể cả khi Codex
+vừa là bên viết round file:
 
 1. Derive một stable meaningful kebab-case `<change>`; không dùng tên kiểu
    `task-87`, `fix-stuff`, hoặc `research-test`.
@@ -132,6 +199,6 @@ không có cơ chế tự động implement/verify nào để giao việc tiếp
 
 Mỗi iteration kết thúc bằng tóm tắt ngắn bằng tiếng Việt: round number,
 instrument/scope, unseen-data evidence, classification, research files đã cập
-nhật và giới hạn thực tế. Với `PROMOTE`, thêm stable change name và đường dẫn
-OpenSpec change đã tạo. Không hỏi user trong research bình thường và không
-biến suy luận thành fact.
+nhật, ai (Claude/Codex) làm phần nào, và giới hạn thực tế. Với `PROMOTE`, thêm
+stable change name và đường dẫn OpenSpec change đã tạo. Không hỏi user trong
+research bình thường và không biến suy luận thành fact.
