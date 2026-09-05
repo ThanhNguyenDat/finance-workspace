@@ -95,6 +95,12 @@ class CodexProvider(BaseProvider):
         async for event in self._handle.stream():
             payload = event.payload
             item = getattr(payload, "item", None)
+            if item is not None:
+                # ItemCompletedNotification.item is a ThreadItem RootModel
+                # wrapper for most item kinds (same shape as
+                # codex_error_info in _turn_error_code below) -- unwrap it
+                # to reach the concrete AgentMessageThreadItem's `.text`.
+                item = getattr(item, "root", item)
             text = getattr(item, "text", None)
             if text:
                 self._final_text = text

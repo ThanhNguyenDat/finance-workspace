@@ -10,15 +10,41 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import sys
 from collections.abc import Callable, Coroutine
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from ..utils.jsonable import jsonable
 from ..utils.redaction import redact_text, redact_value
 from ..utils.timeout import DEFAULT_TIMEOUT_SECONDS, ProviderTimeoutError
+
+LOGS_ROOT = Path(__file__).resolve().parents[3] / "logs"
+_CHANGE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+_ADHOC_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def _validate_change_name(value: str) -> str:
+    if not _CHANGE_NAME_RE.fullmatch(value):
+        raise argparse.ArgumentTypeError(
+            f"--change must be kebab-case (lowercase letters, digits, hyphens): {value!r}"
+        )
+    return value
+
+
+def resolve_log_path(command: str, change: str | None) -> Path:
+    """Resolve the log file for one invocation: `logs/<change>/<command>.log`.
+
+    When `change` is omitted, falls back to `logs/adhoc-<YYYY-MM-DD>/<command>.log`
+    using the Asia/Ho_Chi_Minh calendar date (the per-line `timestamp` field
+    written into each log entry stays UTC regardless).
+    """
+
+    name = change if change else f"adhoc-{datetime.now(_ADHOC_TZ).date().isoformat()}"
+    return LOGS_ROOT / name / f"{command}.log"
 
 
 def build_arg_parser(prog: str, description: str) -> argparse.ArgumentParser:
@@ -55,6 +81,17 @@ def build_arg_parser(prog: str, description: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Override the reasoning effort for this turn (default: the SDK's own default)",
+    )
+    parser.add_argument(
+        "--change",
+        type=_validate_change_name,
+        default=None,
+        help=(
+            "OpenSpec change name to scope this invocation's log file under "
+            "(logs/<change>/<command>.log); defaults to logs/adhoc-<YYYY-MM-DD>/"
+            "<command>.log (Asia/Ho_Chi_Minh date) when omitted. Not checked "
+            "against openspec/changes/ on disk."
+        ),
     )
     return parser
 

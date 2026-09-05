@@ -1,8 +1,9 @@
 import asyncio
+import json
 
 from claude_agent_sdk import AssistantMessage, TextBlock
 
-from orchestrator.cli import claude_exec
+from orchestrator.cli import _shared, claude_exec
 
 from .fakes import claude_query_fn, claude_result
 
@@ -138,3 +139,69 @@ def test_model_and_effort_flags_reach_claude_agent_options() -> None:
     assert exit_code == 0
     assert seen_options[0].model == "claude-opus-5"
     assert seen_options[0].effort == "high"
+
+
+def test_writes_a_jsonl_log_file_alongside_stdout(tmp_path) -> None:
+    log_path = tmp_path / "claude-exec.log"
+    messages = [
+        AssistantMessage(content=[TextBlock(text="thinking...")], model="claude"),
+        claude_result(is_error=False, result="final answer"),
+    ]
+    exit_code = asyncio.run(
+        claude_exec.run_turn(
+            "do the thing",
+            cwd=None,
+            timeout_seconds=5,
+            query_fn=claude_query_fn(messages),
+            log_path=log_path,
+        )
+    )
+    assert exit_code == 0
+    lines = [
+        json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()
+    ]
+    types = [line["type"] for line in lines]
+    assert types == ["event", "event", "result"]
+    assert all("timestamp" in line for line in lines)
+    assert lines[-1]["text"] == "final answer"
+
+
+def test_log_file_records_errors_too(tmp_path) -> None:
+    log_path = tmp_path / "claude-exec.log"
+    messages = [claude_result(is_error=True, result="boom")]
+    exit_code = asyncio.run(
+        claude_exec.run_turn(
+            "do the thing",
+            cwd=None,
+            timeout_seconds=5,
+            query_fn=claude_query_fn(messages),
+            log_path=log_path,
+        )
+    )
+    assert exit_code == 1
+    lines = [
+        json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert lines[-1] == {
+        "type": "error",
+        "message": "boom",
+        "timestamp": lines[-1]["timestamp"],
+    }
+
+
+def test_no_log_path_or_change_given_writes_under_adhoc_directory() -> None:
+    messages = [claude_result(is_error=False, result="ok")]
+    exit_code = claude_exec.main(["hello"], query_fn=claude_query_fn(messages))
+    assert exit_code == 0
+    matches = list(_shared.LOGS_ROOT.glob("adhoc-*/claude-exec.log"))
+    assert len(matches) == 1
+
+
+def test_change_flag_scopes_the_log_path() -> None:
+    messages = [claude_result(is_error=False, result="ok")]
+    exit_code = claude_exec.main(
+        ["hello", "--change", "some-change"], query_fn=claude_query_fn(messages)
+    )
+    assert exit_code == 0
+    expected = _shared.LOGS_ROOT / "some-change" / "claude-exec.log"
+    assert expected.is_file()

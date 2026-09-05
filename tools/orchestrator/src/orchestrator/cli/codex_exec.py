@@ -15,13 +15,12 @@ from ._shared import (
     emit_error,
     emit_event,
     emit_result,
+    resolve_log_path,
     resolve_prompt,
     run_cli_main,
 )
 
 PROG = "codex-exec"
-
-DEFAULT_LOG_PATH = Path(__file__).resolve().parents[3] / "logs" / "codex-exec.log"
 
 
 async def run_turn(
@@ -33,13 +32,16 @@ async def run_turn(
     accounts: list[str | None] | None = None,
     model: str | None = None,
     effort: str | None = None,
+    change: str | None = None,
     log_path: Path | None = None,
 ) -> int:
-    """`log_path=None` means "use DEFAULT_LOG_PATH", read fresh here (not
-    bound as this parameter's own default) so tests can monkeypatch the
-    module-level `DEFAULT_LOG_PATH` and have it take effect."""
+    """`log_path=None` means "resolve from `change`" (via `resolve_log_path`,
+    read fresh here rather than bound as this parameter's own default) so
+    tests can monkeypatch `_shared.LOGS_ROOT` and have it take effect."""
 
-    resolved_log_path = log_path if log_path is not None else DEFAULT_LOG_PATH
+    resolved_log_path = (
+        log_path if log_path is not None else resolve_log_path(PROG, change)
+    )
     provider = CodexProvider(
         codex_client_factory=codex_client_factory,
         accounts=accounts,
@@ -67,7 +69,9 @@ def main(
     parser = build_arg_parser(PROG, "Run exactly one bounded Codex SDK turn.")
     args = parser.parse_args(argv if argv is not None else sys.argv[1:])
     prompt = resolve_prompt(args, parser=parser)
-    resolved_log_path = log_path if log_path is not None else DEFAULT_LOG_PATH
+    resolved_log_path = (
+        log_path if log_path is not None else resolve_log_path(PROG, args.change)
+    )
 
     async def _main() -> int:
         return await run_turn(

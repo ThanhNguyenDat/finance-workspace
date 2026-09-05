@@ -23,10 +23,27 @@ them — this tool does not duplicate that validation). Neither command reads
 or writes any state shared with another invocation — two concurrent runs
 never interact.
 
-`codex-exec` additionally appends a JSONL line (event/result/error, each
-with a UTC timestamp) to `tools/orchestrator/logs/codex-exec.log` for every
-run, in addition to printing to stdout/stderr — a running history on top of
-the same per-invocation output.
+### Logging
+
+Both commands append one JSON line per streamed event, per result, and per
+error (each with a UTC timestamp) to a log file, in addition to printing to
+stdout/stderr — a running history on top of the same per-invocation output.
+
+The log file is organized by `--change <name>`:
+
+```bash
+uv run --project tools/orchestrator codex-exec --change my-feature "..."
+# -> tools/orchestrator/logs/my-feature/codex-exec.log
+uv run --project tools/orchestrator claude-exec --change my-feature "..."
+# -> tools/orchestrator/logs/my-feature/claude-exec.log
+```
+
+`<name>` is validated as kebab-case (matching an OpenSpec change name's
+shape) but is **not** checked against `openspec/changes/<name>/` existing on
+disk — it's just a label. Omitting `--change` falls back to
+`logs/adhoc-<YYYY-MM-DD>/<command>.log`, using the Asia/Ho_Chi_Minh (UTC+7)
+calendar date — the per-line `timestamp` field inside each log entry stays
+UTC regardless. `tools/orchestrator/logs/` is gitignored.
 
 ### Account failover
 

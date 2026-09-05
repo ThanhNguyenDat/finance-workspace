@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-from orchestrator.cli import codex_exec
+from orchestrator.cli import _shared, codex_exec
 
 from .fakes import (
     FakeThread,
@@ -10,7 +10,23 @@ from .fakes import (
     codex_factory,
     completed_event,
     item_event,
+    wrapped_item_event,
 )
+
+
+def test_final_text_unwraps_the_threaditem_root_wrapper(capsys) -> None:
+    handle = FakeTurnHandle([wrapped_item_event("final answer"), completed_event()])
+    thread = FakeThread(handle)
+    exit_code = asyncio.run(
+        codex_exec.run_turn(
+            "do the thing",
+            cwd=None,
+            timeout_seconds=5,
+            codex_client_factory=codex_factory(thread),
+        )
+    )
+    assert exit_code == 0
+    assert "final answer" in capsys.readouterr().out
 
 
 def test_successful_run_prints_result_and_returns_zero(capsys) -> None:
@@ -156,11 +172,23 @@ def test_log_file_records_errors_too(tmp_path) -> None:
     }
 
 
-def test_no_log_path_given_writes_to_the_default_log_path() -> None:
-    # conftest.py's autouse fixture points codex_exec.DEFAULT_LOG_PATH at an
-    # isolated tmp directory for every test.
+def test_no_log_path_or_change_given_writes_under_adhoc_directory() -> None:
+    # conftest.py's autouse fixture points _shared.LOGS_ROOT at an isolated
+    # tmp directory for every test.
     handle = FakeTurnHandle([completed_event()])
     thread = FakeThread(handle)
     exit_code = codex_exec.main(["hello"], codex_client_factory=codex_factory(thread))
     assert exit_code == 0
-    assert codex_exec.DEFAULT_LOG_PATH.is_file()
+    matches = list(_shared.LOGS_ROOT.glob("adhoc-*/codex-exec.log"))
+    assert len(matches) == 1
+
+
+def test_change_flag_scopes_the_log_path(tmp_path) -> None:
+    handle = FakeTurnHandle([completed_event()])
+    thread = FakeThread(handle)
+    exit_code = codex_exec.main(
+        ["hello", "--change", "some-change"], codex_client_factory=codex_factory(thread)
+    )
+    assert exit_code == 0
+    expected = _shared.LOGS_ROOT / "some-change" / "codex-exec.log"
+    assert expected.is_file()

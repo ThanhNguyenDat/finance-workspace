@@ -19,6 +19,20 @@ def item_event(text: str) -> SimpleNamespace:
     return event("item/completed", SimpleNamespace(item=SimpleNamespace(text=text)))
 
 
+def wrapped_item_event(text: str) -> SimpleNamespace:
+    """Like `item_event`, but modeling the real SDK's `ThreadItem` RootModel
+    wrapper shape: `item.root.text`, with no `.text` directly on `item`
+    itself. Regression coverage for CodexProvider unwrapping `.root` before
+    reading `.text` (a real turn's final result was silently always empty
+    until this was fixed, since `item_event`'s flatter shape never
+    exercised the unwrap)."""
+
+    return event(
+        "item/completed",
+        SimpleNamespace(item=SimpleNamespace(root=SimpleNamespace(text=text))),
+    )
+
+
 def completed_event(
     *,
     status: str = "completed",
