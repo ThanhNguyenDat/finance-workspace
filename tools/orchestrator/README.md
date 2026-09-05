@@ -82,6 +82,19 @@ uv run --project tools/orchestrator codex-exec "explain this repo's layout"
 uv run --project tools/orchestrator claude-exec --prompt-file ./prompt.txt --timeout-seconds 120
 ```
 
+## sync-agent-links
+
+Mirrors `.agents/skills/` and `.agents/rules/` into `.claude/skills/`/
+`.claude/rules/` as relative symlinks, so shared Finance knowledge has one
+source of truth. `--check` reports drift without changing anything; it never
+overwrites a real file sitting where a link is expected — that's reported as
+an error instead.
+
+```bash
+uv run --project tools/orchestrator sync-agent-links --check
+uv run --project tools/orchestrator sync-agent-links
+```
+
 ## Tests
 
 ```bash

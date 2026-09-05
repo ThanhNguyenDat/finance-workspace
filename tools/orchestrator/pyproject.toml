@@ -24,6 +24,7 @@ module-name = "orchestrator"
 [project.scripts]
 codex-exec = "orchestrator.cli.codex_exec:cli"
 claude-exec = "orchestrator.cli.claude_exec:cli"
+sync-agent-links = "orchestrator.cli.sync_agent_links:cli"
 
 [dependency-groups]
 dev = [
