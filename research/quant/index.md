@@ -10589,6 +10589,21 @@ mức model/feature mechanism khác, không test lại `logistic_regression_ohlc
 hay `logistic_regression_temporal_v2`.
 Chi tiết: `round451-REJECTED-ml-logistic-temporal-feature-schema-fails-cross-route.md`.
 
+
+**Round 452 (2026-09-05) - REJECTED:** kiểm tra robustness của chính
+`logistic_regression_temporal_v2` trên cutoff sớm hơn, cố định
+`2024-12-18T00:00:00Z`, `days=150`, split 60/20/20, cùng phí 5 bps +
+slippage 2 bps + funding 1 bps. Trên route ưu tiên Exness XAU, threshold 0,50
+là ô duy nhất đủ 20 lệnh validation nhưng PnL **-14,75285 / -5,03048 /
+-4,72074** và PF **0,0442 / 0,0202 / 0,0381** trên train/validation/holdout.
+BTC/Binance chọn 0,55 (31 validation trades), nhưng vẫn **-0,79344 /
+-0,24224 / -0,08188**, PF **0,8200 / 0,8703 / 0,9518**; ô 0,60 có một
+holdout trade dương nhưng validation chỉ 2 lệnh nên bị loại trước selection.
+Kết quả earlier cutoff không cứu schema; ML family giữ mở chỉ cho model hoặc
+feature mechanism khác, không chạy lại v2.
+
+Evidence: `round452-REJECTED-logistic-temporal-v2-fails-earlier-cutoff-robustness-test.md`.
+
 ## 1. Hướng có cơ sở thật nhưng KHÔNG nên implement đứng độc lập
 
 ### Funding Rate Extreme Reversion (Round 22 → 46)
@@ -10665,6 +10680,7 @@ Chi tiết: `round451-REJECTED-ml-logistic-temporal-feature-schema-fails-cross-r
 | Awesome Oscillator (Bill Williams, SMA(5)/SMA(34) của midpoint high+low, zero-line cross) | 150 | PF 0.494-0.538 ổn định cả 3 split — cơ chế thứ 7 (sau Stochastic/CCI/MFI/OBV/Elder Ray/Vortex) thất bại cùng lý do: oscillator thuần không kèm trend/regime filter luôn thua ở 5m, bất kể cơ chế smoothing cụ thể — bằng chứng hội tụ mạnh đây là trần cấu trúc, không phải đặc thù 1 indicator |
 | Logistic regression trên feature OHLCV chuẩn hoá (`body_return`, `range_return`, `close_location`, `log_volume`, `log_trades`) với threshold 0,50/0,55/0,60 | 450 | Identity `logistic_regression_ohlcv_v1` bị bác: XAU/Exness lỗ cả train/validation/holdout; BTC/Binance chỉ dương ở validation và holdout tại threshold 0,55 nhưng train âm, còn threshold 0,60 chỉ có 4 validation trade. Không đủ selection hoặc cross-route evidence; ML family vẫn mở cho model/feature schema khác |
 | Logistic regression temporal đa khung (`return_1`, `return_3`, `return_12`, `realized_vol_12`, `volume_surprise_24`) với threshold 0,50/0,55/0,60 | 451 | Identity `logistic_regression_temporal_v2` bị bác: XAU/Exness selected holdout PF 0,0097 và PnL -22,4909; BTC/Binance train dương nhưng validation/holdout âm (PF 0,6642/0,9455). Schema temporal không giữ được OOS hoặc cross-route; ML family vẫn mở cho model/feature schema khác |
+| Robustness cutoff sớm cho `logistic_regression_temporal_v2`, cùng feature schema/threshold gate | 452 | XAU/Exness selected threshold 0,50 vẫn lỗ cả train/validation/holdout (PF 0,0442/0,0202/0,0381); BTC/Binance selected 0,55 cũng lỗ cả ba split (PF 0,8200/0,8703/0,9518). Ô BTC 0,60 dương chỉ có 2 validation và 1 holdout trade nên không hợp lệ; không có evidence OOS/cross-route để promote. |
 | Session time-of-day filter (UTC hour, London/NY overlap 12-16h và exclude-Asian 6-22h, áp lên candle_momentum/rsi_mean_reversion) | 164 | PF<1 nhất quán cross-instrument (BTC+XAU) mọi biến thể candle_momentum. 1 outlier XAU RSI holdout PF 0.971 (55 trade, train/validation thấp hơn nhiều) — dạng "chỉ holdout thắng" đã biết là false-positive, không promote |
 | 5m entries gated bởi 1d SMA trend filter (`--interval 5m --higher-timeframe-interval 1d`, motivated bởi swing edge Round 172-180) trên XAU | 181 | ĐÓNG sạch — cả 7 biến thể (candle_momentum/rsi/bollinger/keltner) train PF>1 nhưng sập validation+holdout, dạng overfitting kinh điển |
 | Funding rate contrarian threshold (nguồn thông tin THẬT SỰ khác OHLCV, dùng public Binance API do bearer token nội bộ bị chặn) | 168, 171 | Correlation sơ bộ có vẻ hứa hẹn (decile cực trị: funding dương cực đoan → return 8h kế tiếp -0.131%) nhưng ĐÓNG dứt điểm sau khi test đúng phương pháp 3-way split thời gian thật: train PF 1.30, validation PF 8.17 (n=10, artifact mẫu mỏng), **holdout PF 0.35** — dạng "chỉ train+validation đẹp, đảo trên holdout" kinh điển |
