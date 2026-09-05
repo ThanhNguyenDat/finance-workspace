@@ -73,11 +73,19 @@ for worktrees too. So creation is always two steps:
 
 ```bash
 git -C <repo> fetch origin
+git -C <repo> merge --ff-only "origin/<default-branch>"
 git -C <repo> worktree add ".agents/worktrees/<change-name>" \
-  -b "<change-name>" origin/<default-branch>
+  -b "<change-name>" "<default-branch>"
 ```
 
-then `EnterWorktree({ path: "<repo>/.agents/worktrees/<change-name>" })` to
+Branch from local `<default-branch>` (after fast-forwarding it to
+`origin/<default-branch>`), not `origin/<default-branch>` directly — caught
+during this change's own task 3.1 smoke test: local `<default-branch>` can
+legitimately be ahead of `origin/<default-branch>` with not-yet-pushed
+commits (this repo's own practice all session), and branching straight from
+`origin/` silently drops those commits from the new worktree.
+
+Then `EnterWorktree({ path: "<repo>/.agents/worktrees/<change-name>" })` to
 switch the session into it. Branch name is the OpenSpec change's own kebab-
 case name (already unique per change) — no `codex/` prefix; that prefix
 belonged to the old, unrelated convention this design does not adopt.
@@ -142,12 +150,23 @@ given repository's branch:
 ```bash
 git -C <repo> fetch origin
 git -C <repo> checkout <default-branch>
+git -C <repo> merge --ff-only "origin/<default-branch>"
 git -C <repo> merge --ff-only "<change-name>" \
   || (git -C <repo> checkout "<change-name>" \
-      && git -C <repo> rebase origin/<default-branch> \
+      && git -C <repo> rebase <default-branch> \
       && git -C <repo> checkout <default-branch> \
       && git -C <repo> merge --ff-only "<change-name>")
 ```
+
+The extra `merge --ff-only "origin/<default-branch>"` right after checkout
+syncs local `<default-branch>` to whatever else has landed on `origin`
+since the worktree was created (same reasoning as Decision 1's creation
+step), *before* attempting the branch merge — otherwise the first ff-only
+attempt could succeed against a stale local `<default-branch>` while
+`origin/<default-branch>` has moved further, silently reintroducing the
+same staleness Decision 1 fixes. The rebase fallback targets local
+`<default-branch>` (already synced to origin by the line above), not
+`origin/<default-branch>` directly, for the same reason.
 
 This keeps history exactly as linear as the current 100%-direct-to-main
 practice, whether or not `main` moved during the change. A genuine,

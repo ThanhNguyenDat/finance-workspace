@@ -37,10 +37,15 @@ same working tree an interactive session was also using at the same time
   changed — not `.claude/worktrees/`, so the location is shared/Codex-
   visible like the rest of `.agents/`. Branch name is the change's own
   kebab-case name, no prefix.
-- **Create**: `git worktree add .agents/worktrees/<change-name> -b
-  <change-name> origin/<default-branch>` (this already checks the new
-  branch out inside the new worktree — no separate `checkout` needed), then
-  switch into it with Claude Code's `EnterWorktree({ path: ... })`.
+- **Create**: sync local `<default-branch>` first (`git fetch origin && git
+  merge --ff-only origin/<default-branch>`, per the "Branch and merge
+  discipline" bullets above — local `<default-branch>` may legitimately be
+  ahead of `origin/<default-branch>` with not-yet-pushed commits, so branch
+  from local, never straight from `origin/`), then `git worktree add
+  .agents/worktrees/<change-name> -b <change-name> <default-branch>` (this
+  already checks the new branch out inside the new worktree — no separate
+  `checkout` needed). Switch into it with Claude Code's `EnterWorktree({
+  path: ... })`.
 - **Timing**: `finance-workspace`'s own worktree (it always holds
   `openspec/changes/<name>/`) is created before running `openspec new
   change`. Any other repository a cross-repo change touches gets its own
@@ -51,10 +56,12 @@ same working tree an interactive session was also using at the same time
   call for the change passes `--cwd <that repo's worktree path>`, never the
   main tree. This is the mechanism that actually removes the concurrency
   risk.
-- **Merge**: fast-forward only (rebase onto the latest default branch first
-  if it moved), per repository, once that repository's branch has passed
-  FINAL_VERIFY (see required order below) — see the "History stays fully
-  linear" bullet above for the exact commands.
+- **Merge**: sync local `<default-branch>` to `origin/<default-branch>`
+  first (it may have moved since the worktree was created), then fast-
+  forward the change's branch in; if that fails, rebase the branch onto the
+  now-synced local `<default-branch>` and fast-forward. Never a merge
+  commit. Do this per repository, once that repository's branch has passed
+  FINAL_VERIFY (see required order below).
 - **Cleanup**: `EnterWorktree` was entered via `path`, so `ExitWorktree`
   cannot `remove` it — only `action: "keep"` returns to the original
   directory. After merging, clean up manually: `git worktree remove

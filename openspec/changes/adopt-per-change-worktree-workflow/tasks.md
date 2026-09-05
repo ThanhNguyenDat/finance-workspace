@@ -32,7 +32,7 @@
 
 ## 3. Verification
 
-- [ ] 3.1 In `finance-workspace`, exercise the full cycle once end-to-end
+- [x] 3.1 In `finance-workspace`, exercise the full cycle once end-to-end
       with a throwaway change name: `git worktree add
       .agents/worktrees/worktree-workflow-smoke-test -b
       worktree-workflow-smoke-test`, `EnterWorktree({path: ...})`, make a
@@ -42,7 +42,13 @@
       commit (`git log --graph` shows a single linear line), the worktree
       directory is gone, the branch is gone, and `git status` in the main
       tree was never polluted with an untracked `.agents/` entry while the
-      worktree existed (confirms task 2.1's `.gitignore` line works).
-- [ ] 3.2 Confirm `openspec validate adopt-per-change-worktree-workflow
+      worktree existed (confirms task 2.1's `.gitignore` line works). Done —
+      also caught and fixed a real design bug: the worktree must branch
+      from local `<default-branch>` (synced to `origin/<default-branch>`
+      first), not `origin/<default-branch>` directly, or not-yet-pushed
+      local commits silently drop out of the new worktree (design.md
+      Decision 1 and the rule text updated accordingly).
+- [x] 3.2 Confirm `openspec validate adopt-per-change-worktree-workflow
       --strict` passes (already skip_specs, so this is a sanity check that
-      nothing else regressed).
+      nothing else regressed). Confirmed: "Change
+      'adopt-per-change-worktree-workflow' is valid".
