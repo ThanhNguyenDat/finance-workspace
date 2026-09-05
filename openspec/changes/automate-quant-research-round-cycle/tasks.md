@@ -173,7 +173,7 @@
       and verify all pass.
 - [x] 5.2 Run `uv run --project tools/orchestrator sync-agent-links --check`
       and verify it reports synchronized.
-- [ ] 5.3 Exercise one real round end-to-end (real Codex + Claude SDK
+- [x] 5.3 Exercise one real round end-to-end (real Codex + Claude SDK
       calls, not fakes), running `quant-research-exec` with zero
       arguments from the real repository (letting it manage its own
       worktree per section 2 — do not pre-create one by hand for this
@@ -187,15 +187,28 @@
       longer exists afterward and the round's commit landed on local
       `main`.
 
-      **Deferred (2026-09-05), by explicit operator decision** — not
-      completed, not skipped. Two real attempts (round 454, twice) were
-      interrupted by external factors before reaching FINALIZE/error: the
-      first by a host-wide OOM kill (2 real backtest containers plus the
-      operator's other running processes exhausted RAM+swap); the second
-      by the session being stopped with no completion record. Both times,
-      PLAN and the worktree-creation step were observed to run correctly
-      (a worktree was created, real Claude/Codex turns ran per the JSONL
-      log) before the interruption — partial positive evidence, not a
-      substitute for a full run. Merging without this task complete is a
-      deliberate operator call given 1.1-5.2 are independently verified;
-      run this task for real once host resources are less contended.
+      **Completed for real (2026-09-05).** Two earlier real attempts
+      (round 454) were interrupted by external factors before reaching
+      FINALIZE/error (a host-wide OOM kill, then a session stop with no
+      completion record) — see git history for that context; this is the
+      successful retry. `quant-research-exec` with zero arguments: PLAN
+      (real `ClaudeProvider` turn, session `11d1edda-...`) read the
+      backlog and chose a genuinely new hypothesis
+      (`gaussian_naive_bayes_temporal_v4`, never tried before) with no
+      worktree yet; a worktree was created immediately after
+      (`.agents/worktrees/quant-research-round-454`); IMPLEMENT (real
+      Codex turn) ran the real backtest and drafted the round file;
+      VERIFY (real Claude turn, resumed PLAN's session) reviewed the
+      evidence independently and returned `PASS` on the first pass — no
+      FIX attempts needed; FINALIZE committed
+      (`3d4c5e1fc658cb8393b7e6b23a245f66bfe10c61`,
+      `docs(research): finalize quant round 454 evidence`); MERGE+CLEANUP
+      then fast-forward-merged that commit onto local `main` and removed
+      the worktree, unattended. Post-run checks: `git worktree list`
+      shows no round-454 worktree, `git status --short` is clean,
+      `research/quant/reports/optimize_loop_update_v2.csv`'s BTC row for
+      round 454 is honestly left blank (`n/a_data_issue`, no fabricated
+      metric — the round hit the same recurring BTC "invalid OHLCV
+      history" data blocker seen in rounds 453/452/451, now across three
+      different model families), and the full test suite (115 tests)
+      still passes on `main` after the merge.
