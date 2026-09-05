@@ -15,6 +15,13 @@ market evidence, and one testable hypothesis. Output is exactly one classified
 result (`REJECTED`, `NO-CHANGE`, `DATA-ISSUE`, `NEEDS-MORE-RESEARCH`, or
 `PROMOTE`) with reproducible evidence and updated research navigation.
 
+This skill is the round **lifecycle** (who does what, in what order). For
+the round's **domain rules** — task scope, backtest constraints, the exact
+classification criteria, and the promotion gate conditions — read
+[quant-research-domain](../quant-research-domain/SKILL.md). Every stage
+below (Claude's plan/verify, Codex's implement/fix) must satisfy that
+skill's rules, not just this one's ordering.
+
 ## Core workflow
 
 Each round is one unit of work that walks through all four provider roles
