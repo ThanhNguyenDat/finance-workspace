@@ -86,6 +86,33 @@ provides. Whichever source is used, nothing is written to disk to remember
 which account ran: both are read fresh on every invocation, never written
 back to.
 
+### Role/scope advisory warning
+
+Both commands accept `--role {plan,implement,verify,fix,final_verify}` and,
+when the invoked provider's `config.yaml` entry has a non-empty `scope`
+list, print an advisory warning to stderr (and log a `{"type": "warning",
+...}` line) if `--role` isn't in that list:
+
+```yaml
+claude:
+  scope: [plan, verify, final_verify]
+codex:
+  scope: [implement, fix]
+```
+
+```bash
+uv run --project tools/orchestrator claude-exec --role implement "..."
+# warning: implement is outside the configured scope (plan, verify, final_verify)
+# ...then runs the turn normally anyway
+```
+
+**This never blocks anything and never changes the exit code** — the exit
+code always reflects only the turn's own success or failure. A mismatch is
+often a deliberate, valid fallback (e.g. Codex is out of quota for
+`implement`, so Claude covers it per `CLAUDE.md`'s role boundary); this is
+a heads-up, not enforcement. Omitting `--role`, or leaving `scope` unset,
+skips the check entirely.
+
 ## Setup
 
 ```bash

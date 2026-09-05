@@ -25,6 +25,7 @@ from ..utils.timeout import DEFAULT_TIMEOUT_SECONDS, ProviderTimeoutError
 LOGS_ROOT = Path(__file__).resolve().parents[3] / "logs"
 _CHANGE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 _ADHOC_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+ROLES = ("plan", "implement", "verify", "fix", "final_verify")
 
 
 def _validate_change_name(value: str) -> str:
@@ -91,6 +92,16 @@ def build_arg_parser(prog: str, description: str) -> argparse.ArgumentParser:
             "(logs/<change>/<command>.log); defaults to logs/adhoc-<YYYY-MM-DD>/"
             "<command>.log (Asia/Ho_Chi_Minh date) when omitted. Not checked "
             "against openspec/changes/ on disk."
+        ),
+    )
+    parser.add_argument(
+        "--role",
+        choices=ROLES,
+        default=None,
+        help=(
+            "Declare which lifecycle phase this invocation is for. If the "
+            "provider's config.yaml `scope` list doesn't include it, prints "
+            "an advisory warning -- never blocks or changes the exit code."
         ),
     )
     return parser
@@ -160,6 +171,28 @@ def emit_error(message: str, *, log_path: Path | None = None) -> None:
     print(safe, file=sys.stderr, flush=True)
     if log_path is not None:
         _log_line(log_path, {"type": "error", "message": safe})
+
+
+def emit_warning(message: str, *, log_path: Path | None = None) -> None:
+    """Advisory-only: never affects the exit code. See `check_role_scope`."""
+
+    safe = redact_text(message)
+    print(f"warning: {safe}", file=sys.stderr, flush=True)
+    if log_path is not None:
+        _log_line(log_path, {"type": "warning", "message": safe})
+
+
+def check_role_scope(role: str | None, scope: list[str]) -> str | None:
+    """Return an advisory warning message, or `None` if there's no mismatch.
+
+    No mismatch (returns `None`) when `role` is omitted, `scope` is empty,
+    or `role` is already in `scope`.
+    """
+
+    if not role or not scope or role in scope:
+        return None
+    scope_text = ", ".join(scope)
+    return f"{role} is outside the configured scope ({scope_text})"
 
 
 def run_cli_main(

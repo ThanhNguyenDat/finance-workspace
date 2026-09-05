@@ -54,3 +54,20 @@ def resolve_account_list(env_var: str, config_section: str) -> list[str | None]:
 
     accounts: list[str | None] = list(resolved)
     return accounts
+
+
+def configured_scope(config_section: str) -> list[str]:
+    """Return `<config_section>.scope` from the YAML config, or `[]`.
+
+    This is advisory metadata only (see `orchestrator-exec-cli` spec's
+    "Optional advisory role/scope mismatch warning" requirement) -- unlike
+    accounts, it has no environment-variable override; it is a standing
+    per-machine policy declaration, not something that needs a quick
+    one-off override.
+    """
+
+    section = load_config().get(config_section)
+    raw_scope = section.get("scope") if isinstance(section, dict) else None
+    if not isinstance(raw_scope, list):
+        return []
+    return [str(item).strip() for item in raw_scope if str(item).strip()]

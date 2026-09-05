@@ -10,11 +10,14 @@ from typing import NoReturn
 from claude_agent_sdk import query as default_query
 
 from ..providers.claude import ClaudeProvider, QueryFn
+from ..utils.config import configured_scope
 from ._shared import (
     build_arg_parser,
+    check_role_scope,
     emit_error,
     emit_event,
     emit_result,
+    emit_warning,
     resolve_log_path,
     resolve_prompt,
     run_cli_main,
@@ -33,6 +36,7 @@ async def run_turn(
     model: str | None = None,
     effort: str | None = None,
     change: str | None = None,
+    role: str | None = None,
     log_path: Path | None = None,
 ) -> int:
     """`log_path=None` means "resolve from `change`" (via `resolve_log_path`,
@@ -42,6 +46,9 @@ async def run_turn(
     resolved_log_path = (
         log_path if log_path is not None else resolve_log_path(PROG, change)
     )
+    warning = check_role_scope(role, configured_scope("claude"))
+    if warning is not None:
+        emit_warning(warning, log_path=resolved_log_path)
     provider = ClaudeProvider(
         query_fn=query_fn, accounts=accounts, model=model, effort=effort
     )
@@ -79,6 +86,7 @@ def main(
             accounts=accounts,
             model=args.model,
             effort=args.effort,
+            role=args.role,
             log_path=resolved_log_path,
         )
 
