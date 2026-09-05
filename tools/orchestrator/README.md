@@ -15,8 +15,8 @@ three commands and no persistent coordination state.
 - `claude-exec "<prompt>"` — sends the prompt to the Claude Agent SDK for
   exactly one bounded turn, streams turn/tool events to stdout, prints the
   final result, and exits non-zero on failure or timeout.
-- `quant-research-exec "<brief>"` — reads the quant research domain rules and
-  sends one assembled IMPLEMENT or FIX stage to the Codex SDK.
+- `quant-research-exec [PROMPT]` — runs one full PLAN/IMPLEMENT/VERIFY/FIX/FINALIZE
+  quant-research round; the optional prompt is PLAN guidance.
 
 The provider commands (`codex-exec` and `claude-exec`) accept `--prompt-file <path>`
 instead of a positional prompt, `--cwd <dir>`, `--timeout-seconds <n>` (default 300), `--model <name>`, and `--effort <level>` (both passed straight through to the SDK, which validates
@@ -26,31 +26,48 @@ never interact. The `quant-research-exec` command is stateless too.
 
 ### quant-research-exec
 
-`quant-research-exec` is a thin wrapper around the same `CodexProvider`
-machinery used by `codex-exec`, so it keeps the existing bounded turn,
-account-failover, redaction, event streaming, and JSONL logging behavior. It
-reads `.agents/domain/quant-research-domain.md` relative to `--cwd` (a raw
-reference doc, deliberately outside `.agents/skills/` so it isn't scanned or
-synced as an invocable skill) and appends the supplied stage brief. It also
-best-effort `chmod`s that file read-only after each read, as a guard against
-an agent editing domain rules mid-round.
+`quant-research-exec` runs one complete quant-research round in a single
+bounded invocation:
 
-For `--role implement`, `--round <N>` is optional. When omitted, the command
-scans `research/quant/rounds/round<N>-*.md` under `--cwd` and uses the next
-round number. For `--role fix`, `--round <N>` is required and the command
-rejects the invocation before starting a provider turn when it is missing.
-
-The log scope is derived from the resolved round and cannot be overridden:
-
-```bash
-uv run --project tools/orchestrator quant-research-exec \
-  --role implement --round 453 --prompt-file ./plan.txt
-# -> tools/orchestrator/logs/quant-research-round-453/quant-research-exec.log
+```text
+PLAN (Claude) -> IMPLEMENT (Codex) -> VERIFY (Claude)
+  -> QUESTION answer (Codex, at most one exchange)
+  -> FIX (Codex) / re-VERIFY (Claude), at most 5 attempts
+  -> FINALIZE (Codex)
 ```
 
-Call `--role fix` at most once per round. If Claude's re-check still finds a
-problem after that fix, close the round as `NEEDS-MORE-RESEARCH` or
-`DATA-ISSUE` instead of fixing again.
+PLAN reads the domain rules and current XAU-first backlog. An optional
+positional prompt or `--prompt-file` supplies PLAN guidance; neither is
+required. A bare invocation is valid:
+
+```bash
+uv run --project tools/orchestrator quant-research-exec
+```
+
+All arguments are optional. `--round` overrides the next-round auto-detection.
+`--timeout-seconds` applies independently to each stage and defaults to 3600.
+Provider settings are independent:
+
+- `--codex-model`, `--codex-effort`, `--codex-escalated-model`
+- `--claude-model`, `--claude-effort`, `--claude-escalated-model`
+
+From FIX attempt 3, the highest SDK effort is used and an escalated model is
+used when configured. A fifth failed re-VERIFY exits non-zero without
+FINALIZE. VERIFY markers are strict: `PASS` means the evidence and
+classification are trustworthy, including an honest negative result; it does
+not mean the hypothesis succeeded.
+
+When `--cwd` is omitted, the command synchronizes the default branch, runs
+PLAN there, then creates `.agents/worktrees/quant-research-round-<N>` for
+IMPLEMENT onward. A successful FINALIZE fast-forward-merges that branch and
+removes the worktree. A hard error leaves the worktree and branch in place for
+inspection. Supplying `--cwd` skips SYNC, worktree creation, merge, and cleanup
+and runs every stage directly in that directory.
+
+Logs remain under
+`tools/orchestrator/logs/quant-research-round-<N>/quant-research-exec.log`.
+Every JSONL line includes a `stage` such as `sync`, `plan`,
+`setup_worktree`, `implement`, `verify`, `ask`, `fix`, `finalize`, or `merge`.
 
 ### Logging
 

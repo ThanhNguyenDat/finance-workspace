@@ -67,15 +67,22 @@ class ClaudeProvider(BaseProvider):
         self._result_message: ResultMessage | None = None
 
     async def start_turn(
-        self, prompt: str, *, cwd: str | None, account: str | None
+        self,
+        prompt: str,
+        *,
+        cwd: str | None,
+        account: str | None,
+        resume_id: str | None = None,
     ) -> None:
         self._result_message = None
+        self.last_session_id = None
         env = {"CLAUDE_CONFIG_DIR": account} if account else {}
         options = ClaudeAgentOptions(
             cwd=cwd,
             permission_mode="bypassPermissions",
             env=env,
             model=self._model,
+            resume=resume_id,
             # The SDK types this as a closed Literal; a CLI-supplied value is
             # an untrusted str until the SDK itself validates it at the RPC
             # boundary, same as an invalid --model name would be.
@@ -101,6 +108,8 @@ class ClaudeProvider(BaseProvider):
         return None
 
     def collect_result(self) -> ProviderResult:
+        if self._result_message is not None:
+            self.last_session_id = self._result_message.session_id
         if self._result_message is None:
             return ProviderResult(
                 success=False,

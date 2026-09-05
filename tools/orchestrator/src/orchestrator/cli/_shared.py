@@ -150,36 +150,56 @@ def _log_line(log_path: Path, record: dict[str, Any]) -> None:
     _file_logger(log_path).info(json.dumps(line, ensure_ascii=False))
 
 
-def emit_event(payload: Any, *, log_path: Path | None = None) -> None:
+def emit_event(
+    payload: Any, *, log_path: Path | None = None, stage: str | None = None
+) -> None:
     """Print one redacted JSON line for a streamed provider turn/tool event."""
 
     safe = redact_value(jsonable(payload))
     print(json.dumps(safe, ensure_ascii=False), file=sys.stdout, flush=True)
     if log_path is not None:
-        _log_line(log_path, {"type": "event", "payload": safe})
+        record = {"type": "event", "payload": safe}
+        if stage is not None:
+            record["stage"] = stage
+        _log_line(log_path, record)
 
 
-def emit_result(text: str | None, *, log_path: Path | None = None) -> None:
+def emit_result(
+    text: str | None, *, log_path: Path | None = None, stage: str | None = None
+) -> None:
     safe = redact_text(text) if text else ""
     print(safe, file=sys.stdout, flush=True)
     if log_path is not None:
-        _log_line(log_path, {"type": "result", "text": safe})
+        record = {"type": "result", "text": safe}
+        if stage is not None:
+            record["stage"] = stage
+        _log_line(log_path, record)
 
 
-def emit_error(message: str, *, log_path: Path | None = None) -> None:
+def emit_error(
+    message: str, *, log_path: Path | None = None, stage: str | None = None
+) -> None:
     safe = redact_text(message)
     print(safe, file=sys.stderr, flush=True)
     if log_path is not None:
-        _log_line(log_path, {"type": "error", "message": safe})
+        record = {"type": "error", "message": safe}
+        if stage is not None:
+            record["stage"] = stage
+        _log_line(log_path, record)
 
 
-def emit_warning(message: str, *, log_path: Path | None = None) -> None:
+def emit_warning(
+    message: str, *, log_path: Path | None = None, stage: str | None = None
+) -> None:
     """Advisory-only: never affects the exit code. See `check_role_scope`."""
 
     safe = redact_text(message)
     print(f"warning: {safe}", file=sys.stderr, flush=True)
     if log_path is not None:
-        _log_line(log_path, {"type": "warning", "message": safe})
+        record = {"type": "warning", "message": safe}
+        if stage is not None:
+            record["stage"] = stage
+        _log_line(log_path, record)
 
 
 def check_role_scope(role: str | None, scope: list[str]) -> str | None:

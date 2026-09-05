@@ -73,20 +73,35 @@ class CodexProvider(BaseProvider):
         self._final_text: str | None = None
 
     async def start_turn(
-        self, prompt: str, *, cwd: str | None, account: str | None
+        self,
+        prompt: str,
+        *,
+        cwd: str | None,
+        account: str | None,
+        resume_id: str | None = None,
     ) -> None:
         self._completed_turn = None
         self._final_text = None
+        self.last_session_id = None
         env = {"CODEX_HOME": account} if account else {}
         self._codex_cm = self._codex_client_factory(
             config=CodexConfig(cwd=cwd, env=env)
         )
         codex = await self._codex_cm.__aenter__()
-        thread = await codex.thread_start(
-            cwd=cwd,
-            sandbox=Sandbox.workspace_write,
-            approval_mode=ApprovalMode.auto_review,
-        )
+        if resume_id is None:
+            thread = await codex.thread_start(
+                cwd=cwd,
+                sandbox=Sandbox.workspace_write,
+                approval_mode=ApprovalMode.auto_review,
+            )
+        else:
+            thread = await codex.thread_resume(
+                resume_id,
+                cwd=cwd,
+                sandbox=Sandbox.workspace_write,
+                approval_mode=ApprovalMode.auto_review,
+            )
+        self.last_session_id = getattr(thread, "id", None)
         self._handle = await thread.turn(
             prompt, cwd=cwd, model=self._model, effort=self._effort
         )

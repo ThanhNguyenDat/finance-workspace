@@ -94,8 +94,9 @@ class HangingTurnHandle:
 
 
 class FakeThread:
-    def __init__(self, handle):
+    def __init__(self, handle, *, thread_id: str = "thread-1"):
         self._handle = handle
+        self.id = thread_id
         self.seen_prompt: str | None = None
         self.seen_model: str | None = None
         self.seen_effort: str | None = None
@@ -110,6 +111,8 @@ class FakeThread:
 class FakeCodexClient:
     def __init__(self, thread, *, config=None):
         self._thread = thread
+        self.started = False
+        self.resumed_ids: list[str] = []
 
     async def __aenter__(self):
         return self
@@ -118,6 +121,11 @@ class FakeCodexClient:
         return False
 
     async def thread_start(self, **kwargs):
+        self.started = True
+        return self._thread
+
+    async def thread_resume(self, thread_id, **kwargs):
+        self.resumed_ids.append(thread_id)
         return self._thread
 
 

@@ -43,10 +43,16 @@ class BaseProvider(ABC):
     def __init__(self, *, accounts: list[str | None] | None = None) -> None:
         self._accounts: list[str | None] = accounts if accounts else [None]
         self._last_error_code: str | None = None
+        self.last_session_id: str | None = None
 
     @abstractmethod
     async def start_turn(
-        self, prompt: str, *, cwd: str | None, account: str | None
+        self,
+        prompt: str,
+        *,
+        cwd: str | None,
+        account: str | None,
+        resume_id: str | None = None,
     ) -> None:
         """Begin the turn on the given account. Must precede stream()/interrupt()."""
 
@@ -87,11 +93,12 @@ class BaseProvider(ABC):
         *,
         cwd: str | None,
         account: str | None,
+        resume_id: str | None,
         timeout_seconds: float,
         on_event: Callable[[Any], None],
     ) -> ProviderResult:
         self._last_error_code = None
-        await self.start_turn(prompt, cwd=cwd, account=account)
+        await self.start_turn(prompt, cwd=cwd, account=account, resume_id=resume_id)
 
         async def _consume() -> None:
             async for turn_event in self.stream():
@@ -123,6 +130,7 @@ class BaseProvider(ABC):
         *,
         cwd: str | None,
         timeout_seconds: float,
+        resume_id: str | None = None,
         on_event: Callable[[Any], None],
     ) -> ProviderResult:
         result: ProviderResult | None = None
@@ -130,6 +138,7 @@ class BaseProvider(ABC):
             result = await self._run_one_attempt(
                 prompt,
                 cwd=cwd,
+                resume_id=resume_id,
                 account=account,
                 timeout_seconds=timeout_seconds,
                 on_event=on_event,

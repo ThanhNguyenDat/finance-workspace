@@ -18,12 +18,17 @@ class _FakeProvider(BaseProvider):
         self._hang = hang
         self.interrupted = False
         self.closed = False
-        self.started_with: tuple[str, str | None, str | None] | None = None
+        self.started_with: tuple[str, str | None, str | None, str | None] | None = None
 
     async def start_turn(
-        self, prompt: str, *, cwd: str | None, account: str | None
+        self,
+        prompt: str,
+        *,
+        cwd: str | None,
+        account: str | None,
+        resume_id: str | None = None,
     ) -> None:
-        self.started_with = (prompt, cwd, account)
+        self.started_with = (prompt, cwd, account, resume_id)
 
     async def stream(self) -> AsyncIterator[Any]:
         if self._hang:
@@ -59,7 +64,12 @@ class _FailoverProvider(BaseProvider):
         self.started_accounts: list[str | None] = []
 
     async def start_turn(
-        self, prompt: str, *, cwd: str | None, account: str | None
+        self,
+        prompt: str,
+        *,
+        cwd: str | None,
+        account: str | None,
+        resume_id: str | None = None,
     ) -> None:
         self._attempt += 1
         self.started_accounts.append(account)
@@ -103,7 +113,12 @@ class _RaisingProvider(BaseProvider):
         self.started_accounts: list[str | None] = []
 
     async def start_turn(
-        self, prompt: str, *, cwd: str | None, account: str | None
+        self,
+        prompt: str,
+        *,
+        cwd: str | None,
+        account: str | None,
+        resume_id: str | None = None,
     ) -> None:
         self._attempt += 1
         self.started_accounts.append(account)
@@ -178,7 +193,7 @@ def test_run_turn_forwards_events_and_returns_collected_result() -> None:
     )
 
     assert seen == ["a", "b"]
-    assert provider.started_with == ("prompt", "/tmp", None)
+    assert provider.started_with == ("prompt", "/tmp", None, None)
     assert result == ProviderResult(success=True, text="done", error=None)
     assert provider.closed is True
 
@@ -210,7 +225,7 @@ def test_run_turn_defaults_to_single_ambient_account() -> None:
             "prompt", cwd=None, timeout_seconds=5, on_event=lambda _e: None
         )
     )
-    assert provider.started_with == ("prompt", None, None)
+    assert provider.started_with == ("prompt", None, None, None)
 
 
 def test_account_failover_advances_on_matching_error_code() -> None:
@@ -246,3 +261,80 @@ def test_account_failover_exhausts_all_accounts() -> None:
     )
     assert result == ProviderResult(success=False, text=None, error="failed-1")
     assert provider.started_accounts == ["one", "two"]
+
+
+def test_codex_resume_uses_thread_resume_and_captures_id():
+    from orchestrator.providers.codex import CodexProvider
+    from .fakes import FakeCodexClient, FakeThread, FakeTurnHandle, completed_event
+
+    clients = []
+    thread = FakeThread(FakeTurnHandle([completed_event()]), thread_id="thread-new")
+
+    def factory(*, config=None):
+        client = FakeCodexClient(thread, config=config)
+        clients.append(client)
+        return client
+
+    provider = CodexProvider(codex_client_factory=factory, accounts=[])
+    result = asyncio.run(
+        provider.run_turn(
+            "prompt",
+            cwd="/tmp",
+            timeout_seconds=5,
+            on_event=lambda _e: None,
+            resume_id="thread-old",
+        )
+    )
+
+    assert result.success
+    assert clients[0].resumed_ids == ["thread-old"]
+    assert clients[0].started is False
+    assert provider.last_session_id == "thread-new"
+
+
+def test_codex_without_resume_starts_a_thread():
+    from orchestrator.providers.codex import CodexProvider
+    from .fakes import FakeCodexClient, FakeThread, FakeTurnHandle, completed_event
+
+    clients = []
+    thread = FakeThread(FakeTurnHandle([completed_event()]), thread_id="thread-new")
+
+    def factory(*, config=None):
+        client = FakeCodexClient(thread, config=config)
+        clients.append(client)
+        return client
+
+    provider = CodexProvider(codex_client_factory=factory, accounts=[])
+    asyncio.run(
+        provider.run_turn(
+            "prompt", cwd="/tmp", timeout_seconds=5, on_event=lambda _e: None
+        )
+    )
+    assert clients[0].started is True
+    assert clients[0].resumed_ids == []
+
+
+def test_claude_resume_is_passed_to_options_and_session_is_captured():
+    from orchestrator.providers.claude import ClaudeProvider
+    from .fakes import claude_result
+
+    seen = []
+
+    async def query_fn(*, prompt, options):
+        seen.append(options)
+        yield claude_result(is_error=False, result="answer")
+
+    provider = ClaudeProvider(query_fn=query_fn, accounts=[])
+    result = asyncio.run(
+        provider.run_turn(
+            "prompt",
+            cwd="/tmp",
+            timeout_seconds=5,
+            on_event=lambda _e: None,
+            resume_id="session-old",
+        )
+    )
+
+    assert result.success
+    assert seen[0].resume == "session-old"
+    assert provider.last_session_id == "s1"
